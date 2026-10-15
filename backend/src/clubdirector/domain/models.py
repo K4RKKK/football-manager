@@ -7,7 +7,7 @@ Une valeur inconnue reste `None` : on ne la remplace jamais par une estimation.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -184,3 +184,6 @@ class SaveExtract(BaseModel):
     injuries: list[InjuryRecord]
     field_status: dict[str, Confidence] = Field(default_factory=dict)
     reader_warnings: list[str] = Field(default_factory=list)
+    # Miroir intégral des tables fmsave (database/mirror.py) : liste de MirrorTable, non validée
+    # par pydantic (des millions de valeurs) et exclue des sérialisations.
+    mirror: Any = Field(default=None, exclude=True, repr=False)

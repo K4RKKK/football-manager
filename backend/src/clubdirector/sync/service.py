@@ -17,6 +17,7 @@ from sqlalchemy import Engine, delete, func, insert, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from clubdirector.database import schema as s
+from clubdirector.database.mirror import write_mirror
 from clubdirector.domain.models import SaveExtract
 from clubdirector.game.interfaces import ISaveReader
 from clubdirector.game.snapshot import Snapshot, take_snapshot
@@ -42,6 +43,7 @@ class SyncResult:
     alerts_created: int = 0
     history_changes: int = 0
     notes: list[str] = field(default_factory=list)
+    mirror_counts: dict[str, int] = field(default_factory=dict)
 
 
 def career_fingerprint(extract: SaveExtract, save_stem: str) -> str:
@@ -122,9 +124,12 @@ class SyncService:
                 counts=counts,
             )
             if existing is not None:
-                # Lecteur plus récent : on relit le même fichier dans le même relevé.
+                # Lecteur plus récent : on relit le même fichier dans le même relevé. Les tables
+                # rattachées au relevé (insertion simple) sont vidées pour ne pas se dupliquer.
                 snapshot_id = existing.id
                 conn.execute(update(s.snapshots).where(s.snapshots.c.id == snapshot_id).values(**values))
+                for table in (s.league_tables, s.tactics):
+                    conn.execute(delete(table).where(table.c.snapshot_id == snapshot_id))
             else:
                 snapshot_id = conn.execute(
                     insert(s.snapshots).values(career_id=career_id, sha256=snap.sha256, **values)
@@ -137,6 +142,7 @@ class SyncService:
             self._tables(conn, career_id, snapshot_id, extract)
             self._tactics(conn, career_id, snapshot_id, extract)
             self._injuries(conn, career_id, snapshot_id, extract)
+            mirror_counts = write_mirror(conn, career_id, snapshot_id, extract.mirror or [])
             duration = int((time.perf_counter() - t0) * 1000)
             conn.execute(
                 update(s.snapshots).where(s.snapshots.c.id == snapshot_id).values(duration_ms=duration)
@@ -147,6 +153,7 @@ class SyncService:
         return SyncResult(
             career_id, snapshot_id, extract.meta.game_date.isoformat(), season, season_src,
             counts, extract.reader_warnings, duration, alerts_created=alerts, history_changes=changes,
+            mirror_counts=mirror_counts,
         )
 
     # -- étapes ----------------------------------------------------------------------------

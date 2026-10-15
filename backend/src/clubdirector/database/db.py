@@ -24,7 +24,21 @@ def _m2_player_team_slot(engine: Engine) -> None:
             conn.exec_driver_sql("ALTER TABLE players_current ADD COLUMN team_slot INTEGER")
 
 
-MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot]
+def _m3_dedupe_snapshot_rows(engine: Engine) -> None:
+    """Supprime les doublons laissés par les relectures d'un même relevé (session 2, avant
+    correctif) : une seule ligne par clé naturelle et par relevé."""
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "DELETE FROM league_tables WHERE id NOT IN (SELECT max(id) FROM league_tables "
+            "GROUP BY career_id, snapshot_id, competition_id, club_uid, team_slot, position)"
+        )
+        conn.exec_driver_sql(
+            "DELETE FROM tactics WHERE id NOT IN (SELECT max(id) FROM tactics "
+            "GROUP BY career_id, snapshot_id, club_uid, team_slot, idx)"
+        )
+
+
+MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot, _m3_dedupe_snapshot_rows]
 CURRENT_VERSION = len(MIGRATIONS)
 
 

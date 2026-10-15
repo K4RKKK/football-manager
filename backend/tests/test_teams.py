@@ -5,7 +5,7 @@ première, Primavera et U18 (74 joueurs), et l'échec du lecteur de tactiques é
 """
 
 import fmsave
-from sqlalchemy import insert, select, update
+from sqlalchemy import func, insert, select, update
 
 from clubdirector.database import schema as s
 from clubdirector.database.db import CURRENT_VERSION, migrate
@@ -89,3 +89,30 @@ def test_newer_reader_reimports_same_file(sync, game_dir, engine, monkeypatch):
         assert slots == [0]
         assert c.execute(select(s.snapshots.c.reader)).scalar() == sync.reader.name
     assert sync.sync_save(game_dir / SCORED.name).reused
+
+
+def test_reimport_does_not_duplicate_snapshot_rows(sync, game_dir, engine):
+    sync.sync_save(game_dir / SCORED.name)
+    with engine.connect() as c:
+        before = c.execute(select(func.count()).select_from(s.league_tables)).scalar()
+    for _ in range(2):
+        with engine.begin() as c:
+            c.execute(update(s.snapshots).values(reader="ancien"))
+        sync.sync_save(game_dir / SCORED.name)
+    with engine.connect() as c:
+        assert before > 0
+        assert c.execute(select(func.count()).select_from(s.league_tables)).scalar() == before
+
+
+def test_migration_3_removes_existing_duplicates(sync, game_dir, engine):
+    sync.sync_save(game_dir / SCORED.name)
+    with engine.begin() as c:
+        before = c.execute(select(func.count()).select_from(s.league_tables)).scalar()
+        rows = [dict(r._mapping) for r in c.execute(select(s.league_tables))]
+        for r in rows:
+            r.pop("id")
+        c.execute(insert(s.league_tables), rows)  # doublons comme avant le correctif
+        c.execute(update(s.schema_version).values(version=2))
+    migrate(engine)
+    with engine.connect() as c:
+        assert c.execute(select(func.count()).select_from(s.league_tables)).scalar() == before

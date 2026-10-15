@@ -19,6 +19,7 @@ from clubdirector.proactive.rules import POSITION_GROUPS, contract_alerts, depth
 from clubdirector.recruitment.roles import ROLES
 from clubdirector.recruitment.scoring import METHOD, role_with_adjustments, score_player
 from clubdirector.sync.season import season_label
+from clubdirector.tools.game_tables import register_game_table_tools
 from clubdirector.tools.presenters import (
     FOG_LIMITATION,
     advanced_allowed,
@@ -649,6 +650,7 @@ def build_registry() -> ToolRegistry:
                        ("prepare_contract_proposal", "Préparer une proposition de contrat.")]:
         reg.register(ToolSpec(name, desc, "action", ActionArgs, None, False,
                               "Moteur de négociation à règles prévu en phase 6 ; non encore implémenté."))
+    register_game_table_tools(reg)
     return reg
 
 

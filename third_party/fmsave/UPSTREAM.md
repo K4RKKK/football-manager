@@ -31,3 +31,8 @@ le layout 26.3.2, valeur de repli). Tests : `test_a_flagged_tactic_count_skips_i
 `test_another_tactic_count_lead_byte_remains_an_error`.
 **Reste ouvert (26.3.0)** : les enregistrements de tactique y ont une autre signature
 (`22 42 00 1a 02 00 03 0x` au lieu de `22 42 00 1a 03 00 01 0x`) : 0 tactique extraite.
+
+### 3. Noms de compétitions stockés dans la sauvegarde (`readers/competition_names.py`)
+`find_competition_names` lit dans `news` et `edit_session_man` les paires (nom long, nom court)
+précédées de l'identifiant d'éditeur (`database_id` 17 octets avant le nom, mot nul juste avant).
+39 compétitions nommées sur 26.3.0, aucune contradiction. Tests : `tests/test_competition_names.py`.

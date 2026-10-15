@@ -25,8 +25,8 @@ from fmsave import _context, _save
 CLUBDIRECTOR_USAGE: dict[str, str] = {
     "managed_clubs": "careers (club géré, manager)",
     "players": "players_current + player_history",
-    "contracts": "partiel : salaire, début, fin, statut (pas les clauses ni l'historique)",
-    "suspensions": "partiel : indicateur « suspendu » du joueur",
+    "contracts": "salaire, début, fin, statut (typés)",
+    "suspensions": "indicateur « suspendu » (typé)",
     "clubs": "clubs_current",
     "fixtures": "fixtures",
     "player_season_stats": "season_stats",
@@ -35,6 +35,9 @@ CLUBDIRECTOR_USAGE: dict[str, str] = {
     "tactics": "tactics (nom, mentalité, postes)",
     "injuries": "injuries",
 }
+# Depuis la révision 4 du lecteur, toutes les tables fmsave sont aussi copiées en entier
+# (toutes colonnes) dans fm_<lecteur> : database/mirror.py.
+MIRROR_NOTE = "miroir complet fm_{}"
 
 # Méthodes de `fmsave.Save` qui produisent une table (ordre de `validate_save`).
 READER_METHODS = (
@@ -203,8 +206,9 @@ def build_inventory(snapshot_path: Path) -> Inventory:
         failed = [
             f"{g.name}={g.observed:.3g}" if g.observed is not None else g.name for g in (v.gates or ()) if g.applied and not g.passed
         ]
+        usage = " + ".join(x for x in (CLUBDIRECTOR_USAGE.get(name), MIRROR_NOTE.format(name)) if x)
         readers.append(ReaderEntry(name, status, v.record_count, failed, secs,
-                                   CLUBDIRECTOR_USAGE.get(name), round(tracker.seconds.get(name, 0.0), 2)))
+                                   usage, round(tracker.seconds.get(name, 0.0), 2)))
         for sec in secs:
             readers_by_section[sec].append(name)
             status_by_section[sec][name] = status
@@ -215,7 +219,7 @@ def build_inventory(snapshot_path: Path) -> Inventory:
             compressed_bytes=s.compressed_size, decompressed_bytes=s.decompressed_size,
             readers=readers_by_section.get(s.name, []) + ([INFO_SECTIONS[s.name]] if s.name in INFO_SECTIONS else []),
             reader_status=status_by_section.get(s.name, {}),
-            used_by_clubdirector=[r for r in readers_by_section.get(s.name, []) if r in CLUBDIRECTOR_USAGE]
+            used_by_clubdirector=list(readers_by_section.get(s.name, []))
             + (["careers (build, date)"] if s.name in INFO_SECTIONS else []),
         )
         for s in info.sections
@@ -223,7 +227,7 @@ def build_inventory(snapshot_path: Path) -> Inventory:
     if SPAN_SECTION in readers_by_section:
         sections.append(SectionEntry(
             SPAN_SECTION, "", 0, 0, 0, readers_by_section[SPAN_SECTION], status_by_section[SPAN_SECTION],
-            [r for r in readers_by_section[SPAN_SECTION] if r in CLUBDIRECTOR_USAGE],
+            list(readers_by_section[SPAN_SECTION]),
         ))
     return Inventory(Path(snapshot_path).name, info.build, bool(info.known_build), sections, readers)
 

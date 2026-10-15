@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any
 
 import fmsave
+from fmsave.readers.competition_names import NAME_SECTIONS, find_competition_names
 
+from clubdirector.database.mirror import MIRRORED_READERS, MirrorTable, build_mirror_table
 from clubdirector.domain.models import (
     ClubRecord,
     Confidence,
@@ -92,7 +94,7 @@ def _status(model: str, field: str) -> Confidence:
 
 # À incrémenter quand l'adaptateur lit de nouveaux champs : une sauvegarde déjà importée par une
 # révision antérieure est alors relue (sinon les nouveaux champs resteraient vides).
-READER_REVISION = 3  # 3 : fork fmsave (statuts des clubs)
+READER_REVISION = 5  # 3 : statuts des clubs ; 4 : miroir intégral ; 5 : noms de compétitions
 
 
 class FmsaveSaveReader:
@@ -105,8 +107,15 @@ class FmsaveSaveReader:
         caught: list[str] = []
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            with fmsave.open(snapshot_path, competition_names=self.competition_names) as save:
+            save_names = self._save_competition_names(snapshot_path)
+            # Noms fournis par l'utilisateur prioritaires ; sinon ceux que la sauvegarde stocke.
+            names = {db: long for db, (long, _short) in save_names.items()} | (self.competition_names or {})
+            with fmsave.open(snapshot_path, competition_names=names or None) as save:
                 extract = self._read_open(save)
+                extract.mirror.append(MirrorTable(
+                    "competition_names", ["database_id", "long_name", "short_name"],
+                    sorted((db, long, short) for db, (long, short) in save_names.items()),
+                ))
             caught = [f"{x.category.__name__}: {x.message}" for x in w]
         # Les échecs de lecteurs (ajoutés par _read_open) ne doivent pas être écrasés : sans eux,
         # une section illisible (ex. tactiques du build 26.3.0) passait pour une section vide.
@@ -114,6 +123,19 @@ class FmsaveSaveReader:
         for msg in caught:
             log.warning("fmsave: %s", msg)
         return extract
+
+    @staticmethod
+    def _save_competition_names(snapshot_path: Path) -> dict[int, tuple[str, str]]:
+        """Noms (long, court) des compétitions que la sauvegarde stocke elle-même (fork fmsave)."""
+        try:
+            with fmsave.open(snapshot_path) as save:
+                ids = [c.database_id for c in save.competitions() if c.database_id is not None]
+                listed = {s.name for s in save.info.sections}
+                buffers = [save._read_section(n) for n in NAME_SECTIONS if n in listed]
+            return find_competition_names(buffers, ids)
+        except Exception as exc:  # noqa: BLE001 — sans noms, la lecture continue
+            log.warning("noms de compétitions illisibles : %s", exc)
+            return {}
 
     def _safe(self, label: str, fn, errors: list[str]):
         """Un lecteur en échec ne doit pas faire tomber toute la synchronisation."""
@@ -273,6 +295,7 @@ class FmsaveSaveReader:
             for i in self._safe("injuries", save.injuries, errors)
         ]
         field_status = {k: _status(m, f) for k, (m, f) in TRACKED_FIELDS.items()}
+        mirror = self._mirror(save, errors)
         extract = SaveExtract(
             meta=meta,
             managed=managed,
@@ -285,9 +308,23 @@ class FmsaveSaveReader:
             tactics=tactics,
             injuries=injuries,
             field_status=field_status,
+            mirror=mirror,
         )
         extract.reader_warnings.extend(errors)
         return extract
+
+    def _mirror(self, save: Any, errors: list[str]) -> list[MirrorTable]:
+        """Toutes les tables fmsave, colonnes complètes (fmsave met ses décodages en cache :
+        les lecteurs déjà appelés plus haut ne relisent rien)."""
+        already_reported = {e.split(":", 1)[0] for e in errors}
+        tables = []
+        for name in MIRRORED_READERS:
+            try:
+                tables.append(build_mirror_table(name, getattr(save, name)()))
+            except Exception as exc:  # noqa: BLE001 — un lecteur en échec n'arrête pas le miroir
+                if name not in already_reported:
+                    errors.append(f"{name}: {type(exc).__name__}: {exc}")
+        return tables
 
     @staticmethod
     def _player(p: Any) -> PlayerRecord:
