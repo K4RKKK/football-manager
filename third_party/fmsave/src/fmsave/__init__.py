@@ -95,6 +95,7 @@ from fmsave.models.training import (
     TrainingSchedule,
     TrainingWeek,
 )
+from fmsave.models.transfers import PlayerRanking, TransferOffer
 from fmsave.name_maps import read_competition_names
 from fmsave.table import Table
 
@@ -150,6 +151,7 @@ __all__ = [
     "Personality",
     "Player",
     "PlayerMatchStats",
+    "PlayerRanking",
     "PlayerSeasonStats",
     "PlayerSuspension",
     "Positions",
@@ -189,6 +191,7 @@ __all__ = [
     "TrainingSchedule",
     "TrainingWeek",
     "Trait",
+    "TransferOffer",
     "TransferValueState",
     "TransferWindow",
     "UnknownBuildWarning",

@@ -83,3 +83,7 @@ sont marqués *(dense)* : leur signal doit être confirmé par la structure.
 | `player_stats_hist_dt` | 9 383 enregistrements de 152 o (en-tête 8 o) : u8 0, u32 équipe (79 %), u16 compétition (ex. 22 = Serie A), u32 X (0 / −1 dans 87 %), u16 année (2025 partout), puis compteurs (92 % de zéros). 30 enregistrements pour l'équipe première de la Roma en Serie A. | Les compteurs ne recoupent pas les stats de saison connues des joueurs : sens non établi (stats d'équipe par match ? par joueur sans clé ?). |
 | `edit_session_man` | Séance du prochain match : compétition (noms long/court + `database_id`), stade, arbitre, couleurs des maillots. | Format complet. |
 | `news` / `edit_session_man` | Noms des compétitions citées (39). | — |
+
+## Décodées depuis (session 3)
+- `transfer_man` : marché des transferts → `Save.transfer_offers()` (voir `third_party/fmsave/UPSTREAM.md` §6).
+- `shortlist_man` : classements du marché par poste → `Save.player_rankings()` (même référence).

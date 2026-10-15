@@ -13,6 +13,9 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Données | Miroir intégral des tables fmsave (`fm_*`, 28 tables) | ✅ | toutes colonnes ; outils `describe_game_tables` / `query_game_table` |
 | Données | Noms de compétitions stockés dans la sauvegarde | ✅ | 39 compétitions (actualités, séance de match) ; catalogue complet = base du jeu installé ⬜ |
 | Données | Historique des championnats (`tc_league_history_dt`) | ✅ format / 🟡 rattachement | 174 525 saisons ; vérifié sur la réalité (Roma 2018-2025) ; 894 clubs rattachés (ordre de l'index), reste non attribué |
+| Données | Marché des transferts (`transfer_man` → `Save.transfer_offers()`) | ✅ / 🟡 états | 12 253 offres (transferts, prêts, mouvements internes) : joueur, club acheteur, club vendeur, montant, dates ; états « conclue » et « échouée » vérifiés, autres codes non identifiés |
+| Données | Classements du marché par poste (`shortlist_man` → `Save.player_rankings()`) | ✅ | 30 classements (14 postes + jeunes, hommes et femmes), vérifiés par les postes des joueurs ; note interne non interprétée |
+| Phase 6 | Moteur vente / achat / négociation (`transfers/market.py`) | ✅ testé / 🟡 prix | acheteurs (offres réelles, profil visé, budget, besoin, standing), prix demandé / plancher / plafond, contre-offre, contrat ; 8 outils du directeur sportif |
 | Données | Table des devises (`Save.currencies()`) et montants en euros | ✅ | 173 devises ; euro 1,15713 lu dans la sauvegarde, conversion à chaque synchro, étalonnage manuel prioritaire |
 | Données | Historique des coupes / stats d'historique | 🧪 | structure relevée, sens non confirmé (`docs/SECTION_MAP.md`) |
 | Phase 4 | IA locale (llama.cpp b11658 Vulkan + Gemma 4 26B-A4B) | ✅ | testée sur la vraie carrière : 8 questions, outils corrects, 9-65 s ; mode jeu 11,4 Go VRAM |

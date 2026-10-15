@@ -6,6 +6,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Added
 
+- ClubDirector: `Save.transfer_offers()` reads the transfer market of `transfer_man`: transfers, loans and squad moves with their player, bidding and selling clubs, fee, state (completed, failed, open) and dates.
+- ClubDirector: `Save.player_rankings()` reads the game's market rankings of `shortlist_man`: players by position, best first, for men and women.
 - ClubDirector: `Save.currencies()` reads the currency table of `game_db`: name, symbol, rate against the stored money unit and yearly history. The pound has rate 1.0, so a stored amount times the euro's rate is the amount in euros.
 
 ### Fixed

@@ -131,3 +131,12 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Défilement parasite de l'écran | corrigé | `focus({preventScroll})` + `overflow: clip` |
 | `pytest` backend | ✅ | 123 / 123 |
 
+### Session 3 (suite) — marché des transferts
+| Test | Résultat | Détail |
+|---|---|---|
+| `Save.transfer_offers()` sur la vraie sauvegarde | ✅ | 12 253 offres en 7,3 s ; Batrakov Lokomotiv → Roma 12,96 M£ (offre 28/07, arrivée 31/07), Gadou Salzburg → Roma, Hugo López (accord pour le 02/01/2026) |
+| Champs vérifiés statistiquement | ✅ | transfert conclu → joueur au club acheteur 1 855/1 857 ; prêt conclu → club prêteur = club du joueur 505/532 ; type 10 = mouvement interne (Braga → Braga B) |
+| `Save.player_rankings()` | ✅ | 229 361 entrées en 1,5 s ; classement des gardiens = 300/300 gardiens, etc. ; Svilar 10e gardien du monde |
+| Outils marché (copie de la carrière) | ✅ | offres reçues (12), acheteurs d'Hermoso (Napoli : offre réelle 8,5 M€, Tottenham), vente de Rensch, achat d'Hugo López (notre accord détecté), contre-offre, prolongations Dybala / Pellegrini |
+| Directeur sportif, IA locale : « Vends-moi Mario Hermoso… » | ✅ | 4 consultations (fiche, historique, valeur, acheteurs) ; prix 13,8-15,8 M€, plancher 12,4 M€, Napoli puis Tottenham, geste à faire dans FM26 ; 118 s (prompt recalculé + 4 consultations) |
+| Tests fork / backend | ✅ | fork : 6 nouveaux tests (`tests/test_transfers.py`) ; backend : 6 nouveaux (`tests/test_transfers.py`) |

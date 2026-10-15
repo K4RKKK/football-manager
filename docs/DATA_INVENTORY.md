@@ -56,11 +56,11 @@ Build connu de fmsave : non · 77 sections · 351.1 Mo décompressés.
 | match_stats_cfg.dat | 6 | 19.92 | — | non décodée |
 | news.dat | 2865 | 11.30 | fixtures, league_tables, competition_rules, stadiums | importée |
 | person_record_history_dt.cmt | 2 | 10.29 | — | non décodée |
-| transfer_man.dat | 35 | 6.05 | — | non décodée |
+| transfer_man.dat | 35 | 6.05 | transfer_offers | décodée (fork) : 12 253 offres ; clauses non lues |
 | used_player_data.dat | 35 | 5.22 | — | non décodée |
 | hall_of_fame.dat | 10 | 4.97 | — | non décodée |
 | tc_league_history_dt.cmt | 1 | 4.19 | — | non décodée |
-| shortlist_man.dat | 50 | 3.99 | — | non décodée |
+| shortlist_man.dat | 50 | 3.99 | player_rankings | décodée (fork) : 30 classements ; fin de section non lue |
 | comp_history_dt.cmt | 3 | 3.58 | — | non décodée |
 | person_record_manager.dat | 30 | 2.77 | — | non décodée |
 | starting_club_debt_db.cmt | 3729 | 2.75 | — | non décodée |

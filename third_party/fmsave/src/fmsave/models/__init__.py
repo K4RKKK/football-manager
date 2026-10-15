@@ -69,6 +69,7 @@ from fmsave.models.training import (
     TrainingSchedule,
     TrainingWeek,
 )
+from fmsave.models.transfers import PlayerRanking, TransferOffer
 
 __all__ = [
     "Ability",
@@ -111,6 +112,7 @@ __all__ = [
     "Personality",
     "Player",
     "PlayerMatchStats",
+    "PlayerRanking",
     "PlayerSeasonStats",
     "PlayerSuspension",
     "Positions",
@@ -141,6 +143,7 @@ __all__ = [
     "TrainingSchedule",
     "TrainingWeek",
     "Trait",
+    "TransferOffer",
     "TransferValueState",
     "TransferWindow",
 ]

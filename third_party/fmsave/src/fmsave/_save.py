@@ -49,6 +49,7 @@ from fmsave.models.staff import Staff, StaffList
 from fmsave.models.suspensions import Suspension
 from fmsave.models.tactics import SetPieceRoutine, Tactic
 from fmsave.models.training import MentoringGroup, TeamTraining
+from fmsave.models.transfers import PlayerRanking, TransferOffer
 from fmsave.name_maps import (
     _EMPTY_COMPETITION_NAMES,  # pyright: ignore[reportPrivateUsage]
     _normalized_competition_names,  # pyright: ignore[reportPrivateUsage]
@@ -148,6 +149,15 @@ from fmsave.readers.training import (
     unmanaged_training_stats,
     walk_training_blocks,
 )
+from fmsave.readers.transfers import (
+    KINDS,
+    POSITIONS,
+    SHORTLIST_SECTION,
+    STATUSES,
+    TRANSFER_SECTION,
+    read_player_rankings,
+    read_transfer_offers,
+)
 from fmsave.table import Table
 
 CLUBS_TABLE_CACHE_KEY = "table:clubs"
@@ -161,6 +171,8 @@ FIXTURES_TABLE_CACHE_KEY = "table:fixtures"
 TRANSFER_WINDOWS_TABLE_CACHE_KEY = "table:transfer_windows"
 LEAGUE_HISTORY_TABLE_CACHE_KEY = "table:league_history"
 CURRENCIES_TABLE_CACHE_KEY = "table:currencies"
+TRANSFER_OFFERS_TABLE_CACHE_KEY = "table:transfer_offers"
+PLAYER_RANKINGS_TABLE_CACHE_KEY = "table:player_rankings"
 LEAGUE_TABLES_TABLE_CACHE_KEY = "table:league_tables"
 COMPETITION_RULES_TABLE_CACHE_KEY = "table:competition_rules"
 PLAYER_MATCH_STATS_TABLE_CACHE_KEY = "table:player_match_stats"
@@ -837,6 +849,115 @@ class Save:
         with self._context.section(GAME_DB_SECTION) as game_db:
             rows = read_currencies(game_db, self._context.info.file_name)
         return Table(rows, CurrencyRow)
+
+    def transfer_offers(self) -> Table[TransferOffer]:
+        """Every offer of the transfer market the save keeps, in stored order (ClubDirector).
+
+        Read from `transfer_man`: bids, loan requests and moves between a club's own teams, with
+        their player, bidding and selling clubs, fee, state and dates. See `TransferOffer`.
+        Empty when the save has no such section.
+
+        Raises:
+            SaveClosedError: The save is closed.
+            ReaderCheckError: The section does not have the measured layout.
+        """
+        context = self._context
+        return context.cached(TRANSFER_OFFERS_TABLE_CACHE_KEY, self._read_transfer_offers)
+
+    def _read_transfer_offers(self) -> Table[TransferOffer]:
+        if TRANSFER_SECTION not in self._require_open().sections:
+            return Table((), TransferOffer)
+        with self._context.section(TRANSFER_SECTION) as section:
+            raw = read_transfer_offers(section, self._context.info.file_name)
+        uid_of, name_of = self._player_lookup()
+        club_of = self._team_club_lookup()
+        rows = []
+        for r in raw:
+            player_uid = uid_of.get(r.person_index) if r.person_index is not None else None
+            bidding = club_of(r.bidding_team_id)
+            selling = club_of(r.selling_team_id)
+            rows.append(TransferOffer(
+                index=r.index,
+                deal_id=r.deal_id,
+                kind_code=r.kind_code,
+                kind=KINDS.get(r.kind_code),
+                status_code=r.status_code,
+                status=STATUSES.get(r.status_code),
+                person_index=r.person_index,
+                player_uid=player_uid,
+                player_name=name_of.get(player_uid) if player_uid is not None else None,
+                bidding_team_id=r.bidding_team_id,
+                bidding_club_uid=bidding[0],
+                bidding_club_name=bidding[1],
+                selling_team_id=r.selling_team_id if selling[0] is not None else None,
+                selling_club_uid=selling[0],
+                selling_club_name=selling[1],
+                amount=r.amount,
+                offered_on=r.offered_on,
+                effective_on=r.effective_on,
+                deadline=r.deadline,
+                updated_on=r.updated_on,
+                second_team_id=r.second_team_id,
+            ))
+        return Table(rows, TransferOffer)
+
+    def player_rankings(self) -> Table[PlayerRanking]:
+        """The game's market rankings of players, by position, best first (ClubDirector).
+
+        Read from `shortlist_man`; see `PlayerRanking`. Empty when the save has no such
+        section.
+
+        Raises:
+            SaveClosedError: The save is closed.
+            ReaderCheckError: The section does not have the measured layout.
+        """
+        context = self._context
+        return context.cached(PLAYER_RANKINGS_TABLE_CACHE_KEY, self._read_player_rankings)
+
+    def _read_player_rankings(self) -> Table[PlayerRanking]:
+        if SHORTLIST_SECTION not in self._require_open().sections:
+            return Table((), PlayerRanking)
+        with self._context.section(SHORTLIST_SECTION) as section:
+            raw = read_player_rankings(section, self._context.info.file_name)
+        uid_of, name_of = self._player_lookup()
+        rows = []
+        for r in raw:
+            uid = uid_of.get(r.person_index)
+            rows.append(PlayerRanking(
+                table=r.table,
+                position=POSITIONS[r.table % len(POSITIONS)],
+                women=r.table >= len(POSITIONS),
+                rank=r.rank,
+                person_index=r.person_index,
+                player_uid=uid,
+                player_name=name_of.get(uid) if uid is not None else None,
+                score=r.score,
+            ))
+        return Table(rows, PlayerRanking)
+
+    def _player_lookup(self) -> tuple[dict[int, int], dict[int, str]]:
+        """Player uid by person index, and player name by uid."""
+        with self._context.section(GAME_DB_SECTION):
+            names = {player.uid: player.name for player in self.players()}
+            records = self._context.player_records()
+        return dict(zip(records.pindexes, records.uids, strict=True)), names
+
+    def _team_club_lookup(self):
+        """(club uid, club name) for a team id; (None, None) when the team is unknown."""
+        with self._context.section(GAME_DB_SECTION):
+            self.clubs()
+            club_index = self._context.club_index()
+
+        def lookup(team_id: int | None) -> tuple[int | None, str | None]:
+            if team_id is None:
+                return None, None
+            found = club_index.team_to_club.get(team_id) or club_index.affiliate_team_to_club.get(team_id)
+            if found is None:
+                return None, None
+            club = club_index.club_by_uid.get(found[0])
+            return found[0], club.name if club is not None else None
+
+        return lookup
 
     def injury_types(self) -> Table[InjuryType]:
         """Every injury the game can hand out that the save names, in stored order.

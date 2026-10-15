@@ -65,3 +65,18 @@
     relancé avec un journal (`%LOCALAPPDATA%\ClubDirectorAI\llm.log`) pour en trouver la cause.
 20. **Messages** : appels, vidéo et e-mail du téléphone sont décoratifs ; le directeur ne travaille pas
     entre deux messages (pas de tâche de fond) et n'agit pas dans le jeu (voir 12 et 14).
+21. **Marché des transferts** : les offres de la sauvegarde sont lues (club acheteur, vendeur,
+    montant, dates). Seuls les états « conclue » (0x14) et « échouée » (0x0F) sont établis ; les autres
+    codes sont affichés « en cours », « sans suite » (échéance passée) ou « accord pour plus tard »
+    (date d'effet future) : une offre refusée par le club vendeur peut apparaître « en cours ». Les
+    clauses (bonus, pourcentages) en fin d'enregistrement ne sont pas décodées. Les membres du staff
+    recrutés passent par les mêmes enregistrements sans être identifiés.
+22. **Prix, plafonds, salaires proposés** : estimations à règles explicites (valeur du jeu, contrat,
+    âge, rang au marché, prix réellement payés pour des joueurs comparables) ; ce ne sont pas les prix
+    que l'IA du jeu accepterait. Les budgets des clubs sont ceux du dernier mois de finances lu.
+23. **Listes de recrutement des clubs** : `shortlist_man` contient les classements du marché tenus
+    par le jeu, pas les listes de chaque club ; la fin de la section (probablement le staff) n'est
+    pas lue. L'intérêt « prouvé » d'un club = une offre enregistrée.
+24. **Délégation à Cagigao dans FM26** : le directeur explique quoi déléguer (responsabilités du
+    staff, négociation d'une offre, liste des transferts) ; il ne voit pas ces réglages dans la
+    sauvegarde et les intitulés exacts des écrans sont à vérifier dans le jeu.

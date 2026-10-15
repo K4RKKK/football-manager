@@ -52,3 +52,19 @@ taux f32 par rapport à l'unité de stockage, historique annuel (u8 1, u16 anné
 entrée vide), puis index 0, 1, 2… (vérifié) et 9 octets non identifiés. La livre sterling a le taux
 1,0 : les montants de fmsave sont stockés en livres ; l'euro vaut 1,15713, le facteur mesuré auparavant
 entre les montants stockés et les euros affichés à l'écran. Tests : `tests/test_currencies.py`.
+
+### 6. Marché des transferts (`readers/transfers.py`, `Save.transfer_offers()`, `Save.player_rankings()`)
+`transfer_man` : tête de 9 octets, nombre d'enregistrements (u32), puis enregistrements numérotés
+0, 1, 2… de longueur variable (clauses en fin d'enregistrement). Champs établis : type (2 transfert,
+3 prêt, 10 mouvement entre équipes du même club ; 4, 7, 9 rares et non identifiés), personne (index
+de personne + 1 : joueur ou membre du staff), équipe acheteuse (+8), montant (+17, unité stockée),
+état (+29 : 0x14 conclu, 0x0F échoué ; autres codes non identifiés), équipe du joueur au moment de
+l'offre (+69), dates (+56 échéance, +60 effet, +75 offre, +80 dernier changement ; jour de l'année
+sur les 9 bits bas). Vérifié sur la carrière de l'utilisateur (Batrakov Lokomotiv → Roma 12,96 M£
+conclu le 31/07, Gadou Salzburg → Roma, offres reçues pour Hermoso, Rensch…), sur 1 855 des 1 857
+transferts conclus (le joueur appartient au club acheteur) et 505 des 532 prêts conclus (club
+prêteur = club du joueur à l'offre).
+`shortlist_man` : tête de 8 octets puis 30 classements (u32 nombre, paires u32 personne + 1, u32
+note), du meilleur au moins bon : 14 postes dans l'ordre du jeu et les jeunes talents, hommes puis
+femmes. Vérifié par les postes des joueurs de chaque classement. La suite de la section (autre
+structure, probablement le staff) n'est pas lue. Tests : `tests/test_transfers.py`.

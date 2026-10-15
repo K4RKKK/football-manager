@@ -95,7 +95,7 @@ def _status(model: str, field: str) -> Confidence:
 
 # À incrémenter quand l'adaptateur lit de nouveaux champs : une sauvegarde déjà importée par une
 # révision antérieure est alors relue (sinon les nouveaux champs resteraient vides).
-READER_REVISION = 8  # 3 : statuts des clubs ; 4 : miroir ; 5 : noms ; 6 : historique ; 7 : rattachement par l'index ; 8 : devises
+READER_REVISION = 9  # 3 : statuts des clubs ; 4 : miroir ; 5 : noms ; 6 : historique ; 7 : rattachement par l'index ; 8 : devises ; 9 : marché des transferts
 
 
 class FmsaveSaveReader:

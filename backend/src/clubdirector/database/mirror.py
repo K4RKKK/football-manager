@@ -58,6 +58,8 @@ MIRRORED_READERS: dict[str, type] = {
     "facilities": fmsave.ClubFacilities,
     "league_history": fmsave.LeagueHistoryRow,  # fork ClubDirector
     "currencies": fmsave.CurrencyRow,  # fork ClubDirector
+    "transfer_offers": fmsave.TransferOffer,  # fork ClubDirector : marché des transferts (offres, prêts)
+    "player_rankings": fmsave.PlayerRanking,  # fork ClubDirector : classements du marché par poste
 }
 # Tables produites par ClubDirector à partir de la sauvegarde, hors lecteurs fmsave d'origine.
 EXTRA_TABLES: dict[str, str] = {
@@ -66,7 +68,8 @@ EXTRA_TABLES: dict[str, str] = {
 }
 ALL_TABLES: tuple[str, ...] = (*MIRRORED_READERS, *EXTRA_TABLES)
 # Colonnes indexées quand elles existent (recherches courantes des outils).
-INDEXED_COLUMNS = ("uid", "id", "database_id", "run", "player_uid", "club_uid", "competition_id", "team_id", "date")
+INDEXED_COLUMNS = ("uid", "id", "database_id", "run", "player_uid", "club_uid", "competition_id", "team_id", "date",
+                   "bidding_club_uid", "selling_club_uid")
 
 
 @dataclass
