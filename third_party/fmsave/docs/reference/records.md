@@ -56,6 +56,8 @@ their own pages: see {doc}`table` and {doc}`enums`.
 .. autoclass:: fmsave.LeagueTableMatch
 .. autoclass:: fmsave.LeagueTableRow
 .. autoclass:: fmsave.LeagueHistoryRow
+.. autoclass:: fmsave.CurrencyRow
+.. autoclass:: fmsave.CurrencyRate
 .. autoclass:: fmsave.CompetitionRules
 .. autoclass:: fmsave.RulesRound
 .. autoclass:: fmsave.PlayerMatchStats

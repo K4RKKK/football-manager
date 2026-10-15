@@ -13,8 +13,11 @@
    inconnue et l'assistant le dit.
 3. **Scores partiels** : certains matchs joués n'ont pas de score décodable ; ils sont affichés
    « score non disponible ». Un score connu n'est jamais écrasé par une absence de score.
-4. **Unité monétaire** : la sauvegarde stocke l'argent dans une unité interne. Sans étalonnage,
-   aucune comparaison avec un montant en euros n'est faite (outils en erreur explicite).
+4. **Unité monétaire** : réglé. La sauvegarde stocke l'argent en livres (taux 1,0 de sa propre
+   table des devises, 173 devises lues par `Save.currencies()`). Les montants sont convertis avec le
+   taux de l'euro lu dans la même sauvegarde (1,15713 sur la carrière AS Roma), à chaque
+   synchronisation. Un étalonnage manuel reste prioritaire. Reste à confronter quelques valeurs à
+   l'écran du jeu (l'ancien relevé à l'écran donnait déjà ≈ 1,157).
 5. **Brouillard de recrutement** non reproductible : les attributs visibles affichés pour les joueurs
    d'autres clubs sont les valeurs réelles. CA/PA, attributs cachés et personnalité restent masqués
    hors mode avancé confirmé.

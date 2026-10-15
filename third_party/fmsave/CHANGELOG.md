@@ -4,6 +4,10 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ## [Unreleased]
 
+### Added
+
+- ClubDirector: `Save.currencies()` reads the currency table of `game_db`: name, symbol, rate against the stored money unit and yearly history. The pound has rate 1.0, so a stored amount times the euro's rate is the amount in euros.
+
 ### Fixed
 
 - ClubDirector: a team block whose tactic count is led by the flag byte 1 skips the two extra bytes that follow it instead of failing the whole tactics read.

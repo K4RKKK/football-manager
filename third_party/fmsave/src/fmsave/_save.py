@@ -30,6 +30,7 @@ from fmsave.models.affiliates import AffiliateGroup
 from fmsave.models.clubs import Club
 from fmsave.models.competitions import Competition, Stage
 from fmsave.models.contracts import Contract
+from fmsave.models.currencies import CurrencyRow
 from fmsave.models.facilities import ClubFacilities
 from fmsave.models.finances import FinanceMonth, Sponsorship
 from fmsave.models.fixtures import Fixture
@@ -68,6 +69,7 @@ from fmsave.readers.affiliates import (
     find_affiliate_layout,
     walk_affiliate_groups,
 )
+from fmsave.readers.currencies import read_currencies
 from fmsave.readers.facilities import find_facility_layout, read_club_facilities
 from fmsave.readers.finances import find_finance_layouts, read_club_finances
 from fmsave.readers.fixtures import build_fixtures_with_offsets
@@ -158,6 +160,7 @@ COMPETITIONS_TABLE_CACHE_KEY = "table:competitions"
 FIXTURES_TABLE_CACHE_KEY = "table:fixtures"
 TRANSFER_WINDOWS_TABLE_CACHE_KEY = "table:transfer_windows"
 LEAGUE_HISTORY_TABLE_CACHE_KEY = "table:league_history"
+CURRENCIES_TABLE_CACHE_KEY = "table:currencies"
 LEAGUE_TABLES_TABLE_CACHE_KEY = "table:league_tables"
 COMPETITION_RULES_TABLE_CACHE_KEY = "table:competition_rules"
 PLAYER_MATCH_STATS_TABLE_CACHE_KEY = "table:player_match_stats"
@@ -815,6 +818,25 @@ class Save:
         with self._context.section(LEAGUE_HISTORY_SECTION) as section:
             rows = read_league_history(section, self._context.info.file_name)
         return Table(rows, LeagueHistoryRow)
+
+    def currencies(self) -> Table[CurrencyRow]:
+        """Every currency of the save's database with its rate, in stored order (ClubDirector).
+
+        Money fields are stored in the currency whose `rate` is 1.0; multiply by another
+        currency's rate to display them in it. See `CurrencyRow`. Empty when `game_db` does not
+        name the base currency.
+
+        Raises:
+            SaveClosedError: The save is closed.
+            ReaderCheckError: The currency table does not have the measured layout.
+        """
+        context = self._context
+        return context.cached(CURRENCIES_TABLE_CACHE_KEY, self._read_currencies)
+
+    def _read_currencies(self) -> Table[CurrencyRow]:
+        with self._context.section(GAME_DB_SECTION) as game_db:
+            rows = read_currencies(game_db, self._context.info.file_name)
+        return Table(rows, CurrencyRow)
 
     def injury_types(self) -> Table[InjuryType]:
         """Every injury the game can hand out that the save names, in stored order.

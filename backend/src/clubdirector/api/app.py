@@ -32,7 +32,7 @@ from clubdirector.game.discovery import discover_saves
 from clubdirector.game.fmsave_reader import FmsaveSaveReader
 from clubdirector.game.snapshot import SaveBusyError, prune_snapshots
 from clubdirector.memory.store import ConversationStore
-from clubdirector.money import calibrate
+from clubdirector.money import calibrate, from_save_table
 from clubdirector.preferences import Preferences, PreferenceStore
 from clubdirector.security.secrets import load_or_create_token, redact
 from clubdirector.sync.service import SyncService
@@ -109,7 +109,16 @@ class AppState:
             if prefs.active_career_id is None:
                 raise
             ctx = self.repo.context(None)
+        self._apply_save_currency(prefs, ctx)
         return ToolContext(self.engine, self.repo, ctx, prefs)
+
+    def _apply_save_currency(self, prefs: Preferences, ctx) -> None:
+        """Conversion des montants par la table des devises de la sauvegarde, sauf étalonnage manuel."""
+        if prefs.currency.manual:
+            return
+        row = self.repo.currency(ctx, prefs.display_currency)
+        if row and row.get("rate"):
+            prefs.currency = from_save_table(row["name"], row.get("symbol") or "", float(row["rate"]))
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -160,8 +169,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         careers = state.repo.list_careers()
         live = state.bridge.status()
         ctx = None
+        currency = state.prefs.currency
         try:
-            ctx = state.tool_context().ctx
+            t = state.tool_context()
+            ctx, currency = t.ctx, t.prefs.currency
         except CareerNotFound:
             pass
         return {
@@ -175,6 +186,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "monthly_budget_usd": settings.ai.monthly_budget_usd},
             "auto_sync": state.watcher.as_dict(),
             "director": _director_status(),
+            "currency": currency.model_dump(),
             "save_dirs": [str(d) for d in settings.save_dirs],
             "data_dir": str(settings.home),
         }

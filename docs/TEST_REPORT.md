@@ -76,6 +76,14 @@ Défauts corrigés pendant les tests : xA non disponible (outil étendu à 104 s
 implémenté), question fait + avis traitée sans IA (routage), préférences avec BOM.
 Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3).
 
+### Session 2 (suite) — devises
+| Test | Résultat | Détail |
+|---|---|---|
+| `Save.currencies()` sur la vraie sauvegarde | ✅ | 173 devises, index 0-172 vérifiés, 0,02 s ; livre = 1,0 ; euro = 1,15713 (« € ») |
+| Conversion automatique (`/api/status`, outils) | ✅ | budget transferts 21,9 M€, marge salariale 50 k€/sem., Lamine Yamal 312,4 M€ |
+| fmsave (fork) `uv run pytest` | ✅ | 2 970 réussis, 1 échec d'environnement (liens symboliques) |
+| `pytest` backend | ✅ | 112 / 112 |
+
 ### Session 2 (suite) — intégration dans FM26
 | Test | Résultat | Détail |
 |---|---|---|

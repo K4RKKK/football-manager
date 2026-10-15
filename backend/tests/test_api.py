@@ -64,6 +64,23 @@ def test_currency_calibration_and_preferences(client, game_dir):
     assert client.put("/api/preferences", json=prefs).json()["advanced_mode_confirmed"] is False
 
 
+def test_amounts_use_the_save_currency_table_unless_calibrated_by_hand(client, game_dir):
+    from sqlalchemy import text
+
+    career = client.post("/api/sync", json={"path": str(game_dir / SCORED.name)}).json()["career_id"]
+    assert client.get("/api/status").json()["currency"]["factor"] is None  # fixture : pas de table des devises
+    with client.app.state.cd.engine.begin() as c:
+        c.execute(text("CREATE TABLE IF NOT EXISTS fm_currencies (career_id INTEGER, snapshot_id INTEGER, "
+                       "name TEXT, short_name TEXT, symbol TEXT, rate REAL)"))
+        c.execute(text("INSERT INTO fm_currencies (career_id, snapshot_id, name, short_name, symbol, rate) "
+                       "VALUES (:k, 0, 'European Euro', 'Euro', '€', 1.15713)"), {"k": career})
+    cur = client.get("/api/status").json()["currency"]
+    assert cur["source"] == "sauvegarde" and cur["factor"] == 1.15713 and cur["symbol"] == "€"
+    client.post("/api/currency/calibrate", json={"player_uid": 900001, "displayed_value": 9_000_000})
+    cur = client.get("/api/status").json()["currency"]
+    assert cur["source"] == "manuel" and cur["factor"] == 2.0
+
+
 def test_plugin_heartbeat_updates_live_status(client):
     assert client.get("/api/plugin/status").json()["state"] == "absent"
     r = client.post("/api/plugin/heartbeat", json={"plugin_version": "0.1.0", "game_version": "26.3.2",

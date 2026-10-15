@@ -38,6 +38,7 @@ from fmsave.models.contracts import (
     ContractType,
     SquadStatus,
 )
+from fmsave.models.currencies import CurrencyRate, CurrencyRow
 from fmsave.models.facilities import ClubFacilities, CorporateFacilities
 from fmsave.models.finances import FinanceMonth, Sponsorship, SponsorType
 from fmsave.models.fixtures import Fixture
@@ -119,6 +120,8 @@ __all__ = [
     "ContractType",
     "CorporateFacilities",
     "CorruptSaveError",
+    "CurrencyRate",
+    "CurrencyRow",
     "FieldStatus",
     "FinanceMonth",
     "Fixture",

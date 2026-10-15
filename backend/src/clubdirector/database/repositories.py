@@ -168,6 +168,19 @@ class Repository:
             )
             return {r[0]: r[1] for r in rows}
 
+    def currency(self, ctx: CareerContext, name: str) -> dict | None:
+        """Devise de la table du jeu (miroir `fm_currencies`) : nom, symbole, taux par unité stockée."""
+        try:
+            with self.engine.connect() as c:
+                r = c.execute(
+                    text("SELECT name, short_name, symbol, rate FROM fm_currencies WHERE career_id = :k "
+                         "AND (name = :n OR short_name = :n) ORDER BY (name = :n) DESC LIMIT 1"),
+                    {"k": ctx.career_id, "n": name},
+                ).mappings().first()
+        except Exception:  # noqa: BLE001 — table absente avant la première synchronisation r8
+            return None
+        return dict(r) if r else None
+
     def player(self, ctx: CareerContext, uid: int) -> dict | None:
         with self.engine.connect() as c:
             r = c.execute(

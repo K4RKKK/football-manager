@@ -35,6 +35,8 @@ class Preferences(BaseModel):
     persona: str = "equilibre"
     director_name: str = "Directeur sportif"
     currency: CurrencyCalibration = Field(default_factory=CurrencyCalibration)
+    # Devise d'affichage (nom anglais de la table des devises du jeu) ; taux lu à chaque synchronisation.
+    display_currency: str = "European Euro"
     limits: MercatoLimits = Field(default_factory=MercatoLimits)
     silent_during_matches: bool = True
     active_career_id: int | None = None

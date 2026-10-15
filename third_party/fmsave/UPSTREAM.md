@@ -45,3 +45,10 @@ et 2024/25 : positions, V/N/D, buts, points identiques) et arithmétiquement sur
 connues. **Ouvert** : la section ne stocke pas le club d'une série et `tc_league_history_ls` n'est
 qu'une pagination ; ClubDirector rattache une série à un club seulement par recoupement unique.
 Tests : `tests/test_league_history.py`.
+
+### 5. Table des devises (`readers/currencies.py`, `Save.currencies()`)
+`game_db` contient 173 devises contiguës : nom, nom court, chaîne vide, symbole (souvent vide),
+taux f32 par rapport à l'unité de stockage, historique annuel (u8 1, u16 année, f32 taux ; année 0 =
+entrée vide), puis index 0, 1, 2… (vérifié) et 9 octets non identifiés. La livre sterling a le taux
+1,0 : les montants de fmsave sont stockés en livres ; l'euro vaut 1,15713, le facteur mesuré auparavant
+entre les montants stockés et les euros affichés à l'écran. Tests : `tests/test_currencies.py`.

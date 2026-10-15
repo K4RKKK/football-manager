@@ -57,6 +57,7 @@ MIRRORED_READERS: dict[str, type] = {
     "set_pieces": fmsave.SetPieceRoutine,
     "facilities": fmsave.ClubFacilities,
     "league_history": fmsave.LeagueHistoryRow,  # fork ClubDirector
+    "currencies": fmsave.CurrencyRow,  # fork ClubDirector
 }
 # Tables produites par ClubDirector à partir de la sauvegarde, hors lecteurs fmsave d'origine.
 EXTRA_TABLES: dict[str, str] = {
