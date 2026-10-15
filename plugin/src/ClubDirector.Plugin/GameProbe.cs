@@ -20,7 +20,7 @@ namespace ClubDirector.Plugin
                 {
                     if (doc == null || doc.gameObject == null || doc.gameObject.name != "PanelManager") continue;
                     var root = doc.rootVisualElement;
-                    var menu = root?.Q("Menu");
+                    var menu = root?.Q("Menu", (string)null); // surcharge explicite : Q(string, string) vs Q(string, Il2CppStringArray)
                     if (menu == null || menu.childCount == 0) return;
                     LastScreenName = menu.ElementAt(0)?.name;
                     return;
