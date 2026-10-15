@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClubDirector AI — Diagnostic</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#0B141B;--surface:#13212B;--surface2:#192A34;--border:#263C45;
+  --green:#29C77B;--green2:#65E5A5;--text:#F2F6F8;--muted:#9BAEB8;--warn:#E6B85D;--err:#E36E75;
+  --radius:10px;--font:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 var(--font)}
+a{color:var(--green2)}
+.app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+nav{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 10px;gap:2px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--green),#15724a);display:grid;place-items:center;font-weight:700;color:#06120c}
+.brand b{display:block;font-size:14px}.brand small{color:var(--muted);font-size:11px}
+nav button{all:unset;cursor:pointer;padding:9px 12px;border-radius:8px;color:var(--muted);transition:background .15s,color .15s}
+nav button:hover{background:var(--surface2);color:var(--text)}
+nav button.active{background:var(--surface2);color:var(--text);box-shadow:inset 3px 0 0 var(--green)}
+nav .spacer{flex:1}
+.badge-dev{margin:8px;padding:8px 10px;border:1px dashed var(--warn);border-radius:8px;color:var(--warn);font-size:11px}
+main{overflow:auto;padding:22px 26px}
+header.top{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+header.top h1{font-size:20px;margin:0;flex:1}
+.pill{padding:4px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:12px}
+.pill.ok{color:var(--green2);border-color:#1f5a40}.pill.warn{color:var(--warn);border-color:#6b5426}.pill.err{color:var(--err);border-color:#6b2d32}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;animation:in .25s ease}
+.card h3{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.big{font-size:22px;font-weight:600}
+.muted{color:var(--muted)}.small{font-size:12px}
+.lim{color:var(--warn);font-size:12px;margin-top:6px}
+.err{color:var(--err)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12px;position:sticky;top:0;background:var(--surface)}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--surface2)}
+.tablewrap{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface)}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit}
+textarea{width:100%;resize:vertical;min-height:52px}
+button.btn{all:unset;cursor:pointer;background:var(--green);color:#06120c;font-weight:600;padding:8px 14px;border-radius:8px}
+button.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+button.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.chat{display:flex;flex-direction:column;height:calc(100vh - 120px)}
+.msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:10px}
+.msg{max-width:78%;padding:10px 13px;border-radius:12px;white-space:pre-wrap;animation:in .2s ease}
+.msg.user{align-self:flex-end;background:#1d4a36;border:1px solid #23613f}
+.msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--border)}
+.msg .meta{margin-top:6px;font-size:11px;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{all:unset;cursor:pointer;font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--border);color:var(--muted)}
+.chip:hover{color:var(--text);border-color:var(--green)}
+.attrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 16px}
+.attr{display:flex;justify-content:space-between;border-bottom:1px dashed var(--border);padding:2px 0}
+.v-hi{color:var(--green2);font-weight:600}.v-lo{color:var(--err)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal .card{max-width:860px;width:100%;max-height:88vh;overflow:auto}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;overflow:auto;max-height:50vh;font-size:12px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+@keyframes in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (max-width:760px){.app{grid-template-columns:1fr}nav{flex-direction:row;overflow:auto;padding:8px}nav .spacer,.brand small,.badge-dev{display:none}main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav id="nav">
+    <div class="brand"><div class="logo">CD</div><div><b>Directeur sportif IA</b><small>ClubDirector AI</small></div></div>
+    <button data-page="dashboard" class="active">Tableau de bord</button>
+    <button data-page="chat">Discussion IA</button>
+    <button data-page="squad">Mon effectif</button>
+    <button data-page="recruit">Recrutement</button>
+    <button data-page="matches">Historique</button>
+    <button data-page="tools">Outils (diagnostic)</button>
+    <button data-page="settings">Paramètres</button>
+    <div class="spacer"></div>
+    <div class="badge-dev">Interface de diagnostic hors jeu. Toutes les données proviennent de la sauvegarde synchronisée.</div>
+  </nav>
+  <main id="main"></main>
+</div>
+<div class="modal" id="modal"><div class="card" id="modalBody"></div></div>
+<script>
+const TOKEN = "__CLUBDIRECTOR_TOKEN__";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const frDate = iso => iso ? iso.slice(0,10).split("-").reverse().join("/") : "—";
+async function api(path, opts = {}) {
+  const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json", "X-ClubDirector-Token": TOKEN, ...(opts.headers || {})}});
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(body.detail || r.statusText), {status: r.status, body});
+  return body;
+}
+// Montant : valeur en devise si étalonnée, sinon nombre brut + mention discrète (jamais converti au hasard).
+const money = (m, big = false) => {
+  if (!m || m.brut === null || m.brut === undefined) return `<span class="muted">non disponible</span>`;
+  if (m.affiche !== null && m.affiche !== undefined) return esc(m.texte);
+  const n = Number(m.brut).toLocaleString("fr-FR");
+  return big ? `${n}<div class="muted small" style="font-weight:400">unité brute de la sauvegarde — devise non étalonnée</div>` : `${n} <span class="muted small">(brut)</span>`;
+};
+const lims = arr => (arr && arr.length) ? arr.map(l => `<div class="lim">⚠ ${esc(l)}</div>`).join("") : "";
+const res = (r, fn) => r.ok ? fn(r.data) + lims(r.limitations) : `<div class="err small">${esc(r.error)}</div>`;
+let status = null, conversationId = null;
+
+async function refreshStatus() {
+  try { status = await api("/api/status"); } catch (e) { status = null; }
+}
+function header(title) {
+  const a = status?.active, live = status?.live_plugin;
+  const liveCls = !live || live.state === "absent" ? "warn" : live.state === "incompatible" ? "err" : "ok";
+  return `<header class="top"><h1>${esc(title)}</h1>
+    ${a ? `<span class="pill ok">${esc(a.club_name || "Sans club")}</span><span class="pill">Date du jeu : ${frDate(a.game_date)}</span>` : `<span class="pill warn">Aucune carrière synchronisée</span>`}
+    <span class="pill ${liveCls}" title="${esc(live?.detail || "")}">Plugin FM26 : ${esc(live?.state || "absent")}</span></header>`;
+}
+function noCareer() {
+  return `<div class="card empty">Aucune carrière synchronisée.<br><br>Allez dans <b>Paramètres</b> et synchronisez une sauvegarde FM26 (.fm).</div>`;
+}
+
+// ---------------------------------------------------------------- pages
+const pages = {
+  async dashboard() {
+    if (!status?.active) return header("Tableau de bord") + noCareer();
+    const d = await api("/api/dashboard");
+    const m = d.last_matches, n = d.next_matches;
+    const matchLine = x => `${frDate(x.date)} — ${esc(x.domicile)} <b>${x.score_disponible ? esc(x.score) : "score n.d."}</b> ${esc(x.exterieur)}`;
+    return header("Tableau de bord") + `<div class="grid">
+      <div class="card"><h3>Club</h3>${res(d.club, c => `<div class="big">${esc(c.club)}</div><div class="muted">${c.effectif} joueurs · âge moyen ${c.age_moyen ?? "—"}</div>${c.classement ? `<div style="margin-top:6px">Classement : <b>${c.classement.position}e</b> · ${c.classement.points} pts</div>` : ""}`)}</div>
+      <div class="card"><h3>Saison</h3>${res(d.save, s => `<div class="big">${esc(s.saison)}</div><div class="muted small">Source saison : ${esc(s.saison_source)} · build ${esc(s.build_jeu)}<br>Dernière synchro : ${esc((s.derniere_synchro||"").slice(0,19).replace("T"," "))} (heure réelle)</div>`)}</div>
+      <div class="card"><h3>Budget transferts</h3>${res(d.transfer_budget, b => `<div class="big">${money(b.restant, true)}</div><div class="muted small">restant · alloué ${money(b.alloue)} · ${frDate(b.mois)}</div>`)}</div>
+      <div class="card"><h3>Budget salarial (hebdo)</h3>${res(d.wage_budget, b => `<div class="big">${money(b.marge_hebdo, true)}</div><div class="muted small">marge · budget ${money(b.budget_hebdo)} · masse ${money(b.masse_hebdo)}</div>`)}</div>
+      <div class="card"><h3>Derniers résultats</h3>${res(m, rows => rows.length ? rows.map(x => `<div>${matchLine(x)}</div>`).join("") : `<div class="muted">Aucun match</div>`)}</div>
+      <div class="card"><h3>Prochains matchs</h3>${res(n, rows => rows.length ? rows.map(x => `<div>${frDate(x.date)} — ${esc(x.domicile)} vs ${esc(x.exterieur)}</div>`).join("") : `<div class="muted">Aucun match à venir</div>`)}</div>
+      <div class="card"><h3>Alertes du directeur sportif</h3>${res(d.alerts, rows => rows.length ? rows.map(a => `<div class="small" style="margin-bottom:6px"><span class="pill ${a.gravite === "haute" ? "err" : "warn"}">${esc(a.gravite)}</span> ${esc(a.message)}</div>`).join("") : `<div class="muted">Aucune alerte</div>`)}</div>
+      <div class="card"><h3>Contrats à surveiller</h3>${res(d.contracts, rows => rows.length ? rows.map(c => `<div class="small">${esc(c.message)}</div>`).join("") : `<div class="muted">Aucun contrat à moins de 18 mois</div>`)}</div>
+    </div>`;
+  },
+
+  async chat() {
+    const sugg = ["Combien avons-nous de défenseurs centraux ?", "Qui est notre meilleur buteur ?", "Quel était notre score il y a une semaine ?",
+      "Où en est-on au classement ?", "Quel est notre budget transferts ?", "Fais-moi un bilan complet de notre effectif."];
+    setTimeout(() => {
+      const send = async (q) => {
+        if (!q.trim()) return;
+        const box = $("#msgs"); $("#q").value = "";
+        box.insertAdjacentHTML("beforeend", `<div class="msg user">${esc(q)}</div><div class="msg bot" id="pending"><span class="muted">Le directeur sportif consulte les données…</span></div>`);
+        box.scrollTop = box.scrollHeight;
+        try {
+          const a = await api("/api/chat", {method: "POST", body: JSON.stringify({question: q, conversation_id: conversationId})});
+          conversationId = a.conversation_id;
+          const tools = a.tools.map(t => `${t.ok ? "✓" : "✗"} ${t.tool}`).join(", ");
+          $("#pending").outerHTML = `<div class="msg bot">${esc(a.text)}${lims(a.limitations)}<div class="meta">Route : ${esc(a.route)}${a.provider ? " · " + esc(a.provider) : ""}${tools ? " · outils : " + esc(tools) : ""}${a.cost_usd ? " · coût " + a.cost_usd.toFixed(4) + " $" : ""}</div></div>`;
+        } catch (e) { $("#pending").outerHTML = `<div class="msg bot err">${esc(e.message)}</div>`; }
+        box.scrollTop = box.scrollHeight;
+      };
+      $("#send").onclick = () => send($("#q").value);
+      $("#q").onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send($("#q").value); } };
+      document.querySelectorAll(".chip").forEach(c => c.onclick = () => send(c.textContent));
+      $("#newconv").onclick = () => { conversationId = null; $("#msgs").innerHTML = ""; };
+    });
+    if (!status?.active) return header("Discussion IA") + noCareer();
+    const ai = status.ai;
+    return header("Discussion IA") + `<div class="chat">
+      <div class="row small muted">Moteurs IA : ${ai.providers.length ? ai.providers.map(p => `${esc(p.name)} (niveau ${p.tier})`).join(", ") : "aucun — seules les questions factuelles (niveau 0) sont disponibles"} · mode ${esc(ai.mode)}
+        <button class="btn ghost" id="newconv" style="margin-left:auto">Nouvelle conversation</button></div>
+      <div class="msgs" id="msgs"></div>
+      <div class="chips">${sugg.map(s => `<button class="chip">${esc(s)}</button>`).join("")}</div>
+      <div class="row" style="flex-wrap:nowrap"><textarea id="q" placeholder="Écrivez à votre directeur sportif… (Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne)"></textarea><button class="btn" id="send">Envoyer</button></div>
+    </div>`;
+  },
+
+  async squad() {
+    if (!status?.active) return header("Mon effectif") + noCareer();
+    const rows = await api("/api/squad");
+    setTimeout(() => document.querySelectorAll("tr.click").forEach(tr => tr.onclick = () => openPlayer(tr.dataset.uid)));
+    return header("Mon effectif") + (rows.length ? `<div class="tablewrap"><table><thead><tr><th>Nom</th><th>Âge</th><th>Postes</th><th>Valeur</th><th>Salaire</th><th>Fin de contrat</th><th>Statut</th></tr></thead><tbody>
+      ${rows.map(p => `<tr class="click" data-uid="${p.uid}"><td>${esc(p.nom)}</td><td>${p.age ?? "—"}</td><td>${esc(p.postes.join(", "))}</td><td>${money(p.valeur)}</td><td>${money(p.salaire)}</td><td>${frDate(p.fin_contrat)}</td><td>${esc(p.statut_effectif || "—")}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="card empty">Effectif vide dans la sauvegarde.</div>`);
+  },
+
+  async recruit() {
+    if (!status?.active) return header("Recrutement") + noCareer();
+    setTimeout(() => {
+      const run = async (offset = 0) => {
+        const p = new URLSearchParams();
+        for (const k of ["position", "min_age", "max_age", "name"]) { const v = $("#f_" + k).value.trim(); if (v) p.set(k, v); }
+        p.set("limit", 50); p.set("offset", offset);
+        try {
+          const r = await api("/api/players?" + p);
+          $("#results").innerHTML = `<div class="muted small" style="margin-bottom:6px">${r.total} joueur(s) — affichage ${offset + 1}-${offset + r.items.length}</div>
+          <div class="tablewrap"><table><thead><tr><th>Nom</th><th>Âge</th><th>Club</th><th>Postes</th><th>Valeur</th><th>Fin de contrat</th></tr></thead><tbody>
+          ${r.items.map(x => `<tr class="click" data-uid="${x.uid}"><td>${esc(x.nom)}</td><td>${x.age ?? "—"}</td><td>${esc(x.club || "Libre")}</td><td>${esc(x.postes.join(", "))}</td><td>${money(x.valeur)}</td><td>${frDate(x.fin_contrat)}</td></tr>`).join("")}
+          </tbody></table></div>
+          <div class="row" style="margin-top:8px">${offset > 0 ? `<button class="btn ghost" id="prev">Précédent</button>` : ""}${offset + r.items.length < r.total ? `<button class="btn ghost" id="next">Suivant</button>` : ""}</div>`;
+          document.querySelectorAll("#results tr.click").forEach(tr => tr.onclick = () => openPlayer(tr.dataset.uid));
+          if ($("#prev")) $("#prev").onclick = () => run(Math.max(0, offset - 50));
+          if ($("#next")) $("#next").onclick = () => run(offset + 50);
+        } catch (e) { $("#results").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+      };
+      $("#go").onclick = () => run(0);
+    });
+    return header("Recrutement") + `<div class="card" style="margin-bottom:14px"><div class="row">
+      <input id="f_name" placeholder="Nom"><input id="f_position" placeholder="Poste (DC, ailier droit…)">
+      <input id="f_min_age" type="number" placeholder="Âge min" style="width:100px"><input id="f_max_age" type="number" placeholder="Âge max" style="width:100px">
+      <button class="btn" id="go">Rechercher</button></div>
+      <div class="lim">⚠ Brouillard de recrutement non appliqué : la connaissance de vos recruteurs n'est pas lisible dans la sauvegarde.</div></div><div id="results"></div>`;
+  },
+
+  async matches() {
+    if (!status?.active) return header("Historique") + noCareer();
+    const r = await api("/api/tools/get_recent_matches", {method: "POST", body: JSON.stringify({args: {limit: 50}})});
+    return header("Historique des matchs") + res(r, rows => rows.length ? `<div class="tablewrap"><table><thead><tr><th>Date (jeu)</th><th>Domicile</th><th>Score</th><th>Extérieur</th><th>Résultat</th><th>Tour</th></tr></thead><tbody>
+      ${rows.map(x => `<tr><td>${frDate(x.date)}</td><td>${esc(x.domicile)}</td><td>${x.score_disponible ? `<b>${esc(x.score)}</b>` : `<span class="muted">non disponible</span>`}</td><td>${esc(x.exterieur)}</td><td>${esc(x.resultat || "—")}</td><td>${esc(x.tour || "—")}</td></tr>`).join("")}
+      </tbody></table></div>` : `<div class="card empty">Aucun match joué.</div>`);
+  },
+
+  async tools() {
+    const tools = await api("/api/tools");
+    setTimeout(() => {
+      $("#run").onclick = async () => {
+        let args = {};
+        try { args = JSON.parse($("#targs").value || "{}"); } catch { $("#tout").textContent = "JSON invalide"; return; }
+        const r = await api("/api/tools/" + $("#tname").value, {method: "POST", body: JSON.stringify({args})}).catch(e => ({error: e.message}));
+        $("#tout").textContent = JSON.stringify(r, null, 2);
+      };
+    });
+    const groups = ["lecture", "analyse", "memoire", "action"];
+    return header("Outils du directeur sportif (diagnostic)") + `<div class="card" style="margin-bottom:14px"><div class="row">
+      <select id="tname">${tools.filter(t => t.available).map(t => `<option>${esc(t.name)}</option>`).join("")}</select>
+      <input id="targs" placeholder='Arguments JSON, ex. {"player_uid": 123}' style="flex:1;min-width:220px"><button class="btn" id="run">Exécuter</button></div><pre id="tout">—</pre></div>
+      <div class="grid">${groups.map(g => `<div class="card"><h3>${esc(g)}</h3>${tools.filter(t => t.category === g).map(t => `<div class="small" style="margin-bottom:4px"><span class="pill ${t.available ? "ok" : "warn"}">${t.available ? "disponible" : "indisponible"}</span> <b>${esc(t.name)}</b>${t.available ? "" : `<div class="muted">${esc(t.unavailable_reason)}</div>`}</div>`).join("")}</div>`).join("")}</div>`;
+  },
+
+  async settings() {
+    const prefs = await api("/api/preferences");
+    let saves = [];
+    try { saves = await api("/api/saves"); } catch {}
+    setTimeout(() => {
+      const doSync = async (path) => {
+        $("#syncout").textContent = "Synchronisation en cours…";
+        try { const r = await api("/api/sync", {method: "POST", body: JSON.stringify({path})}); $("#syncout").textContent = JSON.stringify(r, null, 2); await refreshStatus(); }
+        catch (e) { $("#syncout").textContent = "Erreur : " + e.message; }
+      };
+      $("#syncbtn").onclick = () => doSync($("#savepath").value.trim());
+      document.querySelectorAll("[data-sync]").forEach(b => b.onclick = () => doSync(b.dataset.sync));
+      $("#savePrefs").onclick = async () => {
+        const p = {...prefs, persona: $("#persona").value, knowledge_mode: $("#knowledge").value, director_name: $("#dname").value,
+          advanced_mode_confirmed: $("#knowledge").value === "avance" && $("#advconf").checked};
+        try { await api("/api/preferences", {method: "PUT", body: JSON.stringify(p)}); $("#prefout").textContent = "Enregistré."; } catch (e) { $("#prefout").textContent = e.message; }
+      };
+      $("#calib").onclick = async () => {
+        try { const r = await api("/api/currency/calibrate", {method: "POST", body: JSON.stringify({player_uid: +$("#cuid").value, displayed_value: +$("#cval").value, symbol: $("#csym").value})});
+          $("#calout").textContent = "Facteur : " + r.factor + " — " + r.reference; } catch (e) { $("#calout").textContent = e.message; }
+      };
+      $("#aitest").onclick = async () => { $("#aiout").textContent = JSON.stringify(await api("/api/ai/test", {method: "POST"}), null, 2); };
+    });
+    const sel = (id, opts, v) => `<select id="${id}">${opts.map(([k, l]) => `<option value="${k}" ${k === v ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+    return header("Paramètres") + `<div class="grid">
+      <div class="card" style="grid-column:1/-1"><h3>Synchroniser une sauvegarde FM26</h3>
+        <div class="row"><input id="savepath" placeholder="Chemin complet vers un fichier .fm" style="flex:1;min-width:260px"><button class="btn" id="syncbtn">Synchroniser</button></div>
+        <div class="small muted">L'original n'est jamais modifié : une copie est faite dans ${esc(status?.data_dir || "le dossier de données")}, puis lue.</div>
+        ${saves.length ? `<div style="margin-top:8px">${saves.slice(0, 10).map(s => `<div class="row small"><button class="btn ghost" data-sync="${esc(s.path)}">Synchroniser</button>${esc(s.path)} <span class="muted">${(s.size / 1e6).toFixed(1)} Mo · ${esc(s.modified.slice(0, 16).replace("T", " "))}</span></div>`).join("")}</div>`
+          : `<div class="lim">Aucune sauvegarde trouvée dans : ${esc((status?.save_dirs || []).join(" ; "))}</div>`}
+        <pre id="syncout">—</pre></div>
+      <div class="card"><h3>Directeur sportif</h3>
+        <div class="row"><input id="dname" value="${esc(prefs.director_name)}"></div>
+        <div class="row">${sel("persona", [["equilibre", "Équilibré"], ["prudent", "Prudent"], ["ambitieux", "Ambitieux"], ["developpeur", "Développeur"], ["analytique", "Analytique"]], prefs.persona)}</div>
+        <div class="row">${sel("knowledge", [["realiste", "Mode réaliste"], ["analyste", "Mode analyste"], ["avance", "Mode avancé (données cachées)"]], prefs.knowledge_mode)}</div>
+        <label class="small"><input type="checkbox" id="advconf" ${prefs.advanced_mode_confirmed ? "checked" : ""}> J'autorise explicitement l'usage des attributs cachés et du potentiel (mode avancé)</label>
+        <div class="row" style="margin-top:8px"><button class="btn" id="savePrefs">Enregistrer</button><span id="prefout" class="small muted"></span></div></div>
+      <div class="card"><h3>Étalonnage de la devise</h3>
+        <div class="small muted">La sauvegarde stocke l'argent dans une unité interne. Indiquez la valeur affichée en jeu d'un joueur (uid visible dans sa fiche).</div>
+        <div class="row" style="margin-top:8px"><input id="cuid" type="number" placeholder="uid joueur" style="width:120px"><input id="cval" type="number" placeholder="Valeur affichée (ex. 12000000)" style="width:200px"><input id="csym" value="${esc(prefs.currency.symbol)}" style="width:60px"></div>
+        <div class="row"><button class="btn" id="calib">Étalonner</button></div><div id="calout" class="small ${prefs.currency.factor ? "" : "lim"}">${prefs.currency.factor ? "Facteur actuel : " + prefs.currency.factor : "Devise non étalonnée"}</div></div>
+      <div class="card"><h3>Moteurs IA</h3><div class="small">Mode : <b>${esc(status?.ai?.mode)}</b> · dépense du mois : ${(status?.ai?.month_spend_usd || 0).toFixed(4)} $ / budget ${status?.ai?.monthly_budget_usd || 0} $</div>
+        ${(status?.ai?.providers || []).map(p => `<div class="small">${esc(p.name)} — ${esc(p.model)} (niveau ${p.tier})</div>`).join("") || `<div class="lim">Aucun moteur configuré.</div>`}
+        ${(status?.ai?.errors || []).map(e => `<div class="lim">${esc(e)}</div>`).join("")}
+        <div class="row" style="margin-top:8px"><button class="btn ghost" id="aitest">Tester la connexion</button></div><pre id="aiout">—</pre></div>
+    </div>`;
+  },
+};
+
+async function openPlayer(uid) {
+  const p = await api("/api/players/" + uid);
+  const attrs = Object.entries(p.attributs).map(([k, v]) => `<div class="attr"><span>${esc(p.libelles_attributs?.[k] || k)}</span><span class="${v >= 15 ? "v-hi" : v <= 7 ? "v-lo" : ""}">${v ?? "—"}</span></div>`).join("");
+  const st = p.stats.ok ? p.stats.data.saisons : [];
+  $("#modalBody").innerHTML = `<div class="row"><div class="big" style="flex:1">${esc(p.nom)}</div><button class="btn ghost" id="close">Fermer</button></div>
+    <div class="muted">${p.age ?? "—"} ans · ${esc(p.club || "Libre")} · ${esc(p.postes_libelles.join(", "))} · uid ${p.uid}</div>
+    <div class="grid" style="margin-top:12px"><div class="card"><h3>Contrat</h3><div>Valeur : ${money(p.valeur)}</div><div>Salaire : ${money(p.salaire)}</div><div>Fin : ${frDate(p.fin_contrat)}</div><div>Statut : ${esc(p.statut_effectif || "—")}</div></div>
+    <div class="card"><h3>Profil</h3><div>Taille : ${p.taille_cm ?? "—"} cm</div><div>Pied G/D : ${p.pied_gauche ?? "—"} / ${p.pied_droit ?? "—"}</div><div>Traits : ${esc((p.traits || []).join(", ") || "—")}</div></div></div>
+    <h3 class="muted small" style="margin-top:12px">ATTRIBUTS VISIBLES</h3><div class="attrs">${attrs}</div>
+    <h3 class="muted small" style="margin-top:12px">STATISTIQUES ARCHIVÉES</h3>
+    ${st.length ? `<div class="tablewrap"><table><thead><tr><th>Saison</th><th>Type</th><th>Club</th><th>Min.</th><th>Buts</th><th>Passes D.</th><th>Note</th></tr></thead><tbody>${st.map(s => `<tr><td>${esc(s.saison)}</td><td>${esc(s.type)}</td><td>${esc(s.club || "—")}</td><td>${s.minutes ?? "—"}</td><td>${s.buts ?? "—"}</td><td>${s.passes_decisives ?? "—"}</td><td>${s.note_moyenne ?? "—"}</td></tr>`).join("")}</tbody></table></div>` : `<div class="muted">Aucune statistique archivée.</div>`}`;
+  $("#modal").classList.add("open");
+  $("#close").onclick = () => $("#modal").classList.remove("open");
+}
+$("#modal").onclick = e => { if (e.target.id === "modal") $("#modal").classList.remove("open"); };
+
+async function show(page) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.page === page));
+  await refreshStatus();
+  try { $("#main").innerHTML = await pages[page](); }
+  catch (e) { $("#main").innerHTML = header("Erreur") + `<div class="card err">${esc(e.message)}</div>`; }
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.page));
+show("dashboard");
+</script>
+</body>
+</html>

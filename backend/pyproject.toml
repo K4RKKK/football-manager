@@ -1,0 +1,45 @@
+[project]
+name = "clubdirector"
+version = "0.1.0"
+description = "ClubDirector AI — directeur sportif IA connecté aux carrières Football Manager 26 (backend local)."
+requires-python = ">=3.12"
+dependencies = [
+    "fmsave==0.5.10",
+    "pydantic>=2.7",
+    "sqlalchemy>=2.0",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+keyring = ["keyring>=25"]
+anthropic = ["anthropic>=0.60"]
+
+[project.scripts]
+clubdirector = "clubdirector.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clubdirector"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "BLE"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/clubdirector/game/fmsave_reader.py" = ["BLE001"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra"]
