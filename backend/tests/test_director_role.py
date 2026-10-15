@@ -222,3 +222,31 @@ def test_dossier_names_the_whole_first_team_so_the_model_never_invents_players(r
     for player in tctx.repo.squad(tctx.ctx):
         assert player["name"] in roster
     assert "aucun autre joueur n'est à nous" in roster
+
+
+def test_each_contact_only_gets_the_tools_of_its_job(engine, registry, tctx):
+    from clubdirector.ai.orchestrator import Orchestrator
+
+    orch = Orchestrator(engine, registry, [])
+    dt = {t["name"] for t in orch._tools_for("directeur_technique")}
+    adj = {t["name"] for t in orch._tools_for("entraineur_adjoint")}
+    ds = {t["name"] for t in orch._tools_for("directeur_sportif")}
+    assert "get_club_staff" in dt and not dt & {"get_club_squad", "search_players", "propose_lineup", "find_recruitment_targets"}
+    assert {"propose_lineup", "get_top_players_stat", "get_club_squad"} <= adj
+    assert not adj & {"find_recruitment_targets", "search_expiring_contracts", "get_transfer_budget"}
+    assert ds >= adj | dt  # le directeur sportif garde tout
+
+
+def test_a_tool_outside_the_role_is_refused(engine, registry, tctx):
+    from clubdirector.ai.orchestrator import Orchestrator
+    from clubdirector.ai.providers.base import StepResult, ToolCall
+
+    p = ScriptedProvider([StepResult("", [ToolCall("1", "get_club_squad", {})]), StepResult("C'est le domaine de l'adjoint.")])
+    a = Orchestrator(engine, registry, [p]).send(tctx, "directeur_technique", "Que vaut notre attaque ?")
+    assert a.tools[0]["ok"] is False and "hors de ton rôle" in a.tools[0]["error"]
+
+
+def test_the_technical_director_gets_the_staff_not_the_players(registry, tctx):
+    dossier = build_club_dossier(registry, tctx, "directeur_technique")
+    assert "Effectif COMPLET" not in dossier
+    assert "Staff du club" in dossier or "Club :" in dossier  # sauvegarde synthétique : staff parfois absent

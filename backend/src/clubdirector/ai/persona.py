@@ -32,8 +32,8 @@ ROLE_LABELS = {
 }
 ROLE_DOMAINS = {
     "directeur_sportif": "mercato, contrats des joueurs, budgets",
-    "directeur_technique": "staff, académie, développement des jeunes, infrastructures, méthodologie",
-    "entraineur_adjoint": "terrain, matchs, groupe, entraînement, composition",
+    "directeur_technique": "staff technique : entraîneurs, préparateurs, médical, recruteurs, organisation de l'encadrement",
+    "entraineur_adjoint": "terrain : matchs, statistiques, joueurs, entraînement, onze type, notes, jeu",
 }
 
 PERSONAS: dict[str, dict[str, str]] = {

@@ -41,6 +41,41 @@ class StaffRole:
     method: str
 
 
+# Fonctions du staff établies dans la sauvegarde (code `unknown_r4`), chacune vérifiée sur plusieurs
+# personnes réelles de la base (session 3) ; les autres codes restent « non décodés ».
+STAFF_FUNCTIONS: dict[int, str] = {
+    2: "Entraîneur",                # département entraînement (Kolo Touré, Domínguez)
+    10: "Directeur sportif",        # hors départements (11 directeurs réels)
+    88: "Directeur technique",      # Freund, Lange, Moncada, Maldini
+    16: "Entraîneur principal",     # Inzaghi, Chivu, Cuesta, Kornetka
+    20: "Entraîneur adjoint",       # Stuivenberg, Sorg, Hulshoff, Kolarov, Lijnders
+    26: "Préparateur physique",     # Buenaventura, Pintus
+    34: "Entraîneur des gardiens",  # Bonaiuti, Caña, Llopis
+    40: "Scientifique du sport",    # Schlumberger, Strudwick, Hayward
+    50: "Kinésithérapeute",         # Lee Nobes, Dave Rennie
+}
+# Départements du club (index de liste `list_indexes`) : médecins et kinés en 0, entraîneurs en 1,
+# recruteurs et directeurs techniques en 2.
+DEPARTMENTS: dict[int, str] = {0: "Médical et performance", 1: "Entraînement (staff technique)", 2: "Recrutement"}
+
+
+def staff_function(code: int | None, list_indexes: str | None) -> str | None:
+    """Fonction connue d'un membre du staff, sinon None (non décodée)."""
+    if code == 10 and list_indexes not in (None, "", "[]"):
+        return None  # même code dans un département : autre fonction (45 cas)
+    return STAFF_FUNCTIONS.get(code) if code is not None else None
+
+
+def staff_departments(list_indexes: str | None) -> list[str]:
+    import json
+
+    try:
+        idx = json.loads(list_indexes or "[]")
+    except ValueError:
+        return []
+    return [DEPARTMENTS[i] for i in idx if i in DEPARTMENTS]
+
+
 STAFF_ROLES: dict[str, StaffRole] = {
     "directeur_sportif": StaffRole(
         "directeur_sportif", "Directeur sportif", DIRECTOR_JOB_CODE, "AND coalesce(in_club_lists, 0) = 0 ",

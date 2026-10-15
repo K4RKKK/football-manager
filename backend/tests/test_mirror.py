@@ -112,7 +112,8 @@ def test_club_staff_comes_from_the_save(registry, tctx):
     r = run(registry, tctx, "get_club_staff", toutes_equipes=True)
     assert r.ok, r.error
     assert r.data["nombre"] == len(r.data["staff"])
-    assert any("rôle" in lim for lim in r.limitations)  # le rôle n'est pas inventé
+    assert any("non précisée" in lim for lim in r.limitations)  # une fonction inconnue n'est pas inventée
+    assert all(x["fonction"] for x in r.data["staff"])
 
 
 def test_top_players_on_any_current_season_stat(registry, tctx, engine):

@@ -16,6 +16,7 @@ from typing import Literal
 from pydantic import Field
 from sqlalchemy import text
 
+from clubdirector.ai.director_identity import staff_departments, staff_function
 from clubdirector.database.mirror import ALL_TABLES, EXTRA_TABLES, table_name
 from clubdirector.database.repositories import HIDDEN_ATTRIBUTES
 from clubdirector.tools.presenters import advanced_allowed, money
@@ -180,16 +181,20 @@ def register_game_table_tools(reg: ToolRegistry) -> None:
             raise LookupError("Staff non synchronisé : resynchronisez la sauvegarde.")
         with t.engine.connect() as c:
             rows = c.execute(text(
-                "SELECT name, age, nation_id, team_slot, is_human_manager, has_contract, wage, contract_start, contract_end "
-                "FROM fm_staff WHERE career_id = :k AND club_uid = :u AND (:all OR team_slot = 0 OR team_slot IS NULL) "
+                "SELECT name, age, nation_id, team_slot, is_human_manager, has_contract, wage, contract_start, contract_end, "
+                "unknown_r4 AS code, list_indexes FROM fm_staff WHERE career_id = :k AND club_uid = :u "
+                "AND (:all OR team_slot = 0 OR team_slot IS NULL) "
                 "ORDER BY is_human_manager DESC, wage DESC"), {"k": t.ctx.career_id, "u": club, "all": a.toutes_equipes}).mappings().all()
         staff = [{"nom": r["name"], "age": r["age"], "nation_id": r["nation_id"], "equipe_slot": r["team_slot"],
                   "entraineur_principal_humain": bool(r["is_human_manager"]),
+                  "fonction": "Entraîneur principal (vous)" if r["is_human_manager"] else (staff_function(r["code"], r["list_indexes"]) or "non précisée"),
+                  "departements": staff_departments(r["list_indexes"]),
                   "salaire": money(t.prefs, r["wage"]), "debut_contrat": r["contract_start"], "fin_contrat": r["contract_end"]}
                  for r in rows]
         return ToolResult("", True, data={"club_uid": club, "nombre": len(staff), "staff": staff}, limitations=[
-            "Le rôle de chaque membre du staff (adjoint, préparateur, recruteur…) n'est pas encore décodé dans la "
-            "sauvegarde : ne le déduis pas du nom ou du salaire."])
+            "Fonctions décodées : directeur sportif, directeur technique, entraîneur principal et adjoint, préparateur "
+            "physique, entraîneur des gardiens, scientifique du sport, kinésithérapeute ; les autres sont « non précisée » "
+            "(le département reste connu) : ne les déduis pas du nom ou du salaire et parle d'un membre du département."])
 
     @T("query_game_table", "Lit n'importe quelle table complète de la sauvegarde (filtres, tri, colonnes). Lecture seule, carrière active.", "lecture", TableQueryArgs)
     def query_game_table(t: ToolContext, a: TableQueryArgs):

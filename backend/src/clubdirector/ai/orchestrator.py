@@ -33,7 +33,7 @@ from clubdirector.ai.router import answer_intent, classify, wants_premium
 from clubdirector.database import schema as s
 from clubdirector.memory.store import ConversationStore, MemoryStore
 from clubdirector.sync.season import season_label
-from clubdirector.tools.registry import ToolContext, ToolRegistry
+from clubdirector.tools.registry import ToolContext, ToolRegistry, ToolResult
 
 log = logging.getLogger(__name__)
 MAX_TOOL_RESULT_CHARS = 12000
@@ -93,8 +93,8 @@ KIND_HINTS = {
                    "information : réagis naturellement en une ou deux bulles, comme un collègue (accord, nuance, "
                    "conséquence pour ton domaine). Pas de rapport, pas de liste.]"),
     "question": ("[Consigne automatique — type de message : QUESTION. Donne la réponse d'abord, directement, en une "
-                 "ou deux bulles avec les chiffres utiles. Consulte les données seulement si le dossier ne suffit "
-                 "pas. Pas de développement non demandé.]"),
+                 "ou deux bulles avec les chiffres utiles. Si le chiffre demandé n'est pas dans le dossier, consulte "
+                 "les données AVANT de répondre ; n'estime jamais un chiffre. Pas de développement non demandé.]"),
     "demande": ("[Consigne automatique — type de message : DEMANDE. Fais le travail maintenant : consulte les données "
                 "nécessaires puis livre un résultat concret (noms, chiffres, recommandation) en bulles aérées. Si "
                 "une action dans FM26 est nécessaire, prépare-la et dis précisément ce que l'entraîneur doit faire "
@@ -196,6 +196,24 @@ TOOL_LABELS = {
     "get_managed_club": "club", "propose_lineup": "composition",
 }
 Event = Callable[[dict], None]
+
+# Outils de chaque contact : chacun reste dans son métier (None = tous les outils).
+COMMON_TOOLS = {"get_current_save", "get_managed_club", "describe_game_tables", "query_game_table",
+                "remember", "list_memories", "forget"}
+ROLE_TOOLS: dict[str, set[str] | None] = {
+    "directeur_sportif": None,
+    # Le staff technique, pas les joueurs.
+    "directeur_technique": COMMON_TOOLS | {"get_club_staff", "get_club_league_history", "get_club_finances",
+                                           "get_wage_budget", "get_active_tactics", "get_tactical_instructions"},
+    # Le terrain : matchs, statistiques, joueurs, entraînement, composition, notes.
+    "entraineur_adjoint": COMMON_TOOLS | {
+        "get_club_squad", "get_player_profile", "get_player_attributes", "get_player_statistics",
+        "get_player_season_history", "get_recent_matches", "get_match_details", "get_upcoming_matches",
+        "get_league_table", "get_active_tactics", "get_tactical_instructions", "get_injured_players",
+        "compare_players", "get_top_players_stat", "get_alerts", "analyze_squad", "identify_weak_positions",
+        "analyze_tactical_fit", "analyze_player_performance", "evaluate_youth_prospects", "propose_lineup",
+    },
+}
 
 
 @dataclass
@@ -426,13 +444,20 @@ class Orchestrator:
             knowledge=tctx.prefs.knowledge_mode, manager=ctx.manager_name, identity=member, role=role, team=team)
         context = build_context_message(
             club=ctx.club_name, game_date=ctx.game_date.isoformat() if ctx.game_date else None,
-            season=season_label(ctx.season_start_year), dossier=build_club_dossier(self.registry, tctx),
+            season=season_label(ctx.season_start_year), dossier=build_club_dossier(self.registry, tctx, role),
             memories=MemoryStore(self.engine).list(ctx.career_id))
         if taking_office and role == DIRECTOR and not question.startswith("[Message automatique"):
             question = first_contact_request(role, taking_office=True) + "\n\nDemande de l'entraîneur : " + question
         if not question.startswith("[Message automatique"):
             previous = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
             question += "\n\n" + KIND_HINTS[message_kind(question, previous)]
+            if role == "directeur_technique" and self._mentions_player(tctx, question):
+                adj, ds = team.get("entraineur_adjoint"), team.get(DIRECTOR)
+                question += ("\n\n[Consigne automatique : la question porte sur un joueur, ce n'est pas ton métier. "
+                             f"Réponds en une ou deux phrases que c'est le domaine de {adj.name if adj else 'l’adjoint'} "
+                             f"(terrain, forme, temps de jeu) ou de {ds.name if ds else 'le directeur sportif'} (contrat, "
+                             "marché), sans donner toi-même de statistiques ni d'avis sur le joueur, puis propose l'angle "
+                             "staff si c'est pertinent.]")
         messages = _alternate([{"role": "user", "content": context}, *history, {"role": "user", "content": question}])
         return system, messages
 
@@ -456,8 +481,8 @@ class Orchestrator:
             trace.append({"tool": "propose_lineup", "args": lineup_args, "ok": r.ok, "error": r.error})
             if r.ok:
                 messages[-1] = {"role": "user", "content": messages[-1]["content"] + "\n\n" + lineup_brief(r.data)}
-        tools = [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
-                 for t in self.registry.for_llm()]
+        tools = self._tools_for(role)
+        restricted = ROLE_TOOLS.get(role)  # None : tous les outils (les actions non prouvées restent refusées par le registre)
         cost = 0.0
         limitations: list[str] = []
         said: list[str] = []
@@ -487,7 +512,10 @@ class Orchestrator:
                 for call in step.tool_calls:
                     if on_event:
                         on_event({"type": "tool", "name": call.name, "label": tool_label(call.name)})
-                    r = self.registry.execute(call.name, call.arguments, tctx)
+                    if restricted is not None and call.name not in restricted:
+                        r = ToolResult(call.name, False, error="Outil hors de ton rôle : renvoie l'entraîneur vers le bon interlocuteur.")
+                    else:
+                        r = self.registry.execute(call.name, call.arguments, tctx)
                     trace.append({"tool": call.name, "args": call.arguments, "ok": r.ok, "error": r.error})
                     limitations.extend(r.limitations)
                     payload = json.dumps(r.as_dict(), ensure_ascii=False, default=str)
@@ -506,6 +534,26 @@ class Orchestrator:
             with self._active_lock:
                 self._active -= 1
 
+    def _mentions_player(self, tctx: ToolContext, text: str) -> bool:
+        """Vrai si le message cite un joueur de l'effectif (nom complet ou nom de famille)."""
+        from clubdirector.text import fold
+
+        words = set(re.findall(r"[\w'-]+", fold(text)))
+        try:
+            squad = tctx.repo.squad(tctx.ctx, team_slot=None)
+        except Exception:  # noqa: BLE001
+            return False
+        for p in squad:
+            parts = [w for w in re.findall(r"[\w'-]+", fold(p["name"])) if len(w) > 2]
+            if parts and parts[-1] in words:
+                return True
+        return False
+
+    def _tools_for(self, role: str) -> list[dict]:
+        allowed = ROLE_TOOLS.get(role)
+        return [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
+                for t in self.registry.for_llm() if allowed is None or t.name in allowed]
+
     # ------------------------------------------------------------------ rapidité
     def warm(self, tctx: ToolContext, roles: tuple[str, ...] = CONTACT_ROLES) -> list[str]:
         """Pré-calcule le prompt de chaque contact (après une synchronisation) sur le modèle local.
@@ -514,14 +562,13 @@ class Orchestrator:
         provider = self.choose_provider("", 1)
         if provider is None or not hasattr(provider, "warm") or provider.input_cost_per_mtok > 0:
             return []
-        tools = [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
-                 for t in self.registry.for_llm()]
         done = []
         for role in roles:
             if self._active:
                 break
             member = self.staff(tctx, role)
             system, messages = self._prompt(tctx, role, member, [], ".")
+            tools = self._tools_for(role)
             key = hashlib.sha256(json.dumps([system, messages, tools], ensure_ascii=False, default=str)
                                  .encode("utf-8")).hexdigest()
             if self._warmed.get(role) == key:
