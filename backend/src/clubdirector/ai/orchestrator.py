@@ -176,7 +176,8 @@ def lineup_brief(data: dict) -> str:
     if data.get("alertes"):
         out += " Alertes : " + " ".join(data["alertes"])
     return out + (" Présente ce onze ligne par ligne avec ton avis de terrain ; si tu proposes un changement, uniquement "
-                  "un joueur noté ≥ 15 au même poste. L'infirmerie du jour n'est pas lue : demande les absents si besoin.]")
+                  "un joueur noté ≥ 15 au même poste. Blessés et suspendus du jour sont déjà écartés (état de la dernière "
+                  "sauvegarde) ; cite les écartés s'il y en a.]")
 
 
 TOOL_LABELS = {

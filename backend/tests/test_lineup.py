@@ -85,3 +85,21 @@ def test_a_lineup_question_gets_the_computed_eleven_before_the_model_answers(eng
     assert a.tools[0]["tool"] == "propose_lineup"
     if a.tools[0]["ok"]:
         assert "Composition calculée par l'outil propose_lineup" in p.history[-1]["content"]
+
+
+def test_injured_and_suspended_players_are_left_out(engine, registry, tctx):
+    from sqlalchemy import text
+
+    from clubdirector.database.mirror import MirrorTable, write_mirror
+
+    squad = tctx.repo.squad(tctx.ctx)
+    if len(squad) < 12:
+        return  # sauvegarde synthétique trop courte pour onze joueurs
+    hurt = squad[0]
+    with engine.begin() as c:
+        write_mirror(c, tctx.ctx.career_id, 1, [MirrorTable("injuries", ["player_uid", "kind", "type_name", "date"], [
+            (hurt["uid"], "typed", "Entorse", "2099-01-01")])])
+        c.execute(text("SELECT 1"))
+    r = registry.execute("propose_lineup", {}, tctx)
+    assert r.ok and all(x["joueur"] != hurt["name"] for x in r.data["onze"])
+    assert any(x["joueur"] == hurt["name"] and "blessé" in x["raison"] for x in r.data["exclus"])

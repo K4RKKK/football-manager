@@ -8,16 +8,19 @@ hongroise) en maximisant :
 - un indice de niveau visible (rang de valeur dans l'effectif, note moyenne et temps de jeu de la
   saison) — jamais le CA/PA caché ;
 - la condition physique (pénalité sous 75 %).
-Les suspendus (sauvegarde) et les absents signalés par l'entraîneur sont écartés. La sauvegarde
-n'expose pas l'infirmerie du jour : l'outil le dit.
+Les blessés en cours et les suspendus du jour (game/availability.py) ainsi que les absents signalés
+par l'entraîneur sont écartés ; une suspension limitée à une compétition ne compte que pour un match de
+cette compétition (le prochain match par défaut). Les retours de blessure récents sont signalés.
 """
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Literal
 
 from pydantic import Field
 
+from clubdirector.game.availability import club_availability
 from clubdirector.positions import LABEL_FR
 from clubdirector.text import fold
 from clubdirector.tools.registry import ToolArgs, ToolContext, ToolRegistry, ToolResult
@@ -177,6 +180,7 @@ class LineupArgs(ToolArgs):
         "4-2-3-1", description="Système de jeu. Par défaut 4-2-3-1 (la tactique active n'est pas toujours lisible).")
     absents: list[str] = Field(default_factory=list, description="Joueurs à écarter (blessés, suspendus, choix de l'entraîneur).")
     rotation: bool = Field(False, description="Vrai pour faire tourner : favorise les joueurs frais et moins utilisés.")
+    competition: str | None = Field(None, description="Compétition du match visé (par défaut : celle du prochain match).")
 
 
 def register_lineup_tools(reg: ToolRegistry) -> None:
@@ -187,13 +191,32 @@ def register_lineup_tools(reg: ToolRegistry) -> None:
     def propose_lineup(t: ToolContext, a: LineupArgs):
         rows = t.repo.squad(t.ctx)
         wanted_out = {fold(n) for n in a.absents}
+        # Disponibilité du jour : blessés en cours, suspendus, retours récents.
+        avail = club_availability(t.engine, t.ctx.career_id, t.ctx.club_uid, t.ctx.game_date)
+        injured = {x["player_uid"]: x for x in avail.get("blesses", [])}
+        competition = a.competition
+        if competition is None and t.ctx.game_date:
+            nxt = t.repo.fixtures(t.ctx, date_from=t.ctx.game_date + timedelta(days=1), limit=1, newest_first=False)
+            competition = nxt[0].get("competition_name") if nxt else None
+        banned, ban_alerts = {}, []
+        for b in avail.get("suspendus", []):
+            if b.get("portee") != "competition" or (competition and fold(b.get("competition") or "") == fold(competition)):
+                banned[b["player_uid"]] = b
+            else:
+                ban_alerts.append(f"{b['joueur']} est suspendu en {b.get('competition') or 'une autre compétition'} : "
+                                  "il reste disponible pour ce match.")
         excluded, available = [], []
         for r in rows:
             name = fold(r["name"])
             if any(w and (w == name or w in name.split() or name.endswith(" " + w)) for w in wanted_out):
                 excluded.append({"joueur": r["name"], "raison": "écarté par l'entraîneur"})
-            elif r.get("banned"):
-                excluded.append({"joueur": r["name"], "raison": "suspendu (sauvegarde)"})
+            elif r["uid"] in injured:
+                back = injured[r["uid"]].get("retour_prevu")
+                why = injured[r["uid"]].get("blessure") or "blessé"
+                excluded.append({"joueur": r["name"], "raison": f"blessé ({why}{', retour prévu le ' + back[8:10] + '/' + back[5:7] if back else ''})"})
+            elif r["uid"] in banned or r.get("banned"):
+                comp = (banned.get(r["uid"]) or {}).get("competition")
+                excluded.append({"joueur": r["name"], "raison": f"suspendu{' en ' + comp if comp else ''}"})
             else:
                 available.append(r)
         seasons = t.repo.season_lines(t.ctx, [r["uid"] for r in available])
@@ -202,8 +225,17 @@ def register_lineup_tools(reg: ToolRegistry) -> None:
         except ValueError as exc:
             return ToolResult("", False, error=str(exc))
         out["exclus"] = excluded
+        out["alertes"] += ban_alerts
+        recent = {x["player_uid"]: x for x in avail.get("retours_recents", [])}
+        playing = {x["uid"] for x in out["onze"]}
+        for uid, x in recent.items():
+            if uid in playing:
+                out["alertes"].append(f"{x['joueur']} revient de blessure (depuis {x.get('revenu_depuis_jours', '?')} jours) : "
+                                      "surveiller son temps de jeu.")
+        out["competition"] = competition
         out["methode"] = ("Affectation optimale : note de poste FM26 (20 = naturel), valeur dans l'effectif, note moyenne et "
-                          "minutes de la saison, condition physique. Aucun attribut caché.")
+                          "minutes de la saison, condition physique ; blessés et suspendus du jour écartés. Aucun attribut caché.")
         return ToolResult("", True, data=out, limitations=[
-            "La sauvegarde n'indique pas l'infirmerie du jour : demandez à l'entraîneur ses absents et passez-les dans « absents ».",
+            "Blessés et suspendus : état de la dernière sauvegarde lue ; un pépin survenu depuis n'est connu qu'après la "
+            "prochaine sauvegarde.",
         ])

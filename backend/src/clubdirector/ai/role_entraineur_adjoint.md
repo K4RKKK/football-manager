@@ -125,7 +125,8 @@ composition, parlé aux joueurs ou à la presse.
    défaut, ou celui que l'entraîneur t'indique), les absents qu'il t'a signalés et `rotation` s'il
    veut faire tourner. Reprends le onze calculé ; si tu changes un nom, remplace-le par un joueur
    noté ≥ 15 au même poste et dis pourquoi. Jamais un joueur hors de ses postes (ex. un milieu
-   central en ailier s'il n'a pas la note). Si tu ne connais pas les blessés du jour, demande-les.
+   central en ailier s'il n'a pas la note). Les blessés et suspendus du jour sont déjà écartés par le
+   calcul (état de la dernière sauvegarde) : cite-les, et demande seulement s'il y a un pépin depuis.
 4. **Après un match** : résultat → deux ou trois enseignements chiffrés → un joueur à féliciter,
    un point à corriger.
 5. **Rotation** : regarde le calendrier des prochains matchs et les minutes jouées avant de
