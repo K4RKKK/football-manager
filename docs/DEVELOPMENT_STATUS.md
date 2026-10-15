@@ -18,12 +18,12 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 4 | Rôle du directeur sportif, dossier du club automatique, prise de poste | ✅ | `ai/persona.py`, `ai/club_brief.py` ; testé sur l'AS Roma |
 | Phase 4 | Lanceur unique (IA + service) | ✅ | `Lancer ClubDirector.cmd` |
 | Données | Sections non décodées (≈ 58) | ⬜ | coupes, stats joueurs passées, transferts, liste de recrutement, palmarès… (`docs/SECTION_MAP.md`) |
-| Phase 1 | Plugin minimal BepInEx + détection du jeu | 🟡 | `plugin/src/ClubDirector.Plugin` |
+| Phase 1 | Plugin minimal BepInEx + détection du jeu | ❌ (bloqué) | compile contre les interop réels ; BepInEx 738 se charge, mais le chargeur Doorstop (`winhttp.dll`) déclenche la protection anti-falsification de FM26 (session 2) — aucun contournement |
 | Phase 1 | Outil de diagnostic | ✅ | interface web + CLI `clubdirector tool …` |
 | Phase 2 | Adaptateur fmsave, normalisation, SQLite, migrations | ✅ | |
 | Phase 2 | Multi-carrières, saisons, archivage des résultats | ✅ | |
 | Phase 2 | Synchronisation automatique à chaque sauvegarde | ⬜ | prochaine étape (surveillance du dossier) |
-| Phase 3 | Overlay dans FM26 (F10) | 🟡 | |
+| Phase 3 | Overlay dans FM26 (F10) | ❌ (bloqué) | dépend de BepInEx ; alternative : fenêtre externe au-dessus du jeu |
 | Phase 3 | Entrée dans le menu latéral natif | 🧪 | outil de relevé UI prêt (Maj+F10) |
 | Phase 4 | Registre d'outils (33 disponibles / 51) | ✅ | |
 | Phase 4 | Routage niveau 0 (sans IA) | ✅ | 13 formulations testées |

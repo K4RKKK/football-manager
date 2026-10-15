@@ -75,3 +75,13 @@ Ces temps concernent le service, **hors du processus FM26**. L'impact sur les FP
 Défauts corrigés pendant les tests : xA non disponible (outil étendu à 104 stats), staff (outil
 implémenté), question fait + avis traitée sans IA (routage), préférences avec BOM.
 Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3).
+
+### Session 2 (suite) — intégration dans FM26
+| Test | Résultat | Détail |
+|---|---|---|
+| P-1 BepInEx dans FM26 | **chargé** | 159 assemblages interop générés, « Chainloader startup complete », ErrorLog vide |
+| Compilation du plugin contre les interop réels | **OK** | 2 corrections (surcharge `Q`, attributs de nullabilité) ; tests du cœur 9/9 |
+| Démarrage de FM26 avec BepInEx | **échec** | protection anti-falsification : serveur inaccessible puis activation hors ligne, fermeture |
+| FM26 avec BepInEx désactivé, `winhttp.dll` présent | **échec** | même message (journal BepInEx inchangé : le mod n'a pas tourné) |
+| FM26 sans `winhttp.dll` | **OK** | démarrage normal, aucune fenêtre de protection |
+| Conclusion | — | le chargeur Doorstop suffit à déclencher la protection ; injection suspendue, aucun contournement |

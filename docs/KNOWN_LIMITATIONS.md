@@ -31,3 +31,13 @@
 12. **Actions** : aucune action dans le jeu n'est disponible (aucun mécanisme prouvé).
 13. **Risque légal** : l'EULA SEGA générique restreint la rétro-ingénierie « sauf si la loi le
     permet ». Le projet est limité au solo local, en lecture seule, sans contournement de protection.
+
+14. **Injection dans FM26 bloquée par la protection du jeu (constaté le 15/10/2026, build Steam 23583635)** :
+    avec BepInEx 6 BE 738 (pack Thunderstore FM26), le jeu affiche « Le serveur n'est pas accessible »
+    puis une demande d'activation hors ligne (protection anti-falsification Codefusion) et se ferme.
+    Test d'isolement : BepInEx désactivé (`enabled = false`) → le message revient ; `winhttp.dll`
+    (Doorstop) retiré → le jeu démarre normalement. Le chargeur suffit à déclencher la protection.
+    Le projet ne contourne pas cette protection : plugin et overlay dans le jeu sont suspendus ;
+    ClubDirector reste utilisable hors du processus du jeu (sauvegardes, IA, interface externe).
+    État laissé : `winhttp.dll` mis de côté dans `C:\AI\downloads\fm26-desactive\`, dossier
+    `BepInEx\` inerte (désinstallation complète : `scripts\uninstall_bepinex.ps1`).

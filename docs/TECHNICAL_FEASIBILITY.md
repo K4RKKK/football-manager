@@ -69,8 +69,8 @@ Légende : ✅ confirmée par test · 🟡 probable, non testée dans FM26 · �
 | Connecteur Anthropic (SDK officiel, Haiku 5.5 / Opus 5.5) | 🟡 | `anthropic_provider.py` (non appelé : aucune clé ici) | — | Faible | Coût | Budget mensuel bloquant |
 | Budget mensuel et routage économique | ✅ | `test_monthly_budget_blocks_paid_provider` | — | Faible | — | — |
 | Client C# plugin ↔ service (battement, chat, jeton) | ✅ (hors jeu) | `ClubDirector.Core` + `scripts/e2e_plugin_backend.sh` | — | Faible | — | — |
-| Chargement du plugin BepInEx dans FM26 | 🟡 | `ClubDirector.Plugin` (non compilé : interop absents) | — | Moyenne | Mise à jour FM / BepInEx | Mode diagnostic hors jeu |
-| Panneau overlay UI Toolkit dans le jeu (raccourci F10) | 🟡 | UIDocument + PanelSettings empruntés (technique FM26Access) | — | Moyenne | PanelSettings, focus clavier, raccourcis du jeu | Interface externe de secours |
+| Chargement du plugin BepInEx dans FM26 | ❌ (constaté) | BepInEx 738 se charge, mais le chargeur `winhttp.dll` déclenche la protection anti-falsification | Steam 23583635 | — | Réactivation exigée, fermeture du jeu | Interface externe au-dessus du jeu (hors processus) |
+| Panneau overlay UI Toolkit dans le jeu (raccourci F10) | ❌ (bloqué, dépend de BepInEx) | UIDocument + PanelSettings empruntés (technique FM26Access) | — | Moyenne | PanelSettings, focus clavier, raccourcis du jeu | Interface externe de secours |
 | Entrée « Directeur sportif IA » dans le menu latéral natif | 🧪 | Relevé d'arbre UI (Maj+F10) puis insertion dans le slot du menu | — | Élevée | Reconstruction des écrans par FM | Overlay + raccourci |
 | Détection « carrière chargée » en direct | 🧪 | Non implémenté (pistes : écran courant, événements de chargement) | — | Moyenne | — | Date/sauvegarde via mode B |
 | Lecture mémoire directe (mode A données) | 🧪 / non retenu | FMSuperScout montre la faisabilité par offsets | — | Élevée | Casse à chaque patch, licence ambiguë | Mode B + lecture UI |
