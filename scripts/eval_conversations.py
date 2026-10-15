@@ -55,7 +55,7 @@ DEFERRED_RE = re.compile(
     re.IGNORECASE)
 RELAY_RE = re.compile(r"je (?:lui|leur) (?:demande|transmets|transmettrai|fais passer|signale)|je (?:préviens|vais prévenir) "
                       r"(?:francis|paolo|antonio|l'adjoint|le directeur)", re.IGNORECASE)
-GREETING_Q = re.compile(r"\b(bonjour|salut|hello|coucou|bonsoir|hey|yo)\b", re.IGNORECASE)
+GREETING_Q = re.compile(r"\b(bonjour|salut|hello|coucou|bonsoir|hey|yo)\b|[çc]a va|comment (?:allez|vas)", re.IGNORECASE)
 ACTION_RE = re.compile(
     r"j'ai (?:contacté|appelé|envoyé|soumis|signé|prolongé|transmis|fait une offre|lancé les négociations|parlé (?:à|avec) (?:l'agent|son agent))|"
     r"je viens (?:d'envoyer|de contacter|de faire une offre|de signer)|offre (?:envoyée|transmise)|c'est signé",
