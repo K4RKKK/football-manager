@@ -95,7 +95,7 @@ def _status(model: str, field: str) -> Confidence:
 
 # À incrémenter quand l'adaptateur lit de nouveaux champs : une sauvegarde déjà importée par une
 # révision antérieure est alors relue (sinon les nouveaux champs resteraient vides).
-READER_REVISION = 6  # 3 : statuts des clubs ; 4 : miroir ; 5 : noms de compétitions ; 6 : historique
+READER_REVISION = 7  # 3 : statuts des clubs ; 4 : miroir ; 5 : noms ; 6 : historique ; 7 : rattachement par l'index
 
 
 class FmsaveSaveReader:
@@ -326,7 +326,9 @@ class FmsaveSaveReader:
                 if name not in already_reported:
                     errors.append(f"{name}: {type(exc).__name__}: {exc}")
         try:
-            links = link_runs_to_clubs(save.league_history(), save.clubs(), save.league_tables())
+            listed = {s.name for s in save.info.sections}
+            index = save._read_section("tc_league_history_ls") if "tc_league_history_ls" in listed else None
+            links = link_runs_to_clubs(save.league_history(), save.clubs(), save.league_tables(), index)
             tables.append(MirrorTable("league_history_links", ["run", "club_uid", "method"], links))
         except Exception as exc:  # noqa: BLE001
             errors.append(f"league_history_links: {type(exc).__name__}: {exc}")
