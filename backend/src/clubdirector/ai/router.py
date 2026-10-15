@@ -281,9 +281,18 @@ def answer_intent(intent: Intent, run, short_names=None) -> tuple[str, list[str]
         return (f"Côté salaires, on a {d['marge_hebdo']['texte']} de marge par semaine : {d['masse_hebdo']['texte']} de masse "
                 f"salariale pour un budget de {d['budget_hebdo']['texte']}.", lim)
     if n == "expiring":
-        d = call("search_expiring_contracts", {"months": 12})
+        d = call("search_expiring_contracts", {"months": 12, "limit": 100})
         if not d["joueurs"]:
             return (f"Aucun contrat ne se termine avant le {day_month(d['jusqu_au'])}.", lim)
-        who = ", ".join(f"{p['nom']} ({day_month(p['fin_contrat'])} {p['fin_contrat'][:4]})" for p in d["joueurs"])
-        return (f"{_plural(len(d['joueurs']), 'contrat')} se termine{'nt' if len(d['joueurs']) > 1 else ''} dans l'année : {who}.", lim)
+        # Les cadres d'abord : l'équipe première nommément, les jeunes et la réserve en nombre.
+        first = [p for p in d["joueurs"] if p.get("equipe_slot") in (0, None)]
+        others = len(d["joueurs"]) - len(first)
+        if not first:
+            return (f"Aucun contrat de l'équipe première ne se termine dans l'année ; {_plural(others, 'contrat')} "
+                    "chez les jeunes et en réserve.", lim)
+        who = ", ".join(f"{p['nom']} ({day_month(p['fin_contrat'])} {p['fin_contrat'][:4]})" for p in first)
+        txt = f"Dans l'équipe première, {_plural(len(first), 'contrat')} se termine{'nt' if len(first) > 1 else ''} dans l'année : {who}."
+        if others:
+            txt += f" Il y en a aussi {others} chez les jeunes et en réserve."
+        return (txt, lim)
     raise ValueError(f"Intention inconnue : {n}")
