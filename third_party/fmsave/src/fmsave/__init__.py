@@ -39,6 +39,7 @@ from fmsave.models.contracts import (
     SquadStatus,
 )
 from fmsave.models.currencies import CurrencyRate, CurrencyRow
+from fmsave.models.dynamics import SquadInfluence
 from fmsave.models.facilities import ClubFacilities, CorporateFacilities
 from fmsave.models.finances import FinanceMonth, Sponsorship, SponsorType
 from fmsave.models.fixtures import Fixture
@@ -172,6 +173,7 @@ __all__ = [
     "SetPieceRoutine",
     "SponsorType",
     "Sponsorship",
+    "SquadInfluence",
     "SquadStatus",
     "Stadium",
     "Staff",

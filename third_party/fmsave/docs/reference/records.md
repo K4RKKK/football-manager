@@ -60,6 +60,7 @@ their own pages: see {doc}`table` and {doc}`enums`.
 .. autoclass:: fmsave.CurrencyRate
 .. autoclass:: fmsave.TransferOffer
 .. autoclass:: fmsave.PlayerRanking
+.. autoclass:: fmsave.SquadInfluence
 .. autoclass:: fmsave.CompetitionRules
 .. autoclass:: fmsave.RulesRound
 .. autoclass:: fmsave.PlayerMatchStats

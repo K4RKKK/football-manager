@@ -76,3 +76,16 @@ encore lue et que les joueurs demandés sont moins d'un quart du total, seuls le
 sont décodés, avec le décodeur du lecteur des joueurs : 4,4 s, table identique (vérifié sur la
 carrière de l'utilisateur, 12 253 offres). Les contrôles du lecteur des joueurs s'appliquent quand
 cette table est lue. Tests : `tests/test_transfers.py`.
+
+### 8. Hiérarchie du vestiaire (`readers/dynamics.py`, `Save.squad_influence()`)
+Vers la fin de `game_db`, pour chaque équipe du club géré (et seulement lui), des listes d'entrées de
+43 octets : u8 1, u32 influence, u32 index de personne + 1, u32 15, 15 composantes i16 ; chaque liste
+est suivie du jour où le jeu l'a calculée (u16 jour sur 9 bits, u16 année). Plusieurs listes par
+équipe : la plus récente et des anciennes. L'influence est le total des composantes (× 0,8 pour
+certains jeunes), plafonné à 8 999 pour tous sauf les leaders. Vérifié sur la carrière de
+l'utilisateur (écran Dynamique > Hiérarchie du 28/10/2025) : sur la liste la plus récente de l'équipe
+première, les tranches 9 000 / 7 500 / 6 000 donnent la couleur du jeu des 23 joueurs listés (vert
+leader, puis violet, bleu et blanc : violet au-dessus de bleu d'après l'influence) ; les 5 joueurs absents de la liste sont
+prêtés à d'autres clubs (blancs dans le jeu). Seuils et date « non confirmés » (une seule sauvegarde). Les listes sont
+repérées par leur forme (≥ 3 entrées suivies d'une date valide), 0,13 s sur 194 Mo. Le sens des 15
+composantes n'est pas établi (la 1re suit l'ancienneté au club). Tests : `tests/test_dynamics.py`.

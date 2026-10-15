@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from datetime import date
 from types import TracebackType
 from typing import NamedTuple, Self, cast
 
@@ -31,6 +33,7 @@ from fmsave.models.clubs import Club
 from fmsave.models.competitions import Competition, Stage
 from fmsave.models.contracts import Contract
 from fmsave.models.currencies import CurrencyRow
+from fmsave.models.dynamics import SquadInfluence
 from fmsave.models.facilities import ClubFacilities
 from fmsave.models.finances import FinanceMonth, Sponsorship
 from fmsave.models.fixtures import Fixture
@@ -71,6 +74,7 @@ from fmsave.readers.affiliates import (
     walk_affiliate_groups,
 )
 from fmsave.readers.currencies import read_currencies
+from fmsave.readers.dynamics import influence_tier, read_influence_runs
 from fmsave.readers.facilities import find_facility_layout, read_club_facilities
 from fmsave.readers.finances import find_finance_layouts, read_club_finances
 from fmsave.readers.fixtures import build_fixtures_with_offsets
@@ -175,6 +179,7 @@ LEAGUE_HISTORY_TABLE_CACHE_KEY = "table:league_history"
 CURRENCIES_TABLE_CACHE_KEY = "table:currencies"
 TRANSFER_OFFERS_TABLE_CACHE_KEY = "table:transfer_offers"
 PLAYER_RANKINGS_TABLE_CACHE_KEY = "table:player_rankings"
+SQUAD_INFLUENCE_TABLE_CACHE_KEY = "table:squad_influence"
 LEAGUE_TABLES_TABLE_CACHE_KEY = "table:league_tables"
 COMPETITION_RULES_TABLE_CACHE_KEY = "table:competition_rules"
 PLAYER_MATCH_STATS_TABLE_CACHE_KEY = "table:player_match_stats"
@@ -938,6 +943,66 @@ class Save:
                 score=r.score,
             ))
         return Table(rows, PlayerRanking)
+
+    def squad_influence(self) -> Table[SquadInfluence]:
+        """The influence lists behind the game's squad hierarchy, best first (ClubDirector).
+
+        Read from `game_db`, which keeps them for the teams of the managed club only: the latest
+        list of each team and older ones, each with the day it was worked out. See
+        `SquadInfluence`. Empty when the save holds no such list.
+
+        Raises:
+            SaveClosedError: The save is closed.
+        """
+        context = self._context
+        return context.cached(SQUAD_INFLUENCE_TABLE_CACHE_KEY, self._read_squad_influence)
+
+    def _read_squad_influence(self) -> Table[SquadInfluence]:
+        records = self._context.player_records()
+        if not records.pindexes:
+            return Table((), SquadInfluence)
+        with self._context.section(GAME_DB_SECTION) as game_db:
+            runs = read_influence_runs(game_db, max(records.pindexes) + 1)
+        if not runs:
+            return Table((), SquadInfluence)
+        uid_of = dict(zip(records.pindexes, records.uids, strict=True))
+        player_of = {player.uid: player for player in self.players()}
+        teams = []
+        for run in runs:
+            members = [player_of.get(uid_of.get(person)) for person, _ in run.entries]
+            members = [player for player in members if player is not None]
+            club = Counter((p.club_uid, p.club_name) for p in members).most_common(1)
+            team = Counter((p.team_id, p.team_slot) for p in members if p.team_id is not None).most_common(1)
+            teams.append((club[0][0] if club else (None, None), team[0][0] if team else (None, None)))
+        latest: dict[tuple[int | None, int | None], int] = {}
+        for index, (run, ((club_uid, _), (team_id, _))) in enumerate(zip(runs, teams, strict=True)):
+            key = (club_uid, team_id)
+            best = latest.get(key)
+            if best is None or (run.as_of or date.min) > (runs[best].as_of or date.min):
+                latest[key] = index
+        latest_lists = set(latest.values())
+        rows = []
+        for index, (run, ((club_uid, club_name), (team_id, team_slot))) in enumerate(zip(runs, teams, strict=True)):
+            ranked = sorted(run.entries, key=lambda entry: -entry[1])  # stored order is not by influence
+            for rank, (person, influence) in enumerate(ranked, start=1):
+                uid = uid_of.get(person)
+                player = player_of.get(uid) if uid is not None else None
+                rows.append(SquadInfluence(
+                    list_index=index,
+                    as_of=run.as_of,
+                    latest=index in latest_lists,
+                    club_uid=club_uid,
+                    club_name=club_name,
+                    team_id=team_id,
+                    team_slot=team_slot,
+                    rank=rank,
+                    person_index=person,
+                    player_uid=uid,
+                    player_name=player.name if player is not None else None,
+                    influence=influence,
+                    tier=influence_tier(influence),
+                ))
+        return Table(rows, SquadInfluence)
 
     def _player_lookup(
         self, pindexes: Iterable[int] | None = None
