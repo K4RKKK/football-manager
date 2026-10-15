@@ -1,5 +1,7 @@
 """Section 17 — service local : authentification, hôte, synchronisation, chat, plugin."""
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -35,7 +37,7 @@ def test_full_flow_sync_dashboard_chat(client, game_dir):
     assert client.post("/api/sync", json={"path": str(game_dir / "x.txt")}).status_code == 400
     assert client.post("/api/sync", json={"path": str(game_dir / "absent.fm")}).status_code == 404
     saves = client.get("/api/saves").json()
-    assert {s["path"].split("/")[-1] for s in saves} == {"synthetic-career.fm", "synthetic-career-scored.fm"}
+    assert {Path(s["path"]).name for s in saves} == {"synthetic-career.fm", "synthetic-career-scored.fm"}
     r = client.post("/api/sync", json={"path": str(game_dir / SCORED.name)})
     assert r.status_code == 200 and r.json()["counts"]["players"] == 4
     d = client.get("/api/dashboard").json()

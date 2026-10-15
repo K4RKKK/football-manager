@@ -125,17 +125,32 @@ class Repository:
             return [_row(r) for r in rows]
 
     # -- joueurs ---------------------------------------------------------------------------
-    def squad(self, ctx: CareerContext, club_uid: int | None = None) -> list[dict]:
+    def squad(self, ctx: CareerContext, club_uid: int | None = None, team_slot: int | None = 0) -> list[dict]:
+        """Effectif d'un club. `team_slot=0` : équipe première (défaut) ; `None` : toutes les équipes.
+
+        Un joueur dont l'équipe est inconnue (NULL) est conservé plutôt qu'écarté en silence.
+        """
         club = club_uid if club_uid is not None else ctx.club_uid
         if club is None:
             return []
+        p = s.players_current.c
+        conds = [p.career_id == ctx.career_id, p.club_uid == club]
+        if team_slot is not None:
+            conds.append(or_(p.team_slot == team_slot, p.team_slot.is_(None)))
+        with self.engine.connect() as c:
+            rows = c.execute(select(s.players_current).where(*conds).order_by(p.name))
+            return [_row(r) for r in rows]
+
+    def team_counts(self, ctx: CareerContext, club_uid: int | None = None) -> dict[int | None, int]:
+        club = club_uid if club_uid is not None else ctx.club_uid
+        p = s.players_current.c
         with self.engine.connect() as c:
             rows = c.execute(
-                select(s.players_current)
-                .where(s.players_current.c.career_id == ctx.career_id, s.players_current.c.club_uid == club)
-                .order_by(s.players_current.c.name)
+                select(p.team_slot, func.count())
+                .where(p.career_id == ctx.career_id, p.club_uid == club)
+                .group_by(p.team_slot)
             )
-            return [_row(r) for r in rows]
+            return {r[0]: r[1] for r in rows}
 
     def player(self, ctx: CareerContext, uid: int) -> dict | None:
         with self.engine.connect() as c:

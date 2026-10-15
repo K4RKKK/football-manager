@@ -22,21 +22,28 @@ if ($steam) {
 }
 $candidates += "C:\Program Files\Epic Games\FootballManager26"
 $r.fm26 = @()
-foreach ($c in ($candidates | Select-Object -Unique)) {
+foreach ($c in ($candidates | ForEach-Object { [IO.Path]::GetFullPath($_) } | Sort-Object -Unique)) {
   if (Test-Path $c) {
     $exe = Get-ChildItem $c -Filter "fm.exe" | Select-Object -First 1
     $bep = Join-Path $c "BepInEx"
+    # Sans BepInEx, doorstop_config.ini n'existe pas : Select-String lèverait une erreur qui
+    # annule toute l'entrée (constaté sur le PC de l'utilisateur, session 2).
+    $doorstop = Join-Path $c "doorstop_config.ini"
+    $steamBuild = $null
+    $manifest = Join-Path (Split-Path (Split-Path $c)) "appmanifest_3551340.acf"
+    if (Test-Path $manifest) { $steamBuild = ((Get-Content $manifest -Raw) | Select-String '"buildid"\s+"(\d+)"').Matches[0].Groups[1].Value }
     $r.fm26 += @{
       path = $c
       platform = $(if ($c -like "*steamapps*") { "Steam" } elseif ($c -like "*Epic*") { "Epic" } else { "autre" })
-      exe_version = $exe.VersionInfo.FileVersion
+      steam_build_id = $steamBuild
+      unity_version = $exe.VersionInfo.ProductVersion
       il2cpp = (Test-Path (Join-Path $c "GameAssembly.dll"))
       unity_player = (Get-Item (Join-Path $c "UnityPlayer.dll")).VersionInfo.FileVersion
       bepinex = (Test-Path $bep)
       bepinex_core = @(Get-ChildItem (Join-Path $bep "core") -Filter "BepInEx*.dll" | ForEach-Object { "$($_.Name) $($_.VersionInfo.FileVersion)" })
       interop_generated = (Test-Path (Join-Path $bep "interop\UnityEngine.UIElementsModule.dll"))
       plugins = @(Get-ChildItem (Join-Path $bep "plugins") -Recurse -Filter *.dll | ForEach-Object { $_.FullName.Replace($c, "") })
-      doorstop_ignore_disable = (Select-String -Path (Join-Path $c "doorstop_config.ini") -Pattern "ignore_disable_switch\s*=\s*true" -Quiet)
+      doorstop_ignore_disable = $(if (Test-Path $doorstop) { Select-String -Path $doorstop -Pattern "ignore_disable_switch\s*=\s*true" -Quiet } else { $false })
     }
   }
 }

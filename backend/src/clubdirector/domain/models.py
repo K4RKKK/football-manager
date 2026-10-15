@@ -50,6 +50,8 @@ class PlayerRecord(BaseModel):
     height_cm: int | None
     club_uid: int | None
     club_name: str | None
+    # Équipe du club : 0 = équipe première, 1, 2… = réserve / jeunes (ordre propre à chaque club).
+    team_slot: int | None = None
     natural_positions: list[str] = Field(default_factory=list)
     accomplished_positions: list[str] = Field(default_factory=list)
     position_ratings: dict[str, int | None] = Field(default_factory=dict)

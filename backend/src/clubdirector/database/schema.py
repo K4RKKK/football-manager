@@ -97,6 +97,7 @@ players_current = T(
     Column("height_cm", Integer),
     Column("club_uid", Integer),
     Column("club_name", String(200)),
+    Column("team_slot", Integer),  # 0 = équipe première ; NULL = inconnu
     Column("positions", String(100)),  # ",DC,DL," pour LIKE
     Column("accomplished_positions", String(100)),
     Column("position_ratings", JSON),

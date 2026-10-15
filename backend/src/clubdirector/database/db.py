@@ -16,7 +16,15 @@ def _m1_initial(engine: Engine) -> None:
     schema.metadata.create_all(engine)
 
 
-MIGRATIONS: list[Migration] = [_m1_initial]
+def _m2_player_team_slot(engine: Engine) -> None:
+    """Équipe de chaque joueur (première / réserve / jeunes) — ajoutée en session 2."""
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(players_current)")}
+        if "team_slot" not in cols:
+            conn.exec_driver_sql("ALTER TABLE players_current ADD COLUMN team_slot INTEGER")
+
+
+MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot]
 CURRENT_VERSION = len(MIGRATIONS)
 
 

@@ -90,8 +90,13 @@ def _status(model: str, field: str) -> Confidence:
     return "verified" if text == "verified" else "unconfirmed"
 
 
+# À incrémenter quand l'adaptateur lit de nouveaux champs : une sauvegarde déjà importée par une
+# révision antérieure est alors relue (sinon les nouveaux champs resteraient vides).
+READER_REVISION = 2
+
+
 class FmsaveSaveReader:
-    name = f"fmsave {getattr(fmsave, '__version__', '?')}"
+    name = f"fmsave {getattr(fmsave, '__version__', '?')} r{READER_REVISION}"
 
     def __init__(self, competition_names: dict[int, str] | None = None) -> None:
         self.competition_names = competition_names
@@ -103,7 +108,9 @@ class FmsaveSaveReader:
             with fmsave.open(snapshot_path, competition_names=self.competition_names) as save:
                 extract = self._read_open(save)
             caught = [f"{x.category.__name__}: {x.message}" for x in w]
-        extract.reader_warnings = caught
+        # Les échecs de lecteurs (ajoutés par _read_open) ne doivent pas être écrasés : sans eux,
+        # une section illisible (ex. tactiques du build 26.3.0) passait pour une section vide.
+        extract.reader_warnings = caught + extract.reader_warnings
         for msg in caught:
             log.warning("fmsave: %s", msg)
         return extract
@@ -296,6 +303,7 @@ class FmsaveSaveReader:
             height_cm=p.height_cm,
             club_uid=p.club_uid,
             club_name=p.club_name,
+            team_slot=p.team_slot,
             natural_positions=list(p.natural_positions or ()),
             accomplished_positions=list(p.accomplished_positions or ()),
             position_ratings=_dc_to_dict(p.positions),

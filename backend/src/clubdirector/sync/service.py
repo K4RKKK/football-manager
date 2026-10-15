@@ -97,34 +97,38 @@ class SyncService:
         with self.engine.begin() as conn:
             career_id = self._upsert_career(conn, fp, extract, stem, now, season, season_src)
             existing = conn.execute(
-                select(s.snapshots.c.id).where(
+                select(s.snapshots.c.id, s.snapshots.c.reader).where(
                     s.snapshots.c.career_id == career_id, s.snapshots.c.sha256 == snap.sha256
                 )
-            ).scalar()
-            if existing is not None:
-                # Même fichier déjà importé : rien à refaire (idempotence).
+            ).first()
+            if existing is not None and existing.reader == self.reader.name:
+                # Même fichier déjà importé par le même lecteur : rien à refaire (idempotence).
                 return SyncResult(
-                    career_id, existing, extract.meta.game_date.isoformat(), season, season_src,
+                    career_id, existing.id, extract.meta.game_date.isoformat(), season, season_src,
                     counts, extract.reader_warnings, int((time.perf_counter() - t0) * 1000),
                     reused=True,
                 )
-            snapshot_id = conn.execute(
-                insert(s.snapshots).values(
-                    career_id=career_id,
-                    source_path=str(snap.source_path),
-                    copy_path=str(snap.copy_path),
-                    sha256=snap.sha256,
-                    size=snap.size,
-                    copied_at=snap.copied_at,
-                    game_date=extract.meta.game_date,
-                    build=extract.meta.build,
-                    reader=self.reader.name,
-                    status="ok",
-                    warnings=extract.reader_warnings,
-                    field_status=extract.field_status,
-                    counts=counts,
-                )
-            ).inserted_primary_key[0]
+            values = dict(
+                source_path=str(snap.source_path),
+                copy_path=str(snap.copy_path),
+                size=snap.size,
+                copied_at=snap.copied_at,
+                game_date=extract.meta.game_date,
+                build=extract.meta.build,
+                reader=self.reader.name,
+                status="ok",
+                warnings=extract.reader_warnings,
+                field_status=extract.field_status,
+                counts=counts,
+            )
+            if existing is not None:
+                # Lecteur plus récent : on relit le même fichier dans le même relevé.
+                snapshot_id = existing.id
+                conn.execute(update(s.snapshots).where(s.snapshots.c.id == snapshot_id).values(**values))
+            else:
+                snapshot_id = conn.execute(
+                    insert(s.snapshots).values(career_id=career_id, sha256=snap.sha256, **values)
+                ).inserted_primary_key[0]
             changes = self._players(conn, career_id, snapshot_id, extract)
             self._clubs(conn, career_id, snapshot_id, extract)
             self._fixtures(conn, career_id, snapshot_id, extract)
@@ -198,6 +202,7 @@ class SyncService:
                     height_cm=p.height_cm,
                     club_uid=p.club_uid,
                     club_name=p.club_name,
+                    team_slot=p.team_slot,
                     positions="," + ",".join(p.natural_positions) + ",",
                     accomplished_positions="," + ",".join(p.accomplished_positions) + ",",
                     position_ratings=p.position_ratings,

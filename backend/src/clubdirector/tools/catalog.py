@@ -49,6 +49,8 @@ class PlayerRef(ToolArgs):
 
 class SquadArgs(ToolArgs):
     club_uid: int | None = Field(None, description="Club ; par défaut le club géré.")
+    team_slot: int = Field(0, ge=0, description="Équipe : 0 = équipe première (défaut), 1, 2… = réserve / jeunes.")
+    toutes_equipes: bool = Field(False, description="True : toutes les équipes du club (première, réserve, jeunes).")
 
 
 class StatsArgs(PlayerRef):
@@ -252,17 +254,20 @@ def build_registry() -> ToolRegistry:
         club = _require_club(t)
         squad = t.repo.squad(t.ctx)
         table = [r for r in t.repo.league_table(t.ctx) if r["club_uid"] == club]
+        counts = t.repo.team_counts(t.ctx)
         return {
             "club": t.ctx.club_name,
             "club_uid": club,
             "effectif": len(squad),
+            "perimetre": "équipe première (slot 0)",
+            "joueurs_par_equipe": {("inconnue" if k is None else f"slot {k}"): v for k, v in sorted(counts.items(), key=lambda kv: (kv[0] is None, kv[0] or 0))},
             "age_moyen": round(sum(p["age"] for p in squad if p["age"]) / max(1, sum(1 for p in squad if p["age"])), 1),
             "classement": table[0] if table else None,
         }
 
     @T("get_club_squad", "Liste de l'effectif (club géré par défaut).", "lecture", SquadArgs)
     def get_club_squad(t: ToolContext, a: SquadArgs):
-        rows = t.repo.squad(t.ctx, a.club_uid)
+        rows = t.repo.squad(t.ctx, a.club_uid, None if a.toutes_equipes else a.team_slot)
         return ToolResult("", True, data=[player_summary(r, t.prefs) for r in rows])
 
     @T("get_player_profile", "Fiche complète d'un joueur (attributs visibles, contrat, postes).", "lecture", PlayerRef)
@@ -590,7 +595,7 @@ def build_registry() -> ToolRegistry:
     @T("evaluate_youth_prospects", "Jeunes du club (≤ 21 ans) avec temps de jeu de la saison.", "analyse")
     def evaluate_youth_prospects(t: ToolContext, a: NoArgs):
         _require_club(t)
-        young = [p for p in t.repo.squad(t.ctx) if p["age"] is not None and p["age"] <= 21]
+        young = [p for p in t.repo.squad(t.ctx, team_slot=None) if p["age"] is not None and p["age"] <= 21]
         out = []
         for p in young:
             st = [r for r in t.repo.season_stats(t.ctx, player_uid=p["uid"], season_start_year=t.ctx.season_start_year) if r["kind"] == "overall"]

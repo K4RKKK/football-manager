@@ -54,6 +54,7 @@ def player_summary(row: dict, prefs: Preferences, today: date | None = None) -> 
         "age": row.get("age"),
         "club": row.get("club_name"),
         "club_uid": row.get("club_uid"),
+        "equipe_slot": row.get("team_slot"),
         "postes": pos,
         "postes_libelles": [LABEL_FR.get(p, p) for p in pos],
         "valeur": money(prefs, row.get("transfer_value")),
