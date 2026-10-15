@@ -667,7 +667,6 @@ def _read_statuses(
     normal_kind = layout.normal_kind
     accepted_kinds = (normal_kind, layout.stub_kind)
     window_span = layout.search_window_bytes + _UINT32_PAIR.size
-    startswith = game_db.startswith
     confirmation_offset = layout.confirmation_offset
     confirmation_zero_bytes = bytes(layout.confirmation_zero_bytes)
     statuses: list[tuple[int | None, int | None]] = []
@@ -694,18 +693,22 @@ def _read_statuses(
             ):
                 ordinal: int = read_uint32(game_db, ordinal_at)[0]
                 kind = game_db[kind_at]
-                if previous_ordinal < ordinal < ordinal_limit and kind in accepted_kinds:
+                # ClubDirector : tant qu'aucun statut n'est accepté, la recherche couvre tout
+                # `game_db` ; un faux positif accepté là fixait un ordinal et un curseur qui
+                # rejetaient ensuite toute la vraie table (build 26.3.0 : 2 statuts sur 29 800).
+                # L'ancre exige donc la confirmation par l'index du club.
+                anchored = found_first_status or _status_confirmed(
+                    game_db, status_hit, record, confirmation_offset, confirmation_zero_bytes
+                )
+                if anchored and previous_ordinal < ordinal < ordinal_limit and kind in accepted_kinds:
                     accepted = True
                     previous_ordinal = ordinal
                     cursor = kind_at
                     if kind == normal_kind:
                         status = _normal_status(game_db, status_hit, layout)
                         normal_status_count += 1
-                        confirmation_at = status_hit + confirmation_offset
-                        if (
-                            confirmation_at >= 0
-                            and read_uint32(game_db, confirmation_at)[0] == record.club_index - 1
-                            and startswith(confirmation_zero_bytes, confirmation_at + _UINT32.size)
+                        if _status_confirmed(
+                            game_db, status_hit, record, confirmation_offset, confirmation_zero_bytes
                         ):
                             confirmed_status_count += 1
                     break
@@ -719,6 +722,23 @@ def _read_statuses(
                 break
     statuses.extend([_NO_STATUS] * (len(records_in_index_order) - len(statuses)))
     return statuses, normal_status_count, confirmed_status_count
+
+
+def _status_confirmed(
+    game_db: bytes,
+    status_hit: int,
+    record: _ClubRecord,
+    confirmation_offset: int,
+    confirmation_zero_bytes: bytes,
+) -> bool:
+    """Whether the stored club index before a status hit names this club."""
+    confirmation_at = status_hit + confirmation_offset
+    return (
+        confirmation_at >= 0
+        and confirmation_at + _UINT32.size <= len(game_db)
+        and _UINT32.unpack_from(game_db, confirmation_at)[0] == record.club_index - 1
+        and game_db.startswith(confirmation_zero_bytes, confirmation_at + _UINT32.size)
+    )
 
 
 def _normal_status(

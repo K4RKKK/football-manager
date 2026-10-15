@@ -5,8 +5,13 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Domaine | Élément | État | Preuve / remarque |
 |---|---|---|---|
 | Phase 0 | Audit environnement cloud, étude des projets, dépôt, docs | ✅ | ce dossier `docs/` |
-| Phase 0 | Audit du PC Windows | 🟡 | `scripts/audit_windows.ps1` écrit, non exécuté |
-| Phase 1 | Lecture club/effectif/attributs depuis un `.fm` | ✅ format / 🟡 vraie carrière | sauvegardes synthétiques au vrai format |
+| Phase 0 | Audit du PC Windows | ✅ | session 2 : FM26 Steam build 23583635, Unity 6000.0.52f1 IL2CPP, BepInEx absent |
+| Phase 1 | Lecture club/effectif/attributs depuis un `.fm` | ✅ vraie carrière | AS Roma (26.3.0) : club, date, effectif par équipe ; valeurs à confronter à l'écran du jeu (5 attributs) |
+| Données | Fork fmsave (`third_party/fmsave`) | ✅ | statuts des clubs et coups de pied arrêtés réparés sur 26.3.0 ; tactiques 26.3.0 ❌ (signature) |
+| Données | Inventaire des sections (`clubdirector inventory`) | ✅ | `docs/DATA_INVENTORY.md` : 77 sections, 35 % du volume non décodé |
+| Données | Atelier de décodage (`tools/decode/workbench.py`) | ✅ outil | `docs/SECTION_MAP.md` : 65 sections cartographiées (liens, pas d'enregistrement) |
+| Données | Lecteurs fmsave non importés (16) | ⬜ | staff, compétitions, stades, sponsors, installations, stats par match… |
+| Données | Sections non décodées (≈ 60) | ⬜ | historiques, transferts, liste de recrutement, palmarès… |
 | Phase 1 | Plugin minimal BepInEx + détection du jeu | 🟡 | `plugin/src/ClubDirector.Plugin` |
 | Phase 1 | Outil de diagnostic | ✅ | interface web + CLI `clubdirector tool …` |
 | Phase 2 | Adaptateur fmsave, normalisation, SQLite, migrations | ✅ | |

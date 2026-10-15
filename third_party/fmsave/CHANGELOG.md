@@ -6,6 +6,9 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) an
 
 ### Fixed
 
+- ClubDirector: a team block whose tactic count is led by the flag byte 1 skips the two extra bytes that follow it instead of failing the whole tactics read.
+- ClubDirector: the club status walk anchors only on a status record whose stored club index confirms it. An unconfirmed doubled uid ahead of the table used to be taken as the first status, and its high ordinal made the walk reject the whole table, so almost every club lost its reputation and last league position.
+
 - The `Sponsorship.annual_value` and `sponsorships()` docs no longer say an ended contract's annual value is zero. Ended contracts often keep a non-zero annual value, so filter on `end` to find running contracts.
 
 Refs #11.

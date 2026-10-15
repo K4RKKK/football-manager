@@ -1630,6 +1630,10 @@ class TacticsLayout:
     routine_record_max_bytes: int
     routine_name_length_range: tuple[int, int]
     name_length_range: tuple[int, int]
+    # ClubDirector : sur une sauvegarde 26.3.0, le bloc de l'équipe première porte un octet de
+    # tête 1 suivi de deux octets de plus avant la valeur et le compte. None : non admis.
+    tactic_count_flagged_lead_byte: int | None = None
+    tactic_count_flag_extra_bytes: int = 0
 
 
 @dataclass(frozen=True, slots=True)

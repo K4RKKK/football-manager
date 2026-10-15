@@ -1008,3 +1008,20 @@ def test_stub_team_objects_require_sound_headers_dates_and_unique_ordinals() -> 
     assert read_stub_team_ids(stub(102, kind=10), layout) == frozenset()
     assert read_stub_team_ids(stub(102, dates=bytes(12)), layout) == frozenset()
     assert read_stub_team_ids(good[:-1], layout) == frozenset()
+
+
+def test_unconfirmed_decoy_before_the_table_does_not_anchor_the_status_walk() -> None:
+    # ClubDirector : sur un build 26.3.0, un doublon d'uid non confirmé situé avant la vraie
+    # table était accepté comme premier statut ; son ordinal élevé faisait rejeter toute la table.
+    decoy_status = status_record_bytes(
+        ordinal=150_000,
+        club_index=99,
+        uid=5001,
+        kind=NORMAL_STATUS_KIND,
+        last_league_position=1,
+        reputation=9999,
+    )
+    status_records = [decoy_status, *example_status_records()]
+    club_index = read_index(example_game_db(status_records=status_records))
+    assert club_index.club_by_uid[5001].reputation == 6500
+    assert club_index.club_by_uid[5004].reputation == 1200

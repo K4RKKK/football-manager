@@ -323,13 +323,23 @@ def _read_selection_part(
         selectors.extend(one_list)
     if cursor + _UINT8.size + _UINT32.size + _UINT16.size > block_end:
         raise _too_short(file_name, "a block's tactic count")
-    if section[cursor] != layout.tactic_count_lead_byte:
+    lead_byte = section[cursor]
+    if lead_byte == layout.tactic_count_lead_byte:
+        extra_bytes = 0
+    elif (
+        layout.tactic_count_flagged_lead_byte is not None
+        and lead_byte == layout.tactic_count_flagged_lead_byte
+    ):
+        extra_bytes = layout.tactic_count_flag_extra_bytes
+    else:
         raise layout_mismatch(
             file_name,
             "the byte in front of a block's tactic count is not zero as fmsave expects",
             TACTICS_SECTION,
         )
-    cursor += _UINT8.size
+    if cursor + _UINT8.size + extra_bytes + _UINT32.size + _UINT16.size > block_end:
+        raise _too_short(file_name, "a block's tactic count")
+    cursor += _UINT8.size + extra_bytes
     (tactics_value,) = _UINT32.unpack_from(section, cursor)
     cursor += _UINT32.size
     (tactic_count,) = _UINT16.unpack_from(section, cursor)

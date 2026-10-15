@@ -1,7 +1,13 @@
 # Limitations vérifiées et problèmes ouverts
 
-1. **Aucune validation sur une vraie carrière FM26** : l'environnement de la session 1 ne contenait
-   ni le jeu ni de sauvegarde. Tout ce qui touche au jeu reste 🟡.
+1. **Builds inconnus de fmsave** : les sauvegardes de l'utilisateur sont en 26.0.4, 26.1.2, 26.2.0 et
+   26.3.0 ; fmsave ne connaît entièrement que 26.3.2. Sur 26.3.0 (session 2), seuls les
+   enregistrements de tactique restent illisibles (autre signature). Le plugin n'est pas encore validé
+   dans le jeu (BepInEx absent).
+1b. **Couverture des données** : ≈ 35 % du volume décompressé de la sauvegarde n'est lu par aucun
+   lecteur (`docs/DATA_INVENTORY.md`) et 16 lecteurs fmsave ne sont pas encore importés. Objectif :
+   100 % (`docs/SECTION_MAP.md`).
+1c. **Synchronisation lente** : ≈ 110 s sur une vraie carrière (73 658 joueurs).
 2. **Statistiques des saisons passées** : FM26 ne conserve dans la sauvegarde que la saison en cours
    (fmsave). ClubDirector archive à chaque synchronisation ; une saison jamais synchronisée reste
    inconnue et l'assistant le dit.

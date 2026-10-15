@@ -999,3 +999,41 @@ def test_a_routine_marker_in_setting_bits_does_not_bound_a_tactic(tmp_path: Path
     assert len(tactics[0].slots) == 11
     assert len(routines) == 40
     assert stats.routine_blocks_complete == 2
+
+
+def _career_selection() -> tuple[bytes, list[bytes]]:
+    records = career_tactic_records()
+    selection = selection_part_bytes(
+        team_id=NORTHBRIDGE_TEAM_A,
+        label="Example Selection",
+        slots=(),
+        list_a=(),
+        list_b=(),
+        single=NO_SELECTOR,
+        taker_marker=b"\x08\x05\x02",
+        tactics_value=HAS_TACTICS_VALUE,
+        tactic_count=len(records),
+    )
+    return selection, records
+
+
+def test_a_flagged_tactic_count_skips_its_two_extra_bytes() -> None:
+    # ClubDirector : bloc de l'équipe première d'une sauvegarde 26.3.0 (octet de tête 1 suivi de
+    # deux octets de plus avant la valeur et le compte).
+    selection, records = _career_selection()
+    flagged = selection[:-7] + b"\x01\x05\x00" + selection[-6:]
+    body = tactics_man_body(
+        selector=MANAGER_SELECTOR,
+        blocks=(flagged + b"".join(records) + set_piece_area_bytes(career_routine_names()),),
+    )
+    blocks, _counts = walk_tactic_blocks(body, (NORTHBRIDGE_TEAM_A,), LAYOUT, FILE_NAME)
+    assert len(blocks[0].tactics) == len(records)
+
+
+def test_another_tactic_count_lead_byte_remains_an_error() -> None:
+    selection, _records = _career_selection()
+    body = tactics_man_body(
+        selector=MANAGER_SELECTOR, blocks=(selection[:-7] + b"\x02" + selection[-6:],)
+    )
+    with pytest.raises(FmsaveError, match="tactic count"):
+        walk_tactic_blocks(body, (NORTHBRIDGE_TEAM_A,), LAYOUT, FILE_NAME)

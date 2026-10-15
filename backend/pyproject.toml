@@ -24,7 +24,11 @@ clubdirector = "clubdirector.cli:main"
 fmsave = { path = "../third_party/fmsave", editable = true }
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = [
+    "numpy>=2.5.4",
+    "pytest>=8",
+    "ruff>=0.6",
+]
 
 [build-system]
 requires = ["hatchling>=1.25"]

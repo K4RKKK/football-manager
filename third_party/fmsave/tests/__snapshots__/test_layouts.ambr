@@ -1331,6 +1331,8 @@
         'slot_count': 11,
         'slot_tag': b'B\x00\x02',
         'style_code_bytes': 4,
+        'tactic_count_flag_extra_bytes': 2,
+        'tactic_count_flagged_lead_byte': 1,
         'tactic_count_lead_byte': 0,
         'taker_list_count': 10,
         'taker_markers': tuple(
