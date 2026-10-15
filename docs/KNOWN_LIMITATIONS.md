@@ -23,7 +23,7 @@
    hors mode avancé confirmé.
 6. **Champs non confirmés par fmsave** (`age`, `club_uid`, `wage`, `ability`) : leur statut est
    transmis à l'IA (`statut_champs`).
-7. **Non lus** : disponibilité du jour, compositions de match, dette, prix demandés, noms de
+7. **Non lus** : compositions de match, dette, prix demandés, noms de
    compétitions (pas de fichier de noms fourni), instructions tactiques détaillées, staff complet.
 8. **Identité de carrière** : un « Enregistrer sous » crée une nouvelle carrière (choix prudent) ;
    la fusion manuelle n'est pas encore exposée dans l'UI.
@@ -86,3 +86,9 @@
     valeur et la condition, jamais sur les attributs cachés. L'infirmerie du jour n'est pas lue dans la sauvegarde :
     l'adjoint demande les absents (« sans Dybala » est compris). La tactique active (26.3.0) n'est pas lue : système
     4-2-3-1 par défaut, ou celui demandé.
+26. **Disponibilité du jour** : lue. Blessé aujourd'hui = ligne de blessure « typée » dont la date
+    de retour prévue est postérieure à la date du jeu (vérifié dans FM26 sur Gabriel Jesus et
+    Barcola) ; le jeu affiche une fourchette (« 6 jours - 2 semaines »), la sauvegarde une seule date.
+    Suspensions : la sauvegarde garde aussi des sanctions que le jeu n'affiche plus, et le nombre de
+    matchs restants n'est pas lu. Les sections féminines portant le nom d'un club masculin sont
+    écartées par les classements du marché (joueurs classés chez les hommes).

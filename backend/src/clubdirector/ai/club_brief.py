@@ -202,12 +202,13 @@ def build_club_dossier(registry: ToolRegistry, tctx: ToolContext, role: str | No
         lines.append("Meilleurs buteurs de la saison : " + ", ".join(f"{s['joueur']} ({s['valeur']})" for s in scorers))
     lines += _leaders(tctx)
 
-    injured = [
-        i for i in (_call(registry, tctx, "get_injured_players") or [])
-        if i.get("nature") != "history" and ctx.game_date and i.get("date") and i["date"] >= ctx.game_date.isoformat()
-    ]
+    availability = _call(registry, tctx, "get_injured_players") or {}
+    injured = availability.get("blesses") or []
     if injured:
-        lines.append("Blessés (retour prévu) : " + ", ".join(f"{i['joueur']} ({_fr(i['date'])})" for i in injured[:8]))
+        lines.append("Blessés (retour prévu) : " + ", ".join(
+            f"{i['joueur']} ({_fr(i['retour_prevu']) if i.get('retour_prevu') else 'date inconnue'})" for i in injured[:8]))
+    if availability.get("suspendus"):
+        lines.append("Suspendus : " + ", ".join(i["joueur"] for i in availability["suspendus"][:8]))
 
     expiring = (_call(registry, tctx, "search_expiring_contracts", months=12, scope="club", limit=8) or {}).get("joueurs") or []
     first_team = [p for p in expiring if p.get("equipe_slot") in (0, None)]

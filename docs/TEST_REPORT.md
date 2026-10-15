@@ -152,3 +152,9 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Détection (« onze », « compo », « en 4-3-3 », « sans X », rotation) | ✅ | tests `test_lineup.py` |
 | `pytest` backend | ✅ | 138 / 138 |
 
+### Session 3 (suite) — disponibilité du jour
+| Test | Résultat | Détail |
+|---|---|---|
+| Règle des blessures vérifiée dans FM26 par l'utilisateur | ✅ | Gabriel Jesus : « entorse des ligaments croisés », retour prévu au 07/11 (jeu : « 6 jours - 2 semaines ») ; Barcola (date passée) non blessé ; Roma : aucun blessé, aucune ligne |
+| Outil get_injured_players (copie de la carrière) | ✅ | Roma : vide ; Arsenal : Gabriel Jesus (17 jours) ; Samsunspor : 3 retours récents ; club homonyme féminin écarté ; 0,6 s |
+| `pytest` backend | ✅ | 3 nouveaux tests (`tests/test_availability.py`) ; suite complète : 155 réussis, 2 échecs dans le travail en cours de la session Fiabilité (surveillance de l'IA), sans lien |

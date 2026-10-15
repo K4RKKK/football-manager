@@ -140,6 +140,11 @@ class FitArgs(ToolArgs):
     role: str
 
 
+class AvailabilityArgs(ToolArgs):
+    club: str | None = Field(None, description="Un autre club (ex. l'adversaire du prochain match) ; par défaut le nôtre.")
+    historique: bool = Field(False, description="Ajouter l'historique récent des blessures.")
+
+
 class ExpiringArgs(ToolArgs):
     months: int = Field(12, ge=0, le=60)
     scope: Literal["club", "tous"] = "club"
@@ -447,13 +452,27 @@ def build_registry() -> ToolRegistry:
             for r in rows
         ], limitations=["Les instructions collectives/individuelles et les rôles sont stockés sous forme codée non confirmée : non interprétés."])
 
-    @T("get_injured_players", "Historique des blessures connues du club (pas l'état médical du jour).", "lecture")
-    def get_injured_players(t: ToolContext, a: NoArgs):
-        rows = t.repo.injuries(t.ctx, club_uid=t.ctx.club_uid)
-        return ToolResult("", True, data=[
-            {"joueur": r["player_name"], "date": r["date"].isoformat() if r["date"] else None, "type": r["type_name"], "nature": r["kind"]}
-            for r in rows[:30]
-        ], limitations=["La sauvegarde n'expose pas la disponibilité du jour : ceci est l'historique des blessures conservé, pas la liste des blessés actuels."])
+    @T("get_injured_players", "Disponibilité du jour d'un club (le nôtre par défaut, ou un adversaire) : blessés en cours avec "
+       "la blessure et la date de retour prévue, joueurs revenus récemment, suspendus ; plus l'historique récent des blessures.",
+       "lecture", AvailabilityArgs)
+    def get_injured_players(t: ToolContext, a: AvailabilityArgs):
+        from clubdirector.game.availability import LIMITATIONS, club_availability, find_club
+
+        club_uid, club_name = t.ctx.club_uid, t.ctx.club_name
+        if a.club:
+            found = find_club(t.engine, t.ctx.career_id, a.club)
+            if found is None:
+                raise LookupError(f"Aucun club nommé « {a.club} » dans la sauvegarde.")
+            club_uid, club_name = found["uid"], found["short_name"] or found["name"]
+        if club_uid is None:
+            raise LookupError("Club géré inconnu.")
+        out = {"club": club_name, "date_du_jeu": t.ctx.game_date.isoformat() if t.ctx.game_date else None,
+               **club_availability(t.engine, t.ctx.career_id, club_uid, t.ctx.game_date)}
+        if a.historique:
+            out["historique"] = [
+                {"joueur": r["player_name"], "date": r["date"].isoformat() if r["date"] else None, "nature": r["kind"]}
+                for r in t.repo.injuries(t.ctx, club_uid=club_uid)[:20]]
+        return ToolResult("", True, data=out, limitations=list(LIMITATIONS))
 
     @T("get_transfer_history", "Changements de club observés entre synchronisations (transferts détectés).", "lecture", PlayerRef)
     def get_transfer_history(t: ToolContext, a: PlayerRef):
