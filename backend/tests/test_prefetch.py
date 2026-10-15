@@ -33,6 +33,10 @@ TCTX = SimpleNamespace(repo=_Repo(), ctx=None)
     ("Quels clubs s'intéressent à Lorenzo Pellegrini ?", [("find_buyers", {"player_uid": 2})]),
     ("On a reçu des offres ?", [("get_transfer_offers", {})]),
     ("Fais une offre pour Lautaro", []),  # une offre à faire : plan d'achat, pas ici
+    ("Prépare-moi une offre pour Juanlu", []),
+    ("Prépare aussi une offre pour Lewis Thomas, le gardien sans club", []),
+    ("On peut recruter Dybala ?", []),
+    ("Vends Dybala : trouve un club qui peut payer et prépare l'offre", [("prepare_sale", {"player_uid": 1})]),
     ("Et Marco Pellegrini, il vaut combien ?", [("evaluate_transfer_value", {"player_uid": 3})]),  # nom complet d'abord
     ("Combien vaut Lautaro ?", []),  # pas un joueur du club : le modèle cherche lui-même
     ("Comment ça va ?", []),

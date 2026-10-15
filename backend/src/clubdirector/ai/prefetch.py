@@ -25,7 +25,9 @@ RULES: list[tuple[re.Pattern, str]] = [
     (re.compile(r"\b(combien vaut|vaut combien|valeur|estime\w*|prix)\b", re.IGNORECASE), "evaluate_transfer_value"),
     (re.compile(r"\boffres?\b", re.IGNORECASE), "get_transfer_offers"),
 ]
-OUR_OFFER_RE = re.compile(r"\b(fai\w*|propos\w*|envoie\w*|lanc\w*) (une |des |notre |nos )?offres?\b", re.IGNORECASE)
+# Un achat (offre à faire, recrue) : plan d'achat préparé ailleurs, jamais la liste de nos offres reçues.
+OUR_OFFER_RE = re.compile(r"\b(fai|propos|envoi|envoy|lanc|pr[ée]par)\w*(-moi|-nous)?( \w+)? (une |des |notre |nos )?offres?\b|"
+                          r"\b(recrut\w*|faire venir|achet(er|e|ons|ez))\b", re.IGNORECASE)
 AMOUNT_RE = re.compile(r"(\d{1,3}(?:[ .]\d{3})+|\d+(?:[.,]\d+)?)\s*(m|millions?|k|milles?)?\s*(€|eur\w*|d'euros)",
                        re.IGNORECASE)
 UNITS = {"m": 1_000_000, "million": 1_000_000, "millions": 1_000_000, "k": 1_000, "mille": 1_000, "milles": 1_000}
