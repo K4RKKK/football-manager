@@ -21,6 +21,8 @@ from clubdirector.ai.router import classify
     ("Quel était notre résultat il y a 10 jours ?", "match_days_ago", {"days_ago": 10}),
     ("Quel est notre budget transferts ?", "transfer_budget", {}),
     ("Où en est-on au classement ?", "table", {}),
+    ("Qui est notre joueur le mieux payé ?", "top_wage", {}),
+    ("Quels sont les plus gros salaires de l'effectif ?", "top_wage", {}),
 ])
 def test_level0_classification(q, intent, args):
     got = classify(q)
@@ -46,6 +48,8 @@ def test_level0_answers_without_any_llm(engine, registry, tctx):
     assert "sauvegarde" not in a.text and "relevé à la date" not in a.text  # ton naturel, pas de jargon
     a = o.ask(tctx, "Combien Mbappé a-t-il marqué la saison dernière ?")
     assert a.route == "niveau0" and "non disponible" in a.text.lower()
+    a = o.ask(tctx, "Qui est notre joueur le mieux payé ?")  # 384 s et 6 consultations par le modèle sur le banc
+    assert a.route == "niveau0" and a.text.startswith("Le mieux payé, c'est Sam Sample") and "par semaine" in a.text
 
 
 def test_no_provider_is_reported_honestly(engine, registry, tctx):

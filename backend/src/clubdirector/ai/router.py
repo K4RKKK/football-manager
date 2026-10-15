@@ -111,6 +111,9 @@ def classify(question: str) -> Intent | None:
         return Intent("transfer_budget")
     if re.search(r"budget salari|masse salariale|marge salariale", q):
         return Intent("wage_budget")
+    if re.search(r"mieux payes?|plus (?:gros|hauts?|eleves?) salaires?|salaires? les plus (?:eleves?|hauts?|gros)|"
+                 r"qui gagne le plus(?: d'argent)?\s*\??$", q):
+        return Intent("top_wage")
     if re.search(r"contrats? (?:qui )?(?:expir|se termin|arriv)|fins? de contrat", q):
         return Intent("expiring")
     return None
@@ -283,6 +286,16 @@ def answer_intent(intent: Intent, run, short_names=None) -> tuple[str, list[str]
         d = call("get_wage_budget")
         return (f"Côté salaires, on a {d['marge_hebdo']['texte']} de marge par semaine : {d['masse_hebdo']['texte']} de masse "
                 f"salariale pour un budget de {d['budget_hebdo']['texte']}.", lim)
+    if n == "top_wage":
+        paid = sorted((p for p in call("get_club_squad") if p["salaire"]["brut"] is not None),
+                      key=lambda p: p["salaire"]["brut"], reverse=True)
+        if not paid:
+            return ("Les salaires de l'effectif ne sont pas disponibles dans nos relevés.", lim)
+        top = paid[0]
+        txt = f"Le mieux payé, c'est {top['nom']} : {top['salaire']['texte']} par semaine."
+        if paid[1:]:
+            txt += " Derrière : " + ", ".join(f"{p['nom']} ({p['salaire']['texte']})" for p in paid[1:5]) + "."
+        return (txt, lim)
     if n == "expiring":
         d = call("search_expiring_contracts", {"months": 12, "limit": 100})
         if not d["joueurs"]:

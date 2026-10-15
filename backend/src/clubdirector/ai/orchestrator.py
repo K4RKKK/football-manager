@@ -28,6 +28,7 @@ from clubdirector.ai.persona import (
     build_system_prompt,
     first_contact_request,
 )
+from clubdirector.ai.prefetch import prefetch_brief, prefetch_calls
 from clubdirector.ai.providers.base import IAIProvider, ProviderError
 from clubdirector.ai.router import answer_intent, classify, intent_allowed, wants_premium
 from clubdirector.ai.topics import (
@@ -108,7 +109,8 @@ KIND_HINTS = {
                  "ou deux bulles avec les chiffres utiles. Si le chiffre demandé n'est pas dans le dossier, consulte "
                  "les données AVANT de répondre ; n'estime jamais un chiffre. Pas de développement non demandé.]"),
     "demande": ("[Consigne automatique — type de message : DEMANDE. Fais le travail maintenant : consulte les données "
-                "nécessaires puis livre un résultat concret (noms, chiffres, recommandation) en bulles aérées. Si "
+                "nécessaires (toutes les consultations d'un coup, dans le même tour, pas l'une après l'autre) puis "
+                "livre un résultat concret (noms, chiffres, recommandation) en bulles aérées. Si "
                 "une action dans FM26 est nécessaire, prépare-la et dis précisément ce que l'entraîneur doit faire "
                 "dans le jeu.]"),
     "accord": ("[Consigne automatique — type de message : RÉPONSE (accord) à ta proposition. L'entraîneur accepte : fais "
@@ -537,6 +539,18 @@ class Orchestrator:
         cost = 0.0
         limitations: list[str] = []
         said: list[str] = []
+        if lineup_args is None and not question.startswith("[Message automatique"):
+            # Demandes courantes sur un joueur nommé : l'outil tourne avant le modèle, qui répond en un seul tour.
+            for name, args in prefetch_calls(role, question, tctx, restricted):
+                if self.registry.get(name) is None:
+                    continue
+                if on_event:
+                    on_event({"type": "tool", "name": name, "label": tool_label(name)})
+                r = self.registry.execute(name, args, tctx)
+                trace.append({"tool": name, "args": args, "ok": r.ok, "error": r.error})
+                if r.ok:
+                    limitations.extend(r.limitations)
+                    messages[-1] = {"role": "user", "content": messages[-1]["content"] + "\n\n" + prefetch_brief(name, r.data)}
         with self._active_lock:
             self._active += 1
         try:
@@ -569,7 +583,7 @@ class Orchestrator:
                         r = self.registry.execute(call.name, call.arguments, tctx)
                     trace.append({"tool": call.name, "args": call.arguments, "ok": r.ok, "error": r.error})
                     limitations.extend(r.limitations)
-                    payload = json.dumps(r.as_dict(), ensure_ascii=False, default=str)
+                    payload = json.dumps(r.as_dict(), ensure_ascii=False, default=str, separators=(",", ":"))
                     results.append((call, _compact(payload), not r.ok))
                 session.add_tool_results(results)
             said.append("J'ai atteint la limite d'appels d'outils sans conclure ; reformulez ou précisez la demande.")

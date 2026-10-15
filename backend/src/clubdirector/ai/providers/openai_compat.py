@@ -48,6 +48,8 @@ class OpenAICompatSession:
         if self.tools:
             body["tools"] = self.tools
             body["tool_choice"] = "auto"
+            if self.p.local:  # llama.cpp : plusieurs consultations dans le même tour (un aller-retour au lieu de trois)
+                body["parallel_tool_calls"] = True
         if self.thinking is not None:
             body["chat_template_kwargs"] = {"enable_thinking": self.thinking}
         return body
