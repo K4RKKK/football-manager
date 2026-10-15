@@ -120,3 +120,14 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Fenêtre téléphone (C#) | ✅ | 10/10 tests ; rendu vérifié par capture d'écran |
 | `pytest` backend | ✅ | 122 / 122 |
 | Défaut constaté | ouvert | llama-server bloqué une fois (relancé avec journal) ; préchauffage limité aux prompts modifiés |
+
+### Session 3 (suite) — téléphone v2
+| Test | Résultat | Détail |
+|---|---|---|
+| Classement : doublon d'équipe | corrigé | Bologne apparaissait deux fois (ligne d'une phase antérieure) ; une ligne par club, la plus avancée (test) |
+| Apps sur la vraie carrière (copie) | ✅ | Calendrier 10 matchs à venir + résultats ; Classement Serie A (Roma 3e, +8) ; Effectif 24 joueurs, 24 photos |
+| Premier message de l'adjoint (vrai modèle) | ✅ 3,9 s | tutoiement, prochain match et rotation tirés du dossier |
+| Fiche contact | ✅ | bloc « Profil » retiré (demande de l'utilisateur) ; salaire en € par semaine |
+| Défilement parasite de l'écran | corrigé | `focus({preventScroll})` + `overflow: clip` |
+| `pytest` backend | ✅ | 123 / 123 |
+

@@ -9,53 +9,24 @@
   --font: -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --font-display: -apple-system, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --frame: #0b0b0d;
-  --bg: #000000;
-  --bg-elev: #1c1c1e;
-  --bg-elev2: #2c2c2e;
-  --sep: rgba(84, 84, 88, .55);
-  --text: #ffffff;
-  --text2: rgba(235, 235, 245, .6);
-  --text3: rgba(235, 235, 245, .3);
-  --blue: #0a84ff;
-  --sent: #0a84ff;
-  --sent-text: #ffffff;
-  --received: #26262a;
-  --received-text: #ffffff;
-  --red: #ff453a;
-  --green: #30d158;
-  --bar: rgba(22, 22, 24, .78);
-  --search: rgba(118, 118, 128, .24);
-  --avatar-a: #a5abb8;
-  --avatar-b: #858994;
+  --bg: #000000; --bg-elev: #1c1c1e; --bg-elev2: #2c2c2e; --bg-grouped: #000000;
+  --sep: rgba(84, 84, 88, .55); --fill: rgba(118, 118, 128, .24);
+  --text: #ffffff; --text2: rgba(235, 235, 245, .6); --text3: rgba(235, 235, 245, .3);
+  --blue: #0a84ff; --sent: #0a84ff; --sent-text: #ffffff; --received: #26262a; --received-text: #ffffff;
+  --red: #ff453a; --green: #30d158; --orange: #ff9f0a; --gray: #8e8e93;
+  --bar: rgba(22, 22, 24, .8); --ours: rgba(10, 132, 255, .18);
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-elev: #f2f2f7;
-  --bg-elev2: #ffffff;
-  --sep: rgba(60, 60, 67, .29);
-  --text: #000000;
-  --text2: rgba(60, 60, 67, .6);
-  --text3: rgba(60, 60, 67, .3);
-  --blue: #007aff;
-  --sent: #007aff;
-  --received: #e9e9eb;
-  --received-text: #000000;
-  --red: #ff3b30;
-  --green: #34c759;
-  --bar: rgba(249, 249, 249, .82);
-  --search: rgba(118, 118, 128, .12);
+  --bg: #ffffff; --bg-elev: #f2f2f7; --bg-elev2: #ffffff; --bg-grouped: #f2f2f7;
+  --sep: rgba(60, 60, 67, .29); --fill: rgba(118, 118, 128, .12);
+  --text: #000000; --text2: rgba(60, 60, 67, .6); --text3: rgba(60, 60, 67, .3);
+  --blue: #007aff; --sent: #007aff; --received: #e9e9eb; --received-text: #000000;
+  --red: #ff3b30; --green: #34c759; --orange: #ff9500;
+  --bar: rgba(249, 249, 249, .85); --ours: rgba(0, 122, 255, .12);
   color-scheme: light;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]):not([data-theme="light"]) {
-    --bg: #ffffff; --bg-elev: #f2f2f7; --bg-elev2: #ffffff; --sep: rgba(60, 60, 67, .29);
-    --text: #000000; --text2: rgba(60, 60, 67, .6); --text3: rgba(60, 60, 67, .3);
-    --blue: #007aff; --sent: #007aff; --received: #e9e9eb; --received-text: #000000;
-    --red: #ff3b30; --green: #34c759; --bar: rgba(249, 249, 249, .82); --search: rgba(118, 118, 128, .12);
-    color-scheme: light;
-  }
-}
+:root[data-theme="light"] .grouped { --bg-elev: #ffffff; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--frame); overflow: hidden; }
@@ -64,270 +35,325 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .selectable { user-select: text; }
 
 /* ------------------------------------------------------------------ appareil */
-.device {
-  position: fixed; inset: 0; padding: 9px; border-radius: 56px; background: var(--frame);
-  box-shadow: inset 0 0 0 1.5px #3a3a3e, inset 0 0 0 3px #111;
-}
-.screen {
-  position: relative; width: 100%; height: 100%; border-radius: 47px; overflow: hidden; background: var(--bg);
-  isolation: isolate;
-}
-.island {
-  position: absolute; top: 11px; left: 50%; width: 118px; height: 34px; margin-left: -59px; border-radius: 20px;
-  background: #000; z-index: 60; pointer-events: none;
-}
-.statusbar {
-  position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 50; display: flex; align-items: center;
+.device { position: fixed; inset: 0; padding: 9px; border-radius: 56px; background: var(--frame);
+  box-shadow: inset 0 0 0 1.5px #3a3a3e, inset 0 0 0 3px #111; }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 47px; overflow: hidden; overflow: clip; background: #000; isolation: isolate; }
+.island { position: absolute; top: 11px; left: 50%; width: 118px; height: 34px; margin-left: -59px; border-radius: 20px;
+  background: #000; z-index: 60; pointer-events: none; }
+.statusbar { position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 50; display: flex; align-items: center;
   justify-content: space-between; padding: 6px 30px 0 40px; font: 600 16px/1 var(--font-display); color: var(--text);
-  cursor: grab; transition: color .3s;
-}
-.statusbar.on-wallpaper { color: #fff; }
+  cursor: grab; transition: color .3s; }
+.statusbar.light { color: #fff; }
 .statusbar .icons { display: flex; gap: 6px; align-items: center; }
 .statusbar svg { fill: currentColor; display: block; }
-.home-indicator {
-  position: absolute; bottom: 8px; left: 50%; width: 136px; height: 5px; margin-left: -68px; border-radius: 3px;
-  background: var(--text); opacity: .9; z-index: 55; cursor: pointer;
-}
-.home-indicator.on-wallpaper { background: #fff; }
+.home-indicator { position: absolute; bottom: 8px; left: 50%; width: 136px; height: 5px; margin-left: -68px; border-radius: 3px;
+  background: var(--text); opacity: .9; z-index: 55; cursor: pointer; transition: background .3s; }
+.home-indicator.light { background: #fff; }
 .home-indicator::before { content: ""; position: absolute; inset: -12px -20px; }
 
 /* ------------------------------------------------------------------ vues */
-.view {
-  position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column;
-  transition: transform .38s cubic-bezier(.32, .72, 0, 1), opacity .3s; will-change: transform;
-}
+.view { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column;
+  transition: transform .4s cubic-bezier(.32, .72, 0, 1), opacity .3s, border-radius .4s; will-change: transform; }
+.view.grouped { background: var(--bg-grouped); }
 .view.hidden-right { transform: translateX(100%); }
 .view.hidden-left { transform: translateX(-28%); }
-.view.app-closed { transform: scale(.86); opacity: 0; pointer-events: none; }
+.view.app-closed { transform: scale(.82); opacity: 0; border-radius: 40px; pointer-events: none; }
 .view[hidden] { display: none; }
+.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; overscroll-behavior: contain; }
+.scroll::-webkit-scrollbar { display: none; }
+.pressable { transition: transform .12s, filter .12s, background .15s; }
+.pressable:active { transform: scale(.97); }
 
 /* ------------------------------------------------------------------ écran d'accueil */
-#home {
-  background:
-    radial-gradient(120% 70% at 85% 10%, #b3261e 0%, rgba(179, 38, 30, 0) 55%),
+#home { background:
+    radial-gradient(120% 70% at 85% 8%, #b3261e 0%, rgba(179, 38, 30, 0) 55%),
     radial-gradient(110% 70% at 10% 95%, #f2a900 0%, rgba(242, 169, 0, 0) 55%),
     radial-gradient(80% 60% at 20% 30%, #5b0f1a 0%, rgba(91, 15, 26, 0) 70%),
     linear-gradient(160deg, #3a0a12 0%, #1a0508 55%, #2a1205 100%);
-  padding: 64px 22px 30px; color: #fff; transition: transform .38s, opacity .3s, filter .3s;
-}
-#home.behind { transform: scale(1.06); filter: blur(6px) brightness(.7); }
-.clock { text-align: center; margin-top: 4px; }
-.clock .date { font: 600 17px var(--font-display); opacity: .9; }
-.clock .time { font: 700 84px/1 var(--font-display); letter-spacing: -2px; margin-top: 2px; }
-.clock .game { font: 500 13px var(--font); opacity: .75; margin-top: 4px; }
-.widget {
-  margin-top: 22px; border-radius: 22px; padding: 14px 16px; background: rgba(255, 255, 255, .14);
-  backdrop-filter: blur(24px) saturate(160%); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .22);
-}
-.widget .wtitle { font: 600 12px var(--font); text-transform: uppercase; letter-spacing: .4px; opacity: .75; }
-.widget .club { font: 700 20px var(--font-display); margin: 3px 0 10px; }
-.widget .row { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 6px 0;
-  border-top: .5px solid rgba(255, 255, 255, .18); }
-.widget .row span:first-child { opacity: .7; flex: none; }
-.widget .row span:last-child { text-align: right; font-weight: 600; }
-.widget .foot { font-size: 11px; opacity: .6; margin-top: 8px; }
-.apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px 0; margin-top: 26px; justify-items: center; }
-.app { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 74px; }
-.app .label { font: 500 12px var(--font); text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
-.icon {
-  position: relative; width: 62px; height: 62px; border-radius: 15px; display: grid; place-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .25); transition: transform .15s;
-}
-.app:active .icon { transform: scale(.9); filter: brightness(.8); }
-.icon.contacts { background: linear-gradient(180deg, #e8e8ea 0%, #c9cace 100%); }
-.icon.contacts svg { width: 40px; height: 40px; }
-.badge {
-  position: absolute; top: -6px; right: -8px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
-  background: #ff3b30; color: #fff; font: 600 14px/22px var(--font); text-align: center;
-}
+  padding: 62px 20px 0; color: #fff; transition: transform .4s cubic-bezier(.32, .72, 0, 1), filter .35s; }
+#home.behind { transform: scale(1.06); filter: blur(8px) brightness(.65); }
+.widgets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.w { border-radius: 22px; padding: 13px 14px; background: rgba(255, 255, 255, .15); color: #fff; text-align: left;
+  backdrop-filter: blur(26px) saturate(170%); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .22); min-height: 156px;
+  display: flex; flex-direction: column; overflow: hidden; }
+.w.wide { grid-column: 1 / -1; min-height: 0; }
+.w .wh { font: 700 12px var(--font); letter-spacing: .3px; text-transform: uppercase; opacity: .8; }
+.w.cal .wday { font: 700 13px var(--font); color: #ff6b5e; text-transform: uppercase; letter-spacing: .3px; }
+.w.cal .wnum { font: 300 54px/1 var(--font-display); margin: 2px 0 4px; }
+.w.cal .wsub { font-size: 12.5px; opacity: .85; margin-top: auto; line-height: 1.3; }
+.w.cal .wsub b { font-weight: 700; display: block; }
+.w.rank .wbig { font: 700 52px/1 var(--font-display); margin: 8px 0 2px; }
+.w.rank .wbig sup { font-size: 22px; vertical-align: super; margin-left: 1px; }
+.w.rank .wsub { font-size: 12.5px; opacity: .85; margin-top: auto; }
+.w.match { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px 14px; }
+.w.match .side { font: 600 14px var(--font); text-align: center; }
+.w.match .score { font: 700 26px var(--font-display); text-align: center; }
+.w.match .meta { grid-column: 1 / -1; font-size: 12px; opacity: .75; text-align: center; }
+.apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 0; margin-top: 22px; justify-items: center; }
+.app { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; }
+.app .label { font: 500 12px var(--font); color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .45); white-space: nowrap; }
+.icon { position: relative; width: 62px; height: 62px; border-radius: 15px; display: grid; place-items: center;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .28); transition: transform .15s, filter .15s; }
+.app:active .icon { transform: scale(.88); filter: brightness(.75); }
+.icon svg { width: 38px; height: 38px; }
+.ic-messages { background: linear-gradient(180deg, #67f27f 0%, #0bbd2b 100%); }
+.ic-contacts { background: linear-gradient(180deg, #ececee 0%, #c4c5ca 100%); }
+.ic-calendar { background: #fff; color: #000; display: flex; flex-direction: column; justify-content: center; gap: 0; }
+.ic-calendar .d { font: 600 11px var(--font); color: #ff3b30; text-transform: capitalize; margin-top: 2px; }
+.ic-calendar .n { font: 300 32px/1 var(--font-display); margin-top: -1px; }
+.ic-table { background: linear-gradient(180deg, #4b6cff 0%, #1d2fbf 100%); }
+.ic-squad { background: linear-gradient(180deg, #33c46b 0%, #137a3d 100%); }
+.ic-settings { background: linear-gradient(180deg, #9a9aa0 0%, #5e5e66 100%); }
+.badge { position: absolute; top: -6px; right: -8px; min-width: 23px; height: 23px; padding: 0 6px; border-radius: 12px;
+  background: #ff3b30; color: #fff; font: 600 14px/23px var(--font); text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
 .badge[hidden] { display: none; }
-.dock {
-  position: absolute; left: 12px; right: 12px; bottom: 22px; height: 92px; border-radius: 32px; padding: 0 16px;
-  background: rgba(255, 255, 255, .16); backdrop-filter: blur(24px) saturate(150%);
-  display: flex; align-items: center; justify-content: space-around;
-}
+.dock { position: absolute; left: 12px; right: 12px; bottom: 22px; height: 92px; border-radius: 32px; padding: 0 14px;
+  background: rgba(255, 255, 255, .17); backdrop-filter: blur(26px) saturate(160%); display: flex; align-items: center; justify-content: space-around; }
 .dock .app .label { display: none; }
-.pager { position: absolute; bottom: 126px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
-.pager i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .35); }
-.pager i.on { background: #fff; }
+.pager { position: absolute; bottom: 124px; left: 0; right: 0; display: flex; justify-content: center; }
+.pager span { background: rgba(255, 255, 255, .18); backdrop-filter: blur(20px); padding: 4px 10px; border-radius: 12px; font-size: 12px; display: flex; gap: 6px; align-items: center; }
+.pager svg { width: 12px; height: 12px; fill: #fff; }
 
 /* ------------------------------------------------------------------ barres de navigation */
-.navbar {
-  flex: none; padding: 54px 16px 8px; display: flex; align-items: center; justify-content: space-between;
-  min-height: 98px; position: relative; z-index: 5;
-}
-.navbar.blur { background: var(--bar); backdrop-filter: blur(20px) saturate(180%); border-bottom: .5px solid var(--sep); }
-.navbtn { color: var(--blue); font-size: 17px; display: inline-flex; align-items: center; gap: 2px; min-width: 70px; }
-.navbtn svg { width: 13px; height: 21px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.navbtn.right { justify-content: flex-end; }
+.navbar { flex: none; padding: 52px 14px 6px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 92px; position: relative; z-index: 5; }
+.navbar.blur { background: var(--bar); backdrop-filter: blur(22px) saturate(180%); border-bottom: .5px solid var(--sep); }
+.navbar .title { font: 600 17px var(--font-display); text-align: center; }
+.navbtn { color: var(--blue); font-size: 17px; display: inline-flex; align-items: center; gap: 3px; justify-self: start; }
+.navbtn svg { width: 12px; height: 20px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.navbtn.right { justify-self: end; }
 .navbtn[disabled] { opacity: .35; cursor: default; }
-.big-title { font: 700 34px/1.1 var(--font-display); padding: 0 16px 8px; letter-spacing: .3px; }
-.scroll { flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
-.scroll::-webkit-scrollbar { display: none; }
-
-/* ------------------------------------------------------------------ contacts */
-.search {
-  margin: 4px 16px 14px; height: 36px; border-radius: 10px; background: var(--search); display: flex; align-items: center;
-  gap: 6px; padding: 0 8px; color: var(--text2);
-}
-.search input { flex: 1; border: 0; outline: 0; background: none; color: var(--text); font: 17px var(--font); }
+.big-title { font: 700 34px/1.12 var(--font-display); padding: 2px 16px 8px; letter-spacing: .2px; }
+.big-sub { font-size: 15px; color: var(--text2); padding: 0 16px 10px; margin-top: -4px; }
+.search { margin: 2px 16px 12px; height: 36px; border-radius: 10px; background: var(--fill); display: flex; align-items: center;
+  gap: 6px; padding: 0 8px; color: var(--text2); }
+.search input { flex: 1; border: 0; outline: 0; background: none; color: var(--text); font: 17px var(--font); min-width: 0; }
 .search input::placeholder { color: var(--text2); }
-.mycard { display: flex; align-items: center; gap: 14px; padding: 6px 16px 14px; }
-.mycard .who { font: 600 20px var(--font-display); }
-.mycard .sub { font-size: 14px; color: var(--text2); margin-top: 2px; }
-.section-h { font: 600 13px var(--font); color: var(--text2); padding: 14px 16px 6px; text-transform: uppercase; letter-spacing: .3px; }
-.row-contact {
-  width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 16px; text-align: left; position: relative;
-}
-.row-contact:active { background: var(--bg-elev); }
-.row-contact .meta { flex: 1; min-width: 0; border-bottom: .5px solid var(--sep); padding: 4px 0 12px; }
-.row-contact:last-child .meta { border-bottom: 0; }
-.row-contact .name { font-size: 17px; }
-.row-contact .name b { font-weight: 600; }
-.row-contact .role { font-size: 14px; color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row-contact .dot {
-  min-width: 20px; height: 20px; border-radius: 10px; background: var(--blue); color: #fff; font: 600 13px/20px var(--font);
-  text-align: center; padding: 0 6px;
-}
-.row-contact .dot.typing { background: var(--bg-elev2); color: var(--text2); }
-.footnote { font-size: 12px; color: var(--text2); padding: 18px 16px 40px; line-height: 1.45; }
-.theme-switch { display: flex; gap: 6px; margin-top: 10px; }
-.theme-switch button { padding: 5px 10px; border-radius: 8px; background: var(--bg-elev); color: var(--text2); font-size: 13px; }
-.theme-switch button.on { background: var(--blue); color: #fff; }
+.section-h { font: 400 13px var(--font); color: var(--text2); padding: 18px 32px 7px; text-transform: uppercase; letter-spacing: .2px; }
+.section-h.flat { padding-left: 16px; }
+.group { margin: 0 16px 8px; background: var(--bg-elev); border-radius: 12px; overflow: hidden; }
+.cell { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0 0 0 16px; min-height: 46px; text-align: left; position: relative; }
+.cell .body { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 16px 11px 0; border-bottom: .5px solid var(--sep); min-height: 46px; }
+.cell:last-child .body { border-bottom: 0; }
+.cell .k { font-size: 17px; }
+.cell .v { font-size: 17px; color: var(--text2); text-align: right; }
+.cell .chev { width: 8px; height: 13px; fill: none; stroke: var(--text3); stroke-width: 2.2; flex: none; }
+button.cell:active { background: var(--fill); }
+.footnote { font-size: 13px; color: var(--text2); padding: 6px 32px 18px; line-height: 1.4; }
+.empty { text-align: center; color: var(--text2); font-size: 15px; padding: 40px 30px; line-height: 1.45; }
 
 /* ------------------------------------------------------------------ avatars */
-.avatar {
-  flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; color: #fff;
-  background: linear-gradient(180deg, var(--avatar-a), var(--avatar-b)); font-family: var(--font-display); font-weight: 600;
-}
-.avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; display: block; }
-.avatar.photo { background: linear-gradient(180deg, #d8d9dd, #b8bac0); }
+.avatar { flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(180deg, #a5abb8, #858994); font-family: var(--font-display); font-weight: 600; position: relative; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 16%; display: block; }
+.avatar.photo { background: linear-gradient(180deg, #dcdde1, #b9bbc1); }
+
+/* ------------------------------------------------------------------ Messages (liste) */
+.conv { width: 100%; display: flex; align-items: center; gap: 10px; padding: 0 0 0 6px; text-align: left; }
+.conv:active { background: var(--fill); }
+.conv .dotcol { width: 12px; display: flex; justify-content: center; }
+.conv .udot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
+.conv .cbody { flex: 1; min-width: 0; padding: 11px 16px 12px 0; border-bottom: .5px solid var(--sep); }
+.conv:last-child .cbody { border-bottom: 0; }
+.conv .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.conv .nm { font-weight: 600; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv .tm { font-size: 15px; color: var(--text2); flex: none; display: flex; align-items: center; gap: 6px; }
+.conv .pv { font-size: 15px; color: var(--text2); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+.conv .pv.typing { color: var(--blue); }
+
+/* ------------------------------------------------------------------ Contacts */
+.mycard { display: flex; align-items: center; gap: 14px; padding: 4px 16px 14px; }
+.mycard .who { font: 600 21px var(--font-display); }
+.mycard .sub { font-size: 14px; color: var(--text2); margin-top: 2px; }
+.row-contact { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0 0 0 16px; text-align: left; }
+.row-contact:active { background: var(--fill); }
+.row-contact .meta { flex: 1; min-width: 0; border-bottom: .5px solid var(--sep); padding: 10px 16px 11px 0; display: flex; align-items: center; gap: 8px; }
+.row-contact:last-child .meta { border-bottom: 0; }
+.row-contact .txt { flex: 1; min-width: 0; }
+.row-contact .name { font-size: 17px; }
+.row-contact .name b { font-weight: 600; }
+.row-contact .role { font-size: 14px; color: var(--text2); margin-top: 1px; }
+.pill { min-width: 20px; height: 20px; border-radius: 10px; background: var(--blue); color: #fff; font: 600 13px/20px var(--font); text-align: center; padding: 0 6px; }
 
 /* ------------------------------------------------------------------ fiche contact */
-#card .scroll { padding-bottom: 40px; }
-.poster { display: flex; flex-direction: column; align-items: center; padding: 6px 16px 18px; text-align: center; }
-.poster .pname { font: 700 28px/1.15 var(--font-display); margin-top: 12px; }
+.poster { position: relative; padding: 4px 16px 20px; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: hidden; }
+.poster .bgimg { position: absolute; inset: -40px; background-size: cover; background-position: 50% 20%; filter: blur(40px) saturate(1.4) brightness(.55); opacity: .9; transform: scale(1.2); }
+.poster > *:not(.bgimg) { position: relative; }
+#card .poster { padding-top: 96px; }
+.poster .pname { font: 700 30px/1.12 var(--font-display); margin-top: 14px; }
 .poster .prole { font-size: 15px; color: var(--text2); margin-top: 4px; }
-.actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 16px 16px; }
-.action {
-  background: var(--bg-elev); border-radius: 12px; padding: 9px 0 7px; display: flex; flex-direction: column; align-items: center;
-  gap: 4px; color: var(--blue); font-size: 12px;
-}
-.action svg { width: 24px; height: 24px; fill: currentColor; }
-.action[disabled] { color: var(--text3); cursor: default; }
-.group { margin: 0 16px 16px; background: var(--bg-elev); border-radius: 12px; overflow: hidden; }
-.group .item { padding: 11px 16px; border-bottom: .5px solid var(--sep); }
-.group .item:last-child { border-bottom: 0; }
-.group .k { font-size: 14px; color: var(--text); }
-.group .v { font-size: 17px; color: var(--blue); margin-top: 2px; }
-.group .v.plain { color: var(--text); }
-.group .trait { font-size: 15px; padding: 3px 0; }
-.group button.item { width: 100%; text-align: left; color: var(--blue); }
-.group button.item.danger { color: var(--red); }
-.vacant { margin: 0 16px 16px; padding: 14px 16px; border-radius: 12px; background: var(--bg-elev); font-size: 15px; color: var(--text2); }
+.poster.has-photo .pname, .poster.has-photo .prole { color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, .35); }
+.poster.has-photo .prole { opacity: .85; }
+.cta { display: flex; gap: 10px; padding: 0 16px 18px; }
+.cta button { flex: 1; height: 58px; border-radius: 14px; background: var(--bg-elev); color: var(--blue); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px; font-size: 12.5px; font-weight: 500; }
+.cta button svg { width: 24px; height: 24px; fill: currentColor; }
+.cta button.primary { background: var(--blue); color: #fff; }
+.cta button:active { filter: brightness(.85); transform: scale(.98); }
+.info-k { font-size: 13px; color: var(--text); }
+.info-v { font-size: 17px; color: var(--text); margin-top: 2px; }
+.info { padding: 10px 16px; border-bottom: .5px solid var(--sep); }
+.info:last-child { border-bottom: 0; }
+.link-cell { width: 100%; text-align: left; padding: 12px 16px; color: var(--blue); border-bottom: .5px solid var(--sep); font-size: 17px; }
+.link-cell:last-child { border-bottom: 0; }
+.link-cell.danger { color: var(--red); }
+.link-cell:active { background: var(--fill); }
 
-/* ------------------------------------------------------------------ messages */
-#chat .navbar { padding: 50px 10px 6px; min-height: 0; display: grid; grid-template-columns: 80px 1fr 80px; }
+/* ------------------------------------------------------------------ conversation */
+#chat .navbar { padding: 50px 10px 6px; min-height: 0; grid-template-columns: 90px 1fr 90px; }
 .chat-head { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.chat-head .n { font-size: 12px; display: flex; align-items: center; gap: 2px; }
+.chat-head .n { font-size: 12px; display: flex; align-items: center; gap: 3px; color: var(--text); }
 .chat-head .n svg { width: 6px; height: 10px; fill: none; stroke: var(--text3); stroke-width: 2; }
-.unread-back { font-size: 13px; background: var(--blue); color: #fff; border-radius: 10px; padding: 1px 7px; margin-left: 2px; }
+.unread-back { font-size: 14px; background: var(--blue); color: #fff; border-radius: 11px; padding: 1px 7px; margin-left: 1px; min-width: 22px; text-align: center; }
 .unread-back[hidden] { display: none; }
-#thread { padding: 10px 0 12px; }
-.sep-time { text-align: center; font-size: 11px; color: var(--text2); margin: 14px 0 6px; }
+#thread { padding: 8px 0 10px; }
+.sep-time { text-align: center; font-size: 11px; color: var(--text2); margin: 16px 0 6px; }
 .sep-time b { font-weight: 600; }
 .msg { display: flex; flex-direction: column; padding: 0 12px; }
 .msg.me { align-items: flex-end; }
 .msg.them { align-items: flex-start; }
-.bubble {
-  position: relative; max-width: 76%; padding: 7px 12px 8px; border-radius: 18px; margin-top: 2px; font-size: 16px;
-  line-height: 1.32; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; user-select: text;
-}
+.bubble { position: relative; max-width: 76%; padding: 7px 12px 8px; border-radius: 18px; margin-top: 2px; font-size: 16px;
+  line-height: 1.32; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; user-select: text; }
 .me .bubble { background: var(--sent); color: var(--sent-text); }
 .them .bubble { background: var(--received); color: var(--received-text); }
+.bubble.emoji { background: none !important; font-size: 44px; line-height: 1.1; padding: 2px 4px; }
+.bubble.emoji::before, .bubble.emoji::after { display: none; }
 .msg + .msg { margin-top: 8px; }
 .msg.cont { margin-top: 2px !important; }
-/* queue de bulle (dernière bulle d'un groupe) */
 .bubble.tail::before, .bubble.tail::after { content: ""; position: absolute; bottom: 0; height: 20px; }
 .me .bubble.tail::before { right: -7px; width: 20px; background: var(--sent); border-bottom-left-radius: 16px 14px; }
 .me .bubble.tail::after { right: -26px; width: 26px; background: var(--bg); border-bottom-left-radius: 10px; }
 .them .bubble.tail::before { left: -7px; width: 20px; background: var(--received); border-bottom-right-radius: 16px 14px; }
 .them .bubble.tail::after { left: -26px; width: 26px; background: var(--bg); border-bottom-right-radius: 10px; }
-.bubble.pop { animation: pop .32s cubic-bezier(.2, 1.4, .4, 1); }
-.me .bubble.pop { transform-origin: 100% 100%; }
+.bubble.pop { animation: pop .34s cubic-bezier(.2, 1.4, .4, 1); }
+.me .bubble.pop { transform-origin: 100% 100%; animation-name: popme; }
 .them .bubble.pop { transform-origin: 0 100%; }
-@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pop { from { transform: scale(.55); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes popme { from { transform: translateY(26px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
 .bubble .li { display: block; padding-left: 14px; text-indent: -12px; }
-.receipt { font-size: 11px; color: var(--text2); margin: 3px 4px 0; }
+.receipt { font-size: 11px; color: var(--text2); margin: 3px 4px 0; font-weight: 500; }
 .receipt.failed { color: var(--red); cursor: pointer; }
-.sources { font-size: 11px; color: var(--text3); margin: 4px 6px 0; max-width: 76%; }
-.typing { display: inline-flex; gap: 4px; align-items: center; padding: 12px 14px; }
+.sources { font-size: 11px; color: var(--text3); margin: 4px 6px 0; max-width: 78%; }
+.typing { display: inline-flex !important; gap: 4px; align-items: center; padding: 12px 14px !important; }
 .typing i { width: 8px; height: 8px; border-radius: 50%; background: var(--text2); animation: blink 1.3s infinite ease-in-out; }
 .typing i:nth-child(2) { animation-delay: .18s; }
 .typing i:nth-child(3) { animation-delay: .36s; }
-@keyframes blink { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: .9; transform: translateY(-2px); } }
-.caption { font-size: 11px; color: var(--text2); margin: 3px 8px 0; }
-.composer {
-  flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px 30px; background: var(--bg);
-}
-.composer .plus { width: 34px; height: 34px; border-radius: 50%; background: var(--bg-elev); display: grid; place-items: center; color: var(--text2); flex: none; cursor: default; }
+@keyframes blink { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: .95; transform: translateY(-2px); } }
+.caption { font-size: 11px; color: var(--text2); margin: 4px 8px 0; display: flex; align-items: center; gap: 5px; }
+.caption::before { content: ""; width: 9px; height: 9px; border: 1.6px solid var(--text3); border-top-color: var(--text2); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.chips { flex: none; display: flex; gap: 8px; overflow-x: auto; padding: 6px 12px 2px; scrollbar-width: none; background: var(--bg); }
+.chips::-webkit-scrollbar { display: none; }
+.chips[hidden] { display: none; }
+.chip { flex: none; padding: 7px 13px; border-radius: 16px; border: 1px solid var(--sep); color: var(--blue); font-size: 14px; background: var(--bg); white-space: nowrap; }
+.chip:active { background: var(--fill); }
+.composer { flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 6px 12px 30px; background: var(--bg); }
+.composer .plus { width: 34px; height: 34px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; color: var(--text2); flex: none; }
 .composer .plus svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
-.field {
-  flex: 1; display: flex; align-items: flex-end; min-height: 36px; border-radius: 18px; border: 1px solid var(--sep);
-  padding: 3px 4px 3px 14px; background: var(--bg);
-}
-.field textarea {
-  flex: 1; resize: none; border: 0; outline: 0; background: none; color: var(--text); font: 17px/1.3 var(--font);
-  max-height: 120px; padding: 4px 0; user-select: text;
-}
+.composer .plus.on { background: var(--blue); color: #fff; }
+.field { flex: 1; display: flex; align-items: flex-end; min-height: 36px; border-radius: 18px; border: 1px solid var(--sep); padding: 3px 4px 3px 14px; background: var(--bg); }
+.field textarea { flex: 1; resize: none; border: 0; outline: 0; background: none; color: var(--text); font: 17px/1.3 var(--font); max-height: 120px; padding: 4px 0; user-select: text; }
 .field textarea::placeholder { color: var(--text3); }
-.send {
-  width: 30px; height: 30px; border-radius: 50%; background: var(--blue); display: grid; place-items: center; flex: none;
-  transform: scale(0); transition: transform .18s; margin-bottom: 0;
-}
+.send { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); display: grid; place-items: center; flex: none; transform: scale(0); transition: transform .18s cubic-bezier(.2, 1.4, .4, 1); }
 .send.on { transform: scale(1); }
 .send svg { width: 14px; height: 16px; stroke: #fff; stroke-width: 2.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .composer.disabled .field { opacity: .5; }
+.to-bottom { position: absolute; right: 16px; bottom: 132px; width: 36px; height: 36px; border-radius: 50%; background: var(--bg-elev2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .3); display: grid; place-items: center; z-index: 6; opacity: 0; transform: scale(.6); transition: all .2s; pointer-events: none; }
+.to-bottom.show { opacity: 1; transform: none; pointer-events: auto; }
+.to-bottom svg { width: 14px; height: 14px; stroke: var(--blue); stroke-width: 2.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
-/* ------------------------------------------------------------------ notification, feuille, toast */
-.banner {
-  position: absolute; top: 52px; left: 10px; right: 10px; z-index: 70; border-radius: 22px; padding: 11px 12px;
-  background: rgba(40, 40, 44, .82); color: #fff; backdrop-filter: blur(30px) saturate(180%); display: flex; gap: 10px;
+/* ------------------------------------------------------------------ Calendrier, Classement, Effectif */
+.fx { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0 0 0 16px; }
+.fx .day { width: 46px; flex: none; text-align: center; padding: 10px 0; }
+.fx .day .dd { font: 600 11px var(--font); color: var(--red); text-transform: uppercase; }
+.fx .day .dn { font: 400 24px/1.1 var(--font-display); }
+.fx .fb { flex: 1; min-width: 0; padding: 10px 16px 10px 0; border-bottom: .5px solid var(--sep); display: flex; align-items: center; gap: 10px; }
+.fx:last-child .fb { border-bottom: 0; }
+.fx .teams { flex: 1; min-width: 0; }
+.fx .vs { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fx .vs b { font-weight: 600; }
+.fx .comp { font-size: 13px; color: var(--text2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.res { flex: none; display: flex; align-items: center; gap: 6px; font: 600 16px var(--font-display); }
+.res i { font-style: normal; width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: #fff; font: 700 12px var(--font); }
+.res i.v { background: var(--green); } .res i.n { background: var(--gray); } .res i.d { background: var(--red); }
+.ha { flex: none; font: 600 11px var(--font); color: var(--text2); border: 1px solid var(--sep); border-radius: 5px; padding: 2px 5px; }
+table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tb th { font: 600 11px var(--font); color: var(--text2); text-transform: uppercase; padding: 8px 4px; text-align: right; }
+.tb th:nth-child(2), .tb td:nth-child(2) { text-align: left; }
+.tb td { padding: 9px 4px; border-top: .5px solid var(--sep); text-align: right; font-variant-numeric: tabular-nums; }
+.tb td:first-child, .tb th:first-child { padding-left: 14px; width: 30px; text-align: center; color: var(--text2); }
+.tb td:last-child, .tb th:last-child { padding-right: 14px; font-weight: 700; }
+.tb td:nth-child(2) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.tb tr.ours td { background: var(--ours); font-weight: 600; }
+.tb tr.ours td:first-child { color: var(--blue); }
+.pl { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0 0 0 16px; text-align: left; }
+.pl:active { background: var(--fill); }
+.pl .pb { flex: 1; min-width: 0; padding: 8px 16px 8px 0; border-bottom: .5px solid var(--sep); display: flex; align-items: center; gap: 10px; }
+.pl:last-child .pb { border-bottom: 0; }
+.pl .pn { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl .ps { font-size: 13px; color: var(--text2); margin-top: 1px; }
+.pl .stat { margin-left: auto; text-align: right; flex: none; font-size: 13px; color: var(--text2); }
+.pl .stat b { display: block; color: var(--text); font-size: 15px; }
+.seg { display: flex; background: var(--fill); border-radius: 9px; padding: 2px; margin: 0 16px 12px; }
+.seg button { flex: 1; padding: 6px 0; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--text); }
+.seg button.on { background: var(--bg-elev2); box-shadow: 0 1px 4px rgba(0, 0, 0, .18); font-weight: 600; }
+:root:not([data-theme="light"]) .seg button.on { background: #636366; }
+.switch { width: 51px; height: 31px; border-radius: 16px; background: var(--fill); position: relative; flex: none; transition: background .25s; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .25); transition: transform .25s; }
+.switch.on { background: var(--green); }
+.switch.on::after { transform: translateX(20px); }
+.sicon { width: 29px; height: 29px; border-radius: 7px; display: grid; place-items: center; flex: none; color: #fff; }
+.sicon svg { width: 18px; height: 18px; fill: currentColor; }
+
+/* ------------------------------------------------------------------ notification, feuille, toast, menu */
+.banner { position: absolute; top: 52px; left: 10px; right: 10px; z-index: 70; border-radius: 22px; padding: 11px 12px;
+  background: rgba(44, 44, 48, .84); color: #fff; backdrop-filter: blur(30px) saturate(180%); display: flex; gap: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .35); transform: translateY(calc(-100% - 80px)); opacity: 0;
-  transition: transform .45s cubic-bezier(.2, .9, .3, 1.1), opacity .3s; cursor: pointer; text-align: left; pointer-events: none;
-}
-:root[data-theme="light"] .banner { background: rgba(245, 245, 247, .9); color: #000; }
+  transition: transform .45s cubic-bezier(.2, .9, .3, 1.1), opacity .3s; cursor: pointer; text-align: left; pointer-events: none; }
+:root[data-theme="light"] .banner { background: rgba(245, 245, 247, .92); color: #000; }
 .banner.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
 .banner .bt { flex: 1; min-width: 0; }
 .banner .bh { display: flex; justify-content: space-between; font-size: 15px; }
 .banner .bh b { font-weight: 600; }
 .banner .bh span { font-size: 13px; opacity: .55; }
-.banner .bb { font-size: 15px; opacity: .9; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; }
-.sheet-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .4); z-index: 80; opacity: 0; transition: opacity .3s; pointer-events: none; }
+.banner .bb { font-size: 15px; opacity: .92; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; }
+.banner .appmini { width: 20px; height: 20px; border-radius: 5px; position: absolute; left: 34px; top: 34px; border: 2px solid rgba(44, 44, 48, .9); }
+.sheet-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .42); z-index: 80; opacity: 0; transition: opacity .3s; pointer-events: none; }
 .sheet-bg.show { opacity: 1; pointer-events: auto; }
-.sheet {
-  position: absolute; left: 0; right: 0; bottom: 0; top: 70px; z-index: 81; background: var(--bg-elev); border-radius: 14px 14px 40px 40px;
-  transform: translateY(105%); transition: transform .4s cubic-bezier(.32, .72, 0, 1); display: flex; flex-direction: column;
-}
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 64px; z-index: 81; background: var(--bg-grouped); border-radius: 14px 14px 40px 40px;
+  transform: translateY(105%); transition: transform .42s cubic-bezier(.32, .72, 0, 1); display: flex; flex-direction: column; }
 .sheet.show { transform: translateY(0); }
-.sheet .sh { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; font-weight: 600; }
-.sheet .group { background: var(--bg-elev2); }
-.sheet .cand { width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 16px; text-align: left; border-bottom: .5px solid var(--sep); }
-.sheet .cand .s { font-size: 13px; color: var(--text2); }
-.sheet .cand .ck { margin-left: auto; color: var(--blue); font-weight: 700; }
-.toast {
-  position: absolute; left: 50%; bottom: 110px; transform: translate(-50%, 20px); z-index: 90; padding: 9px 14px; border-radius: 16px;
-  background: rgba(60, 60, 64, .92); color: #fff; font-size: 13px; opacity: 0; transition: all .3s; pointer-events: none; max-width: 86%; text-align: center;
-}
+.sheet .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--text3); margin: 6px auto 0; }
+.sheet .sh { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 10px 16px; font-weight: 600; }
+.cand { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0 0 0 16px; text-align: left; }
+.cand .cb { flex: 1; display: flex; align-items: center; justify-content: space-between; padding: 9px 16px 9px 0; border-bottom: .5px solid var(--sep); }
+.cand:last-child .cb { border-bottom: 0; }
+.cand .s { font-size: 13px; color: var(--text2); }
+.cand .ck { color: var(--blue); font-weight: 700; }
+.cand:active { background: var(--fill); }
+.toast { position: absolute; left: 50%; bottom: 112px; transform: translate(-50%, 20px); z-index: 90; padding: 9px 15px; border-radius: 18px;
+  background: rgba(60, 60, 64, .94); color: #fff; font-size: 13px; opacity: 0; transition: all .3s; pointer-events: none; max-width: 86%; text-align: center; backdrop-filter: blur(20px); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-.empty-chat { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 30px 0; }
+.menu { position: absolute; z-index: 85; min-width: 170px; border-radius: 13px; background: rgba(40, 40, 44, .92); backdrop-filter: blur(30px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .4); overflow: hidden; display: none; }
+:root[data-theme="light"] .menu { background: rgba(250, 250, 252, .95); }
+.menu.show { display: block; animation: pop .2s ease-out; }
+.menu button { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 11px 15px; font-size: 16px; border-bottom: .5px solid var(--sep); }
+.menu button:last-child { border-bottom: 0; }
+.menu button:active { background: var(--fill); }
+.menu svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 14px; }
+.kv div { background: var(--bg-elev); border-radius: 12px; padding: 10px 12px; }
+.kv .k2 { font-size: 12px; color: var(--text2); }
+.kv .v2 { font: 600 17px var(--font-display); margin-top: 3px; }
 </style>
 </head>
 <body>
 <div class="device">
   <div class="screen" id="screen">
     <div class="island"></div>
-    <div class="statusbar on-wallpaper" id="statusbar" title="Glisser pour déplacer le téléphone">
+    <div class="statusbar light" id="statusbar" title="Glisser pour déplacer le téléphone">
       <span id="sb-time">--:--</span>
       <span class="icons">
         <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
@@ -336,69 +362,66 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
       </span>
     </div>
 
-    <!-- Écran d'accueil -->
+    <!-- ================================================================ ACCUEIL -->
     <section class="view" id="home">
-      <div class="clock">
-        <div class="date" id="h-date">—</div>
-        <div class="time" id="h-time">--:--</div>
-        <div class="game" id="h-game"></div>
+      <div class="widgets" id="widgets"></div>
+      <div class="apps">
+        <button class="app" data-open="calendar"><span class="icon ic-calendar"><span class="d" id="ic-cal-d">—</span><span class="n" id="ic-cal-n">—</span></span><span class="label">Calendrier</span></button>
+        <button class="app" data-open="table"><span class="icon ic-table"><svg viewBox="0 0 40 40" fill="#fff"><path d="M12 9h16v3h5v4a7 7 0 0 1-6.6 7 9 9 0 0 1-4.9 4.3V31h4v3H14.5v-3h4v-3.7A9 9 0 0 1 13.6 23 7 7 0 0 1 7 16v-4h5V9zm-2.5 5.5V16a4.5 4.5 0 0 0 3.2 4.3A9 9 0 0 1 12 17v-2.5H9.5zm21 0H28V17a9 9 0 0 1-.7 3.3 4.5 4.5 0 0 0 3.2-4.3v-1.5z"/></svg></span><span class="label">Classement</span></button>
+        <button class="app" data-open="squad"><span class="icon ic-squad"><svg viewBox="0 0 40 40" fill="#fff"><path d="M14.5 7 8 10.5l-3.5 7 5 2.5L11 17v16h18V17l1.5 3 5-2.5-3.5-7L25.5 7c-.6 2.4-2.8 4-5.5 4s-4.9-1.6-5.5-4z"/></svg></span><span class="label">Effectif</span></button>
+        <button class="app" data-open="settings"><span class="icon ic-settings"><svg viewBox="0 0 40 40" fill="#fff"><path d="M17.6 5h4.8l.7 3.6a12 12 0 0 1 3.2 1.9l3.5-1.2 2.4 4.1-2.8 2.4a12 12 0 0 1 0 3.7l2.8 2.4-2.4 4.1-3.5-1.2a12 12 0 0 1-3.2 1.9l-.7 3.6h-4.8l-.7-3.6a12 12 0 0 1-3.2-1.9l-3.5 1.2-2.4-4.1 2.8-2.4a12 12 0 0 1 0-3.7L8 13.4l2.4-4.1 3.5 1.2a12 12 0 0 1 3.2-1.9L17.6 5zM20 14.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg></span><span class="label">Réglages</span></button>
       </div>
-      <div class="widget" id="widget">
-        <div class="wtitle">Mon club</div>
-        <div class="club" id="w-club">Synchronisation…</div>
-        <div id="w-rows"></div>
-        <div class="foot" id="w-foot"></div>
-      </div>
-      <div class="pager"><i class="on"></i></div>
+      <div class="pager"><span id="home-search" role="button" style="cursor:pointer"><svg viewBox="0 0 12 12"><path d="M5.2 1a4.2 4.2 0 0 1 3.4 6.7l2.4 2.4-.9.9-2.4-2.4A4.2 4.2 0 1 1 5.2 1zm0 1.3a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/></svg>Recherche</span></div>
       <div class="dock">
-        <button class="app" id="open-contacts" aria-label="Contacts">
-          <span class="icon contacts">
-            <svg viewBox="0 0 40 40"><circle cx="20" cy="15" r="7.5" fill="#8e8e93"/><path d="M6 34c1.5-7 7.2-11 14-11s12.5 4 14 11" fill="#8e8e93"/></svg>
-            <span class="badge" id="badge" hidden>0</span>
-          </span>
-          <span class="label">Contacts</span>
-        </button>
+        <button class="app" data-open="messages" aria-label="Messages"><span class="icon ic-messages"><svg viewBox="0 0 40 40"><path fill="#fff" d="M20 7C11.7 7 5 12.6 5 19.5c0 3.9 2.2 7.4 5.6 9.7-.3 2-1.3 3.9-3 5.3 3.3 0 6.2-1.2 8.1-3 1.4.3 2.8.5 4.3.5 8.3 0 15-5.6 15-12.5S28.3 7 20 7z"/></svg><span class="badge" id="badge-messages" hidden>0</span></span><span class="label">Messages</span></button>
+        <button class="app" data-open="contacts" aria-label="Contacts"><span class="icon ic-contacts"><svg viewBox="0 0 40 40"><circle cx="20" cy="15" r="7.5" fill="#8e8e93"/><path d="M6 34c1.5-7 7.2-11 14-11s12.5 4 14 11" fill="#8e8e93"/></svg></span><span class="label">Contacts</span></button>
       </div>
     </section>
 
-    <!-- Contacts -->
+    <!-- ================================================================ MESSAGES -->
+    <section class="view app-closed" id="messages" hidden>
+      <div class="navbar"><span></span><span></span><button class="navbtn right" id="compose" title="Nouveau message"><svg viewBox="0 0 24 24" style="width:24px;height:24px;stroke-width:1.8"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg></button></div>
+      <div class="scroll">
+        <div class="big-title">Messages</div>
+        <label class="search"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.6 1a5.6 5.6 0 0 1 4.5 9l3.6 3.6-1.1 1.1-3.6-3.6A5.6 5.6 0 1 1 6.6 1zm0 1.6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg><input id="msearch" placeholder="Rechercher" autocomplete="off"></label>
+        <div id="conv-list"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================ CONTACTS -->
     <section class="view app-closed" id="contacts" hidden>
-      <div class="navbar"><span></span><span></span></div>
+      <div class="navbar"><span></span><span></span><span></span></div>
       <div class="scroll">
         <div class="big-title">Contacts</div>
-        <label class="search">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.6 1a5.6 5.6 0 0 1 4.5 9l3.6 3.6-1.1 1.1-3.6-3.6A5.6 5.6 0 1 1 6.6 1zm0 1.6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
-          <input id="search" placeholder="Rechercher" autocomplete="off">
-        </label>
+        <label class="search"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6.6 1a5.6 5.6 0 0 1 4.5 9l3.6 3.6-1.1 1.1-3.6-3.6A5.6 5.6 0 1 1 6.6 1zm0 1.6a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg><input id="search" placeholder="Rechercher" autocomplete="off"></label>
         <div class="mycard" id="mycard"></div>
-        <div class="section-h">Staff du club</div>
+        <div class="section-h flat">Staff du club</div>
         <div id="contact-list"></div>
-        <div class="footnote" id="contacts-foot"></div>
       </div>
     </section>
 
-    <!-- Fiche contact -->
-    <section class="view hidden-right" id="card" hidden>
-      <div class="navbar">
-        <button class="navbtn" id="card-back"><svg viewBox="0 0 13 21"><path d="M11 2 2.5 10.5 11 19"/></svg>Contacts</button>
+    <!-- ================================================================ FICHE CONTACT -->
+    <section class="view grouped hidden-right" id="card" hidden>
+      <div class="navbar" id="card-nav">
+        <button class="navbtn" id="card-back"><svg viewBox="0 0 12 20"><path d="M10 2 2 10l8 8"/></svg><span id="card-back-label">Contacts</span></button>
+        <span></span>
         <button class="navbtn right" id="card-edit">Modifier</button>
       </div>
-      <div class="scroll" id="card-body"></div>
+      <div class="scroll" id="card-body" style="margin-top:-92px"></div>
     </section>
 
-    <!-- Messages -->
+    <!-- ================================================================ CONVERSATION -->
     <section class="view hidden-right" id="chat" hidden>
       <div class="navbar blur">
-        <button class="navbtn" id="chat-back"><svg viewBox="0 0 13 21"><path d="M11 2 2.5 10.5 11 19"/></svg><span class="unread-back" id="back-unread" hidden></span></button>
-        <button class="chat-head" id="chat-head">
-          <span id="chat-avatar"></span>
-          <span class="n"><span id="chat-name"></span><svg viewBox="0 0 6 10"><path d="m1 1 4 4-4 4"/></svg></span>
-        </button>
+        <button class="navbtn" id="chat-back"><svg viewBox="0 0 12 20"><path d="M10 2 2 10l8 8"/></svg><span class="unread-back" id="back-unread" hidden></span></button>
+        <button class="chat-head" id="chat-head"><span id="chat-avatar"></span><span class="n"><span id="chat-name"></span><svg viewBox="0 0 6 10"><path d="m1 1 4 4-4 4"/></svg></span></button>
         <span></span>
       </div>
       <div class="scroll" id="thread-scroll"><div id="thread"></div></div>
+      <button class="to-bottom" id="to-bottom" aria-label="Aller en bas"><svg viewBox="0 0 14 14"><path d="M7 2v10M2.5 7.5 7 12l4.5-4.5"/></svg></button>
+      <div class="chips" id="chips"></div>
       <div class="composer" id="composer">
-        <span class="plus" title="Pièces jointes : indisponible"><svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></svg></span>
+        <button class="plus" id="plus" title="Suggestions"><svg viewBox="0 0 16 16"><path d="M8 2v12M2 8h12"/></svg></button>
         <div class="field">
           <textarea id="input" rows="1" placeholder="iMessage" maxlength="4000"></textarea>
           <button class="send" id="send" aria-label="Envoyer"><svg viewBox="0 0 14 16"><path d="M7 14V2M2 7l5-5 5 5"/></svg></button>
@@ -406,11 +429,40 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
       </div>
     </section>
 
-    <button class="banner" id="banner"><span id="banner-avatar"></span><span class="bt"><span class="bh"><b id="banner-name"></b><span>maintenant</span></span><span class="bb" id="banner-text"></span></span></button>
+    <!-- ================================================================ CALENDRIER -->
+    <section class="view grouped app-closed" id="calendar" hidden>
+      <div class="navbar"><span></span><span></span><span></span></div>
+      <div class="scroll"><div class="big-title" id="cal-title">Calendrier</div><div class="big-sub" id="cal-sub"></div><div id="cal-body"></div></div>
+    </section>
+
+    <!-- ================================================================ CLASSEMENT -->
+    <section class="view grouped app-closed" id="table" hidden>
+      <div class="navbar"><span></span><span></span><span></span></div>
+      <div class="scroll"><div class="big-title">Classement</div><div class="big-sub" id="tb-sub"></div><div id="tb-body"></div></div>
+    </section>
+
+    <!-- ================================================================ EFFECTIF -->
+    <section class="view grouped app-closed" id="squad" hidden>
+      <div class="navbar"><span></span><span></span><span></span></div>
+      <div class="scroll">
+        <div class="big-title">Effectif</div><div class="big-sub" id="sq-sub"></div>
+        <div class="seg" id="sq-seg"><button data-sort="poste" class="on">Postes</button><button data-sort="buts">Buts</button><button data-sort="note">Note</button><button data-sort="valeur">Valeur</button></div>
+        <div id="sq-body"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================ RÉGLAGES -->
+    <section class="view grouped app-closed" id="settings" hidden>
+      <div class="navbar"><span></span><span></span><span></span></div>
+      <div class="scroll"><div class="big-title">Réglages</div><div id="set-body"></div></div>
+    </section>
+
+    <button class="banner" id="banner"><span id="banner-avatar" style="position:relative"></span><span class="bt"><span class="bh"><b id="banner-name"></b><span>maintenant</span></span><span class="bb" id="banner-text"></span></span></button>
     <div class="sheet-bg" id="sheet-bg"></div>
-    <div class="sheet" id="sheet"><div class="sh"><button class="navbtn" id="sheet-cancel">Annuler</button><span id="sheet-title"></span><span style="min-width:70px"></span></div><div class="scroll" id="sheet-body"></div></div>
+    <div class="sheet" id="sheet"><div class="grab"></div><div class="sh"><button class="navbtn" id="sheet-cancel">Fermer</button><span id="sheet-title"></span><span></span></div><div class="scroll" id="sheet-body"></div></div>
+    <div class="menu" id="menu"><button id="menu-copy">Copier<svg viewBox="0 0 18 18"><rect x="6" y="6" width="9" height="10" rx="2"/><path d="M12 6V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h1"/></svg></button></div>
     <div class="toast" id="toast"></div>
-    <div class="home-indicator on-wallpaper" id="home-indicator" title="Accueil"></div>
+    <div class="home-indicator light" id="home-indicator" title="Accueil"></div>
   </div>
 </div>
 
@@ -418,28 +470,30 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 "use strict";
 const TOKEN = "__CLUBDIRECTOR_TOKEN__";
 const $ = (id) => document.getElementById(id);
-const S = {
-  view: "home", contacts: [], home: null, status: null, role: null,
-  threads: {}, live: {}, rendered: {}, photos: new Map(), noCareer: false, lastGameDate: null, lastDirector: null,
-};
+const S = { view: "home", contacts: [], home: null, status: null, role: null, threads: {}, live: {}, rendered: {},
+  photos: new Map(), noCareer: false, lastGameDate: null, cameFrom: "messages", squadSort: "poste", data: {} };
 const ROLE_ORDER = ["directeur_sportif", "directeur_technique", "entraineur_adjoint"];
+const SUGGESTIONS = {
+  directeur_sportif: [["Point mercato", "Fais-moi un point mercato rapide."], ["Contrats à risque", "Quels contrats doit-on régler en priorité ?"],
+    ["Qui vendre ?", "Quels joueurs pourrait-on vendre cet hiver ?"], ["Budgets", "Où en sont nos budgets transferts et salaires ?"]],
+  directeur_technique: [["Audit du staff", "Fais-moi un audit rapide du staff."], ["Nos jeunes", "Quels sont nos jeunes les plus prometteurs ?"],
+    ["Prêts", "Quels jeunes devrait-on prêter pour qu'ils jouent ?"], ["Installations", "Où en sont nos installations ?"]],
+  entraineur_adjoint: [["Prochain match", "On joue qui au prochain match, et qu'est-ce qu'il faut surveiller ?"], ["Onze type", "Quel onze tu alignerais au prochain match ?"],
+    ["En forme", "Qui est en forme en ce moment ?"], ["Rotation", "Faut-il faire tourner sur les prochains matchs ?"]],
+};
 
 // ------------------------------------------------------------------ hôte (fenêtre ClubDirector)
 function hostSend(msg) { try { window.chrome && window.chrome.webview && window.chrome.webview.postMessage(msg); } catch (e) { /* hors fenêtre */ } }
 try {
   window.chrome && window.chrome.webview && window.chrome.webview.addEventListener("message", (e) => {
-    const m = String(e.data || "");
-    if (m === "focus") { if (S.view === "chat") $("input").focus(); refreshAll(); }
+    if (String(e.data || "") === "focus") { if (S.view === "chat") $("input").focus({ preventScroll: true }); refreshAll(); }
   });
 } catch (e) { /* hors fenêtre */ }
 
 // ------------------------------------------------------------------ API
 async function api(path, opts = {}) {
   const r = await fetch(path, { ...opts, headers: { "X-ClubDirector-Token": TOKEN, "Content-Type": "application/json", ...(opts.headers || {}) } });
-  if (!r.ok) {
-    let d = null; try { d = await r.json(); } catch (e) { /* vide */ }
-    const err = new Error((d && d.detail) || r.statusText); err.status = r.status; err.code = d && d.code; throw err;
-  }
+  if (!r.ok) { let d = null; try { d = await r.json(); } catch (e) { /* vide */ } const err = new Error((d && d.detail) || r.statusText); err.status = r.status; err.code = d && d.code; throw err; }
   return r.json();
 }
 async function streamPost(path, body, onEvent) {
@@ -447,8 +501,7 @@ async function streamPost(path, body, onEvent) {
   if (!r.ok || !r.body) { let d = null; try { d = await r.json(); } catch (e) { /* vide */ } throw new Error((d && d.detail) || r.statusText); }
   const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
   for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
+    const { value, done } = await reader.read(); if (done) break;
     buf += dec.decode(value, { stream: true });
     let i;
     while ((i = buf.indexOf("\n\n")) >= 0) {
@@ -464,95 +517,116 @@ const pad = (n) => String(n).padStart(2, "0");
 const hhmm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const DAYS = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 function isoDay(s) { if (!s) return null; const [y, m, d] = s.slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); }
-function gameLong(s) {
-  const d = isoDay(s); if (!d) return "";
-  return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-}
+function gameLong(s) { const d = isoDay(s); return d ? d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : ""; }
 function gameShort(s) { const d = isoDay(s); return d ? `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}` : ""; }
 function initials(name) { return String(name || "?").split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase(); }
-function shortName(c) { return (c.person && c.person.first_name) || (c.name || c.label).split(" ")[0]; }
-function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 3200); }
+function shortName(c) { return (c && c.person && c.person.first_name) || String((c && (c.name || c.label)) || "").split(" ")[0]; }
+function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 3000); }
 function store(key, value) { try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch (e) { return null; } return null; }
+function relTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso), now = new Date();
+  if (d.toDateString() === now.toDateString()) return hhmm(d);
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return "Hier";
+  if (now - d < 6 * 864e5) return cap(d.toLocaleDateString("fr-FR", { weekday: "long" }));
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+const CHEV = '<svg class="chev" viewBox="0 0 8 13"><path d="m1.5 1.5 5 5-5 5"/></svg>';
+
+// ------------------------------------------------------------------ sons (synthétisés, aucun fichier)
+let audio = null;
+function sound(kind) {
+  if (store("cd-sound") === "off") return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
+    o.connect(g); g.connect(audio.destination);
+    if (kind === "send") { o.type = "sine"; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(1250, t + .14); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.06, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .18); o.start(t); o.stop(t + .2); }
+    else { o.type = "triangle"; [880, 1175, 1568].forEach((f, i) => o.frequency.setValueAtTime(f, t + i * .09)); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.05, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .34); o.start(t); o.stop(t + .36); }
+  } catch (e) { /* audio indisponible */ }
+}
 
 // ------------------------------------------------------------------ photos (pack de visages de l'entraîneur)
 const photoReady = new Map();
-async function photoUrl(c) {
-  const uid = c.person && c.person.unique_id;
-  if (!c.photo || !uid) return null;
+function photoUrl(uid) {
+  if (!uid) return Promise.resolve(null);
   if (S.photos.has(uid)) return S.photos.get(uid);
-  const p = fetch(`/api/staff/${uid}/photo`, { headers: { "X-ClubDirector-Token": TOKEN } })
+  const p = fetch(`/api/photos/${uid}`, { headers: { "X-ClubDirector-Token": TOKEN } })
     .then((r) => (r.ok ? r.blob() : null)).then((b) => (b ? URL.createObjectURL(b) : null)).catch(() => null)
     .then((u) => { if (u) photoReady.set(uid, u); return u; });
   S.photos.set(uid, p);
   return p;
 }
-function avatar(c, size) {
+function avatar(name, uid, hasPhoto, size, bg) {
   const el = document.createElement("span");
   el.className = "avatar"; el.style.width = el.style.height = size + "px"; el.style.fontSize = Math.round(size * 0.4) + "px";
+  if (bg) el.style.background = bg;
   const put = (u) => { el.textContent = ""; el.classList.add("photo"); const img = new Image(); img.alt = ""; img.src = u; el.appendChild(img); };
-  const ready = c && c.person && photoReady.get(c.person.unique_id);
-  if (ready) { put(ready); return el; }
-  el.textContent = initials(c ? c.name || c.label : "?");
-  if (c) photoUrl(c).then((u) => { if (u) put(u); });
+  if (hasPhoto && uid && photoReady.get(uid)) { put(photoReady.get(uid)); return el; }
+  el.textContent = initials(name);
+  if (hasPhoto && uid) photoUrl(uid).then((u) => { if (u) put(u); });
   return el;
 }
+const contactAvatar = (c, size) => avatar(c ? c.name || c.label : "?", c && c.person && c.person.unique_id, c && c.photo, size);
 
-// ------------------------------------------------------------------ horloge et barre d'état
-function tick() {
-  const now = new Date();
-  $("sb-time").textContent = hhmm(now);
-  $("h-time").textContent = hhmm(now);
-  const d = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-  $("h-date").textContent = d.charAt(0).toUpperCase() + d.slice(1);
-}
+// ------------------------------------------------------------------ horloge
+function tick() { $("sb-time").textContent = hhmm(new Date()); }
 setInterval(tick, 10000); tick();
 
 // ------------------------------------------------------------------ navigation
-const APP_VIEWS = ["contacts", "card", "chat"];
+const APP_VIEWS = ["messages", "contacts", "card", "chat", "calendar", "table", "squad", "settings"];
+const LIGHT_BAR = new Set(["home"]);
 const raf2 = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
 function setPos(el, cls) { el.classList.remove("app-closed", "hidden-right", "hidden-left"); if (cls) el.classList.add(cls); }
 function show(view, dir = "push") {
-  const prev = S.view;
-  if (prev === view) return;
-  S.view = view;
-  const wall = view === "home";
-  $("statusbar").classList.toggle("on-wallpaper", wall);
-  $("home-indicator").classList.toggle("on-wallpaper", wall);
-  if (view === "home") {                       // fermeture de l'application
-    $("home").classList.remove("behind");
-    setPos($(prev), "app-closed");
-    setTimeout(() => { if (S.view === "home") for (const id of APP_VIEWS) $(id).hidden = true; }, 400);
+  const prev = S.view; if (prev === view) return; S.view = view;
+  $("screen").scrollLeft = 0; $("screen").scrollTop = 0;
+  $("statusbar").classList.toggle("light", LIGHT_BAR.has(view));
+  $("home-indicator").classList.toggle("light", LIGHT_BAR.has(view));
+  closeMenu();
+  if (view === "home") {
+    $("home").classList.remove("behind"); setPos($(prev), "app-closed");
+    setTimeout(() => { if (S.view === "home") for (const id of APP_VIEWS) $(id).hidden = true; }, 420);
     return;
   }
   const target = $(view);
-  if (prev === "home") {                       // ouverture de l'application
+  if (prev === "home") {
     $("home").classList.add("behind");
     for (const id of APP_VIEWS) if (id !== view) $(id).hidden = true;
-    target.hidden = false; setPos(target, "app-closed");
-    raf2(() => setPos(target, null));
+    target.hidden = false; setPos(target, "app-closed"); raf2(() => setPos(target, null));
     return;
   }
-  const from = $(prev);                        // navigation dans l'application
-  target.hidden = false;
-  setPos(target, dir === "push" ? "hidden-right" : "hidden-left");
+  const from = $(prev);
+  target.hidden = false; setPos(target, dir === "push" ? "hidden-right" : "hidden-left");
   raf2(() => { setPos(target, null); setPos(from, dir === "push" ? "hidden-left" : "hidden-right"); });
-  setTimeout(() => { if (S.view !== prev) from.hidden = true; }, 420);
+  setTimeout(() => { if (S.view !== prev) from.hidden = true; }, 440);
 }
 function back() {
+  if ($("menu").classList.contains("show")) return closeMenu();
   if ($("sheet").classList.contains("show")) return closeSheet();
-  if (S.view === "chat") { closeChat(); return show(S.cameFrom === "card" ? "card" : "contacts", "back"); }
-  if (S.view === "card") return show("contacts", "back");
-  if (S.view === "contacts") return show("home");
+  if (S.view === "chat") return show(S.cameFrom, "back");
+  if (S.view === "card") return show(S.cardFrom || "contacts", "back");
+  if (S.view !== "home") return show("home");
   hostSend("hide");
 }
-$("open-contacts").onclick = () => { renderContacts(); show("contacts"); };
-$("home-indicator").onclick = () => { closeChat(); show("home"); };
+function openApp(name) {
+  if (name === "messages") renderConversations();
+  if (name === "contacts") renderContacts();
+  if (name === "calendar") loadCalendar();
+  if (name === "table") loadTable();
+  if (name === "squad") loadSquad();
+  if (name === "settings") renderSettings();
+  show(name);
+}
+for (const b of document.querySelectorAll("[data-open]")) b.onclick = () => openApp(b.dataset.open);
+$("home-search").onclick = () => { openApp("contacts"); setTimeout(() => $("search").focus({ preventScroll: true }), 420); };
+$("home-indicator").onclick = () => show("home");
 $("card-back").onclick = back;
 $("chat-back").onclick = back;
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { e.preventDefault(); back(); }
-});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); back(); } });
 $("statusbar").addEventListener("mousedown", (e) => { if (e.button === 0) hostSend("drag"); });
 
 // ------------------------------------------------------------------ données
@@ -560,161 +634,175 @@ async function refreshAll() {
   try {
     const [status, contacts] = await Promise.all([api("/api/status"), api("/api/contacts")]);
     S.noCareer = false; S.status = status; S.contacts = contacts;
-    watchChanges(status, contacts);
-  } catch (e) {
-    if (e.code === "no_career" || e.status === 409) { S.noCareer = true; S.contacts = []; }
-  }
-  renderBadge(); renderContacts();
+    const gd = status.active && status.active.game_date;
+    if (S.lastGameDate && gd && gd !== S.lastGameDate) { toast(`Nouvelle sauvegarde lue : ${gameShort(gd)}`); S.data = {}; }
+    S.lastGameDate = gd || S.lastGameDate;
+  } catch (e) { if (e.code === "no_career" || e.status === 409) { S.noCareer = true; S.contacts = []; } }
+  renderBadges();
+  if (S.view === "messages") renderConversations();
+  if (S.view === "contacts") renderContacts();
   if (S.view === "card" && S.role) renderCard(S.role);
   if (S.view === "chat" && S.role) renderChatHead();
   try { S.home = await api("/api/phone/home"); } catch (e) { S.home = null; }
   renderHome();
   autoIntroduceDirector();
 }
-function watchChanges(status, contacts) {
-  const gd = status.active && status.active.game_date;
-  if (S.lastGameDate && gd && gd !== S.lastGameDate) toast(`Nouvelle sauvegarde lue : ${gameShort(gd)}`);
-  S.lastGameDate = gd || S.lastGameDate;
-}
-function contact(role) { return S.contacts.find((c) => c.role === role); }
+const contact = (role) => S.contacts.find((c) => c.role === role);
+const unreadTotal = () => S.contacts.reduce((a, c) => a + (c.unread || 0), 0);
+function renderBadges() { const n = unreadTotal(); $("badge-messages").hidden = !n; $("badge-messages").textContent = n; }
 
 // ------------------------------------------------------------------ accueil
 function renderHome() {
-  const h = S.home;
+  const h = S.home, w = $("widgets");
+  const gd = (h && h.game_date) || S.lastGameDate;
+  const d = isoDay(gd);
+  $("ic-cal-d").textContent = d ? d.toLocaleDateString("fr-FR", { weekday: "long" }) : "—";
+  $("ic-cal-n").textContent = d ? d.getDate() : "—";
   if (S.noCareer || !h) {
-    $("w-club").textContent = S.noCareer ? "Aucune carrière" : "Service en attente";
-    $("w-rows").innerHTML = `<div class="row"><span>${S.noCareer ? "Sauvegardez votre partie dans FM26 : elle sera lue automatiquement." : "Connexion au service ClubDirector…"}</span><span></span></div>`;
-    $("h-game").textContent = ""; $("w-foot").textContent = "";
+    w.innerHTML = `<div class="w wide"><div class="wh">ClubDirector</div><div style="margin-top:8px;font-size:15px;line-height:1.4">${S.noCareer
+      ? "Aucune carrière lue. Sauvegardez votre partie dans FM26 : elle sera lue automatiquement."
+      : "Connexion au service ClubDirector…"}</div></div>`;
     return;
   }
-  $("h-game").textContent = h.game_date ? `Dans le jeu : ${gameLong(h.game_date)}` : "";
-  $("w-club").textContent = h.club_short || h.club || "—";
-  const rows = [];
-  if (h.league) rows.push(["Championnat", `${h.league.position}${h.league.position === 1 ? "er" : "e"} · ${h.league.points} pts (${h.league.won}V ${h.league.drawn}N ${h.league.lost}D)`]);
   const n = (x) => (h.short_names && h.short_names[x]) || x;
-  if (h.next_match) rows.push(["Prochain match", `${gameShort(h.next_match.date)} · ${n(h.next_match.domicile)} – ${n(h.next_match.exterieur)}`]);
-  if (h.last_match) rows.push(["Dernier match", `${n(h.last_match.domicile)} ${h.last_match.score || "?"} ${n(h.last_match.exterieur)}`]);
-  $("w-rows").innerHTML = rows.map(([k, v]) => `<div class="row"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("");
-  const sync = h.sync || {};
-  $("w-foot").textContent = sync.in_progress ? "Lecture de la sauvegarde en cours…" : (h.manager ? `Entraîneur : ${h.manager}` : "");
-}
-function renderBadge() {
-  const n = S.contacts.reduce((a, c) => a + (c.unread || 0), 0);
-  $("badge").hidden = !n; $("badge").textContent = n;
+  const nx = h.next_match;
+  const cal = `<button class="w cal pressable" data-go="calendar"><div class="wday">${esc(d ? d.toLocaleDateString("fr-FR", { weekday: "long" }) : "")}</div>
+    <div class="wnum">${d ? d.getDate() : "—"}</div>
+    <div class="wsub">${nx ? `<b>${esc(n(nx.domicile))} – ${esc(n(nx.exterieur))}</b>${esc(gameShort(nx.date))} · ${esc(nx.competition || "")}` : "Aucun match prévu"}</div></button>`;
+  const lg = h.league;
+  const rank = `<button class="w rank pressable" data-go="table"><div class="wh">${esc(h.club_short || h.club)}</div>
+    <div class="wbig">${lg ? lg.position : "—"}<sup>${lg ? (lg.position === 1 ? "er" : "e") : ""}</sup></div>
+    <div class="wsub">${lg ? `${lg.points} pts · ${lg.won}V ${lg.drawn}N ${lg.lost}D` : "Classement indisponible"}</div></button>`;
+  const lm = h.last_match;
+  const last = lm ? `<button class="w wide match pressable" data-go="calendar"><span class="side">${esc(n(lm.domicile))}</span><span class="score">${esc(lm.score || "–")}</span><span class="side">${esc(n(lm.exterieur))}</span>
+    <span class="meta">Dernier match · ${esc(gameShort(lm.date))} · ${esc(lm.competition || "")}</span></button>` : "";
+  w.innerHTML = cal + rank + last;
+  for (const b of w.querySelectorAll("[data-go]")) b.onclick = () => openApp(b.dataset.go);
 }
 
-// ------------------------------------------------------------------ contacts
+// ------------------------------------------------------------------ Messages (liste des conversations)
+function renderConversations() {
+  const box = $("conv-list"); box.innerHTML = "";
+  if (S.noCareer) { box.innerHTML = `<div class="empty">Aucune carrière lue. Sauvegardez votre partie dans FM26.</div>`; return; }
+  const q = $("msearch").value.trim().toLowerCase();
+  const list = ROLE_ORDER.map(contact).filter((c) => c && c.can_chat)
+    .filter((c) => !q || `${c.name} ${c.label} ${c.last ? c.last.text : ""}`.toLowerCase().includes(q))
+    .sort((a, b) => (S.live[b.role] ? 1 : 0) - (S.live[a.role] ? 1 : 0) || String(b.last ? b.last.at : "").localeCompare(String(a.last ? a.last.at : "")));
+  for (const c of list) {
+    const b = document.createElement("button"); b.className = "conv";
+    const dc = document.createElement("span"); dc.className = "dotcol"; if (c.unread) dc.innerHTML = '<span class="udot"></span>';
+    b.appendChild(dc); b.appendChild(contactAvatar(c, 52));
+    const typing = !!S.live[c.role];
+    const preview = typing ? `${esc(shortName(c))} est en train d'écrire…` : c.last ? `${c.last.from === "me" ? "Vous : " : ""}${esc(c.last.text.replace(/\s+/g, " "))}` : `${esc(c.label)} · appuyez pour écrire`;
+    b.insertAdjacentHTML("beforeend", `<span class="cbody"><span class="top"><span class="nm">${esc(c.name || c.label)}</span><span class="tm">${c.last ? relTime(c.last.at) : ""}${CHEV}</span></span>
+      <span class="pv${typing ? " typing" : ""}">${preview}</span></span>`);
+    b.onclick = () => openChat(c.role, "messages");
+    box.appendChild(b);
+  }
+  if (!list.length) box.innerHTML = `<div class="empty">Aucune conversation.</div>`;
+}
+$("msearch").addEventListener("input", renderConversations);
+$("compose").onclick = () => openSheetCompose();
+function openSheetCompose() {
+  $("sheet-title").textContent = "Nouveau message";
+  const body = $("sheet-body"); body.innerHTML = `<div class="section-h">À</div><div class="group" id="compose-list"></div>`;
+  for (const c of ROLE_ORDER.map(contact).filter((x) => x && x.can_chat)) {
+    const b = document.createElement("button"); b.className = "cand"; b.appendChild(contactAvatar(c, 36));
+    b.insertAdjacentHTML("beforeend", `<span class="cb"><span><div>${esc(c.name)}</div><div class="s">${esc(c.label)}</div></span>${CHEV}</span>`);
+    b.onclick = () => { closeSheet(); openChat(c.role, "messages"); };
+    $("compose-list").appendChild(b);
+  }
+  openSheet();
+}
+
+// ------------------------------------------------------------------ Contacts
 function renderContacts() {
-  const me = S.home && S.home.manager || (S.status && S.status.active && S.status.active.manager_name) || "Moi";
+  const me = (S.home && S.home.manager) || (S.status && S.status.active && S.status.active.manager_name) || "Moi";
   const club = S.home && (S.home.club_short || S.home.club) || "";
   const mc = $("mycard"); mc.innerHTML = "";
-  const av = avatar({ name: me }, 58); av.style.background = "linear-gradient(180deg,#5e5ce6,#3634a3)"; mc.appendChild(av);
+  mc.appendChild(avatar(me, null, false, 60, "linear-gradient(180deg,#6e6cf0,#3634a3)"));
   mc.insertAdjacentHTML("beforeend", `<div><div class="who">${esc(me)}</div><div class="sub">Ma fiche · Entraîneur${club ? " · " + esc(club) : ""}</div></div>`);
   const q = $("search").value.trim().toLowerCase();
   const list = $("contact-list"); list.innerHTML = "";
-  if (S.noCareer) { list.innerHTML = `<div class="footnote">Aucune carrière n'est encore lue. Sauvegardez votre partie dans FM26.</div>`; return; }
+  if (S.noCareer) { list.innerHTML = `<div class="empty">Aucune carrière lue.</div>`; return; }
   for (const role of ROLE_ORDER) {
     const c = contact(role); if (!c) continue;
     const name = c.name || "Poste vacant";
     if (q && !(name + " " + c.label).toLowerCase().includes(q)) continue;
     const b = document.createElement("button"); b.className = "row-contact";
-    b.appendChild(avatar(c.name ? c : null, 44));
+    b.appendChild(contactAvatar(c.name ? c : null, 42));
     const parts = name.split(" "); const last = parts.length > 1 ? parts.pop() : ""; const first = parts.join(" ");
-    const meta = document.createElement("span"); meta.className = "meta";
-    meta.innerHTML = `<div class="name">${esc(first)} <b>${esc(last)}</b></div><div class="role">${esc(c.label)}${c.can_chat ? "" : " · poste vacant"}</div>`;
-    b.appendChild(meta);
-    if (S.live[role]) { const d = document.createElement("span"); d.className = "dot typing"; d.textContent = "…"; b.appendChild(d); }
-    else if (c.unread) { const d = document.createElement("span"); d.className = "dot"; d.textContent = c.unread; b.appendChild(d); }
-    b.onclick = () => openCard(role);
+    b.insertAdjacentHTML("beforeend", `<span class="meta"><span class="txt"><div class="name">${esc(first)} <b>${esc(last)}</b></div>
+      <div class="role">${esc(c.label)}${c.can_chat ? "" : " · poste vacant"}</div></span>${c.unread ? `<span class="pill">${c.unread}</span>` : ""}</span>`);
+    b.onclick = () => openCard(role, "contacts");
     list.appendChild(b);
   }
-  const theme = store("cd-theme") || "auto";
-  $("contacts-foot").innerHTML = `Les contacts sont les membres du staff en poste dans votre sauvegarde FM26 ; leurs photos viennent de votre pack de visages.
-    <div class="theme-switch">${["auto", "clair", "sombre"].map((t) => `<button data-t="${t}" class="${t === theme ? "on" : ""}">${t[0].toUpperCase() + t.slice(1)}</button>`).join("")}</div>`;
-  for (const btn of $("contacts-foot").querySelectorAll("button")) btn.onclick = () => { store("cd-theme", btn.dataset.t); applyTheme(); renderContacts(); };
 }
 $("search").addEventListener("input", renderContacts);
-function applyTheme() {
-  const t = store("cd-theme") || "auto";
-  if (t === "clair") document.documentElement.dataset.theme = "light";
-  else if (t === "sombre") document.documentElement.dataset.theme = "dark";
-  else delete document.documentElement.dataset.theme;
-}
-applyTheme();
 
 // ------------------------------------------------------------------ fiche contact
 function fr(d) { if (!d) return "—"; const [y, m, j] = d.slice(0, 10).split("-"); return `${j}/${m}/${y}`; }
-function openCard(role) { S.role = role; renderCard(role); show("card"); }
+function openCard(role, from) { S.role = role; S.cardFrom = from; $("card-back-label").textContent = from === "chat" ? "" : "Contacts"; renderCard(role); show("card"); }
 function renderCard(role) {
   const c = contact(role); if (!c) return;
   const body = $("card-body"); body.innerHTML = "";
   const poster = document.createElement("div"); poster.className = "poster";
-  poster.appendChild(avatar(c.name ? c : null, 116));
+  const uid = c.person && c.person.unique_id;
+  if (c.photo && uid) {
+    poster.classList.add("has-photo");
+    const bg = document.createElement("div"); bg.className = "bgimg"; poster.appendChild(bg);
+    photoUrl(uid).then((u) => { if (u) bg.style.backgroundImage = `url(${u})`; });
+  }
+  poster.appendChild(contactAvatar(c.name ? c : null, 128));
   const club = S.home && (S.home.club_short || S.home.club) || "";
   poster.insertAdjacentHTML("beforeend", `<div class="pname">${esc(c.name || "Poste vacant")}</div><div class="prole">${esc(c.label)}${club ? " · " + esc(club) : ""}</div>`);
   body.appendChild(poster);
-  const acts = document.createElement("div"); acts.className = "actions";
-  const ico = {
-    msg: '<svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11.1c0 2.6 1.5 4.9 3.8 6.4-.2 1.3-.9 2.6-2 3.5 2.2 0 4.1-.8 5.4-2 .9.2 1.8.3 2.8.3 5.5 0 10-3.6 10-8.1S17.5 3 12 3z"/></svg>',
-    call: '<svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg>',
-    video: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7zm14 3.5 4-2.8v8.6l-4-2.8v-3z"/></svg>',
-    mail: '<svg viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6zm2 .5V7l7 5 7-5v-.5L12 11 5 6.5z"/></svg>',
-  };
-  acts.innerHTML = `<button class="action" id="act-msg" ${c.can_chat ? "" : "disabled"}>${ico.msg}message</button>
-    <button class="action" disabled title="Indisponible">${ico.call}appel</button>
-    <button class="action" disabled title="Indisponible">${ico.video}vidéo</button>
-    <button class="action" disabled title="Indisponible">${ico.mail}e-mail</button>`;
-  body.appendChild(acts);
-  $("act-msg") && ($("act-msg").onclick = () => openChat(role, "card"));
+  const icMsg = '<svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11.1c0 2.6 1.5 4.9 3.8 6.4-.2 1.3-.9 2.6-2 3.5 2.2 0 4.1-.8 5.4-2 .9.2 1.8.3 2.8.3 5.5 0 10-3.6 10-8.1S17.5 3 12 3z"/></svg>';
+  const icSwap = '<svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4V9h11V7H7V4zm10 8v3H6v2h11v3l4-4-4-4z"/></svg>';
+  const cta = document.createElement("div"); cta.className = "cta";
+  if (c.can_chat) cta.innerHTML = `<button class="primary" id="cta-msg">${icMsg}Message</button>`;
+  if (c.person || role !== "directeur_sportif") cta.insertAdjacentHTML("beforeend", `<button id="cta-swap">${icSwap}Changer de personne</button>`);
+  body.appendChild(cta);
+  if ($("cta-msg")) $("cta-msg").onclick = () => openChat(role, "card");
+  if ($("cta-swap")) $("cta-swap").onclick = () => openCandidates(role);
   const p = c.person;
   if (!p) {
-    body.insertAdjacentHTML("beforeend", `<div class="vacant">${role === "directeur_sportif"
-      ? "Aucun directeur sportif dans la sauvegarde : vous discutez avec un directeur sans identité de jeu. Recrutez-en un dans FM26 (Staff), puis sauvegardez : il prendra sa place et se présentera."
-      : `Poste vacant dans la sauvegarde. Recrutez un ${esc(c.label.toLowerCase())} dans FM26 (Staff → recrutement du staff), puis sauvegardez : il apparaîtra ici et vous écrira.`}</div>`);
+    body.insertAdjacentHTML("beforeend", `<div class="group"><div class="info"><div class="info-v" style="font-size:15px;color:var(--text2)">${role === "directeur_sportif"
+      ? "Aucun directeur sportif dans la sauvegarde : vous discutez avec un directeur sans identité de jeu. Recrutez-en un dans FM26, puis sauvegardez : il prendra sa place et vous écrira."
+      : `Poste vacant dans la sauvegarde. Recrutez un ${esc(c.label.toLowerCase())} dans FM26 (Staff), puis sauvegardez : il apparaîtra ici et vous écrira.`}</div></div></div>`);
   } else {
-    const items = [
-      ["Poste", c.label], ["Âge", p.age ? `${p.age} ans` : "—"], ["Au club depuis le", fr(p.contract_start)],
-      ["Contrat jusqu'au", fr(p.contract_end)],
-    ];
-    const g = document.createElement("div"); g.className = "group";
-    g.innerHTML = items.map(([k, v]) => `<div class="item"><div class="k">${esc(k)}</div><div class="v plain">${esc(v)}</div></div>`).join("");
-    body.appendChild(g);
-    if (p.traits && p.traits.length) {
-      const t = document.createElement("div"); t.className = "group";
-      t.innerHTML = `<div class="item"><div class="k">Profil (préférences FM26)</div>${p.traits.map((x) => `<div class="trait">${esc(x)}</div>`).join("")}</div>`;
-      body.appendChild(t);
+    const items = [["Poste", c.label], ["Âge", p.age ? `${p.age} ans` : "—"], ["Au club depuis le", fr(p.contract_start)], ["Contrat jusqu'au", fr(p.contract_end)]];
+    if (c.wage_text) items.push(["Salaire", `${c.wage_text} par semaine`]);
+    body.insertAdjacentHTML("beforeend", `<div class="group">${items.map(([k, v]) => `<div class="info"><div class="info-k">${esc(k)}</div><div class="info-v">${esc(v)}</div></div>`).join("")}</div>`);
+    body.insertAdjacentHTML("beforeend", `<div class="footnote">${esc(p.method || "")}</div>`);
+    if (c.corrected) {
+      const g = document.createElement("div"); g.className = "group"; g.innerHTML = `<button class="link-cell danger" id="card-auto">Revenir à la détection automatique</button>`;
+      body.appendChild(g); $("card-auto").onclick = () => assign(role, null);
     }
-    const src = document.createElement("div"); src.className = "group";
-    src.innerHTML = `<div class="item"><div class="k">Source</div><div class="v plain" style="font-size:14px">${esc(p.method || "")}</div></div>
-      <button class="item" id="card-change">Ce n'est pas la bonne personne ?</button>
-      ${c.corrected ? '<button class="item danger" id="card-auto">Revenir à la détection automatique</button>' : ""}`;
-    body.appendChild(src);
-    $("card-change").onclick = () => openSheet(role);
-    if ($("card-auto")) $("card-auto").onclick = () => assign(role, null);
   }
-  $("card-edit").onclick = () => openSheet(role);
-  $("card-edit").disabled = !S.contacts.length;
+  $("card-edit").onclick = () => openCandidates(role);
 }
 
-// ------------------------------------------------------------------ correction d'un contact
-async function openSheet(role) {
+// ------------------------------------------------------------------ feuille (choix d'une personne, nouveau message, joueur)
+function openSheet() { $("sheet-bg").classList.add("show"); $("sheet").classList.add("show"); }
+function closeSheet() { $("sheet-bg").classList.remove("show"); $("sheet").classList.remove("show"); }
+$("sheet-cancel").onclick = closeSheet; $("sheet-bg").onclick = closeSheet;
+async function openCandidates(role) {
   const c = contact(role);
   $("sheet-title").textContent = c.label;
-  $("sheet-body").innerHTML = `<div class="footnote">Chargement du staff…</div>`;
-  $("sheet-bg").classList.add("show"); $("sheet").classList.add("show");
+  $("sheet-body").innerHTML = `<div class="footnote" style="padding-top:12px">Chargement du staff…</div>`;
+  openSheet();
   let list = [];
   try { list = await api(`/api/contacts/${role}/candidates`); } catch (e) { $("sheet-body").innerHTML = `<div class="footnote">${esc(e.message)}</div>`; return; }
   const same = list.filter((x) => x.same_function), others = list.filter((x) => !x.same_function);
   const cur = c.person && c.person.uid;
   const team = ["Équipe première", "Réserve", "Jeunes", "Jeunes"];
   const block = (title, arr) => arr.length ? `<div class="section-h">${esc(title)}</div><div class="group">${arr.map((x) =>
-    `<button class="cand" data-uid="${x.uid}"><span><div>${esc(x.name)}</div><div class="s">${x.age ? x.age + " ans · " : ""}${esc(team[x.team_slot || 0] || "Équipe")}</div></span>${x.uid === cur ? '<span class="ck">✓</span>' : ""}</button>`).join("")}</div>` : "";
-  $("sheet-body").innerHTML = `<div class="footnote" style="padding-bottom:4px">Choisissez qui occupe ce poste dans votre carrière. La détection automatique se fonde sur la fonction enregistrée dans la sauvegarde.</div>
-    ${block("Même fonction dans la sauvegarde", same)}${block("Autres membres du staff", others)}`;
+    `<button class="cand" data-uid="${x.uid}"><span class="cb"><span><div>${esc(x.name)}</div><div class="s">${x.age ? x.age + " ans · " : ""}${esc(team[x.team_slot || 0] || "Équipe")}</div></span>${x.uid === cur ? '<span class="ck">✓</span>' : ""}</span></button>`).join("")}</div>` : "";
+  $("sheet-body").innerHTML = `<div class="footnote" style="padding-top:4px">Choisissez qui occupe ce poste dans votre carrière. La détection automatique se fonde sur la fonction enregistrée dans la sauvegarde.</div>
+    ${block("Même fonction dans la sauvegarde", same)}${block("Autres membres du staff", others)}<div style="height:30px"></div>`;
   for (const b of $("sheet-body").querySelectorAll(".cand")) b.onclick = () => assign(role, Number(b.dataset.uid));
 }
-function closeSheet() { $("sheet-bg").classList.remove("show"); $("sheet").classList.remove("show"); }
-$("sheet-cancel").onclick = closeSheet; $("sheet-bg").onclick = closeSheet;
 async function assign(role, uid) {
   try { await api(`/api/contacts/${role}/person`, { method: "PUT", body: JSON.stringify({ uid }) }); } catch (e) { toast(e.message); return; }
   closeSheet(); delete S.threads[role]; S.rendered[role] = new Set();
@@ -723,38 +811,50 @@ async function assign(role, uid) {
 }
 
 // ------------------------------------------------------------------ conversation
-function closeChat() { if (S.view === "chat") S.chatOpen = null; }
-async function openChat(role, from = "contacts") {
+async function openChat(role, from = "messages") {
   const c = contact(role); if (!c || !c.can_chat) return;
-  S.role = role; S.cameFrom = from; S.chatOpen = role;
-  renderChatHead();
+  S.role = role; S.cameFrom = from === "card" ? "card" : from;
+  renderChatHead(); renderChips();
   show("chat");
   if (!S.threads[role]) {
-    $("thread").innerHTML = `<div class="empty-chat">Chargement…</div>`;
+    $("thread").innerHTML = `<div class="empty">Chargement…</div>`;
     try { S.threads[role] = await api(`/api/contacts/${role}/messages`); } catch (e) { S.threads[role] = []; }
   }
-  S.rendered[role] = new Set(S.threads[role].flatMap((m) => bubbleKeys(m)));
+  S.rendered[role] = new Set(S.threads[role].flatMap(bubbleKeys));
   renderThread(role, true);
   markRead(role);
-  setTimeout(() => $("input").focus(), 350);
+  setTimeout(() => $("input").focus({ preventScroll: true }), 380);
   if (!S.live[role] && !S.threads[role].length && c.intro_pending) introduce(role);
 }
 function renderChatHead() {
   const c = contact(S.role); if (!c) return;
-  const a = $("chat-avatar"); a.innerHTML = ""; a.appendChild(avatar(c.name ? c : null, 50));
+  const a = $("chat-avatar"); a.innerHTML = ""; a.appendChild(contactAvatar(c, 50));
   $("chat-name").textContent = c.name || c.label;
-  $("chat-head").onclick = () => { S.cameFrom = "contacts"; renderCard(S.role); show("card", "push"); };
+  $("chat-head").onclick = () => openCard(S.role, "chat");
   const others = S.contacts.filter((x) => x.role !== S.role).reduce((n, x) => n + (x.unread || 0), 0);
   $("back-unread").hidden = !others; $("back-unread").textContent = others;
 }
+function renderChips() {
+  const box = $("chips"); box.innerHTML = "";
+  for (const [label, text] of SUGGESTIONS[S.role] || []) {
+    const b = document.createElement("button"); b.className = "chip"; b.textContent = label;
+    b.onclick = () => { $("input").value = text; autosize(); send(); };
+    box.appendChild(b);
+  }
+  updateChips();
+}
+function updateChips() {
+  const show = store("cd-chips") !== "off" && !$("input").value.trim() && !S.live[S.role];
+  $("chips").hidden = !show; $("plus").classList.toggle("on", show);
+}
+$("plus").onclick = () => { store("cd-chips", store("cd-chips") === "off" ? "on" : "off"); updateChips(); };
 async function markRead(role) {
   try { await api(`/api/contacts/${role}/read`, { method: "POST" }); } catch (e) { /* hors ligne */ }
-  const c = contact(role); if (c) c.unread = 0; renderBadge();
+  const c = contact(role); if (c) c.unread = 0; renderBadges();
 }
-function splitBubbles(text) {
-  return String(text || "").replace(/\r/g, "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
-}
-function bubbleKeys(m) { return splitBubbles(m.text).map((_, i) => `${m.id}:${i}`); }
+const splitBubbles = (text) => String(text || "").replace(/\r/g, "").split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
+const bubbleKeys = (m) => splitBubbles(m.text).map((_, i) => `${m.id}:${i}`);
+const EMOJI_ONLY = /^(?:\p{Extended_Pictographic}(?:\ufe0f|\p{Emoji_Modifier}|\u200d\p{Extended_Pictographic})*\s*){1,6}$/u;
 function formatBubble(t) {
   return esc(t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, ""))
     .split("\n").map((line) => /^\s*[-•*]\s+/.test(line) ? `<span class="li">• ${line.replace(/^\s*[-•*]\s+/, "")}</span>` : line).join("\n")
@@ -762,20 +862,17 @@ function formatBubble(t) {
 }
 function sepLabel(at, gameDate) {
   const now = new Date(); const sameDay = at.toDateString() === now.toDateString();
-  const day = sameDay ? "Aujourd'hui" : at.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const day = sameDay ? "Aujourd'hui" : cap(at.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }));
   return `<b>${day}</b> ${hhmm(at)}${gameDate ? ` · dans le jeu : ${gameShort(gameDate)}` : ""}`;
 }
 function renderThread(role, jump = false) {
   if (S.view !== "chat" || S.role !== role) return;
   const sc = $("thread-scroll");
-  const nearBottom = jump || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 120;
-  const msgs = S.threads[role] || [];
-  const live = S.live[role];
+  const nearBottom = jump || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 140;
+  const msgs = S.threads[role] || []; const live = S.live[role];
   const seen = S.rendered[role] || (S.rendered[role] = new Set());
   const box = $("thread"); box.innerHTML = "";
-  if (!msgs.length && !live) {
-    box.innerHTML = `<div class="empty-chat">Aucun message. Écrivez à ${esc(shortName(contact(role)))}.</div>`;
-  }
+  if (!msgs.length && !live) box.innerHTML = `<div class="empty">Aucun message.<br>Écrivez à ${esc(shortName(contact(role)))} ou choisissez une suggestion.</div>`;
   let prevAt = null, prevGame = null, prevFrom = null;
   const lastMe = [...msgs].reverse().find((m) => m.from === "me");
   const all = live ? [...msgs, live] : msgs;
@@ -789,11 +886,13 @@ function renderThread(role, jump = false) {
     const parts = m.live ? m.parts : splitBubbles(m.text);
     parts.forEach((t, i) => {
       const b = document.createElement("div"); b.className = "bubble selectable"; b.innerHTML = formatBubble(t);
+      if (EMOJI_ONLY.test(t)) b.classList.add("emoji");
       const key = `${m.id}:${i}`;
       if (!seen.has(key)) { b.classList.add("pop"); seen.add(key); }
       const next = all[idx + 1];
       const groupEnds = i === parts.length - 1 && !(m.live && m.typing) && !(next && next.from === m.from && next.at && new Date(next.at) - at < 60 * 1000);
       if (groupEnds) b.classList.add("tail");
+      b.addEventListener("contextmenu", (e) => { e.preventDefault(); openMenu(e, t); });
       wrap.appendChild(b);
     });
     if (m.live && m.typing) {
@@ -801,50 +900,57 @@ function renderThread(role, jump = false) {
       wrap.appendChild(tb);
       if (m.caption) wrap.insertAdjacentHTML("beforeend", `<div class="caption">${esc(m.caption)}</div>`);
     }
-    if (m.from === "them" && !m.live && m.sources && m.sources.length) {
-      wrap.insertAdjacentHTML("beforeend", `<div class="sources">Données consultées : ${esc(m.sources.join(" · "))}</div>`);
-    }
+    if (m.from === "them" && !m.live && m.sources && m.sources.length) wrap.insertAdjacentHTML("beforeend", `<div class="sources">Données consultées : ${esc(m.sources.join(" · "))}</div>`);
     if (m.from === "me" && m.failed) {
-      const r = document.createElement("div"); r.className = "receipt failed"; r.textContent = "Non distribué — toucher pour réessayer";
+      const r = document.createElement("div"); r.className = "receipt failed"; r.textContent = "Non distribué · toucher pour réessayer";
       r.onclick = () => retry(role, m); wrap.appendChild(r);
     } else if (m === lastMe && msgs[msgs.length - 1] === m) {
-      wrap.insertAdjacentHTML("beforeend", `<div class="receipt">${live && live.parts.length === 0 && !live.read ? "Distribué" : "Lu"}</div>`);
+      wrap.insertAdjacentHTML("beforeend", `<div class="receipt">${live && !live.read ? "Distribué" : "Lu"}</div>`);
     }
     box.appendChild(wrap);
     prevAt = at; prevGame = m.game_date || prevGame; prevFrom = m.from;
   });
   if (nearBottom) sc.scrollTop = sc.scrollHeight;
-  const c = contact(role);
-  $("composer").classList.toggle("disabled", !c || !c.can_chat);
+  updateToBottom();
+  const c = contact(role); $("composer").classList.toggle("disabled", !c || !c.can_chat);
+  updateChips();
 }
+function updateToBottom() { const sc = $("thread-scroll"); $("to-bottom").classList.toggle("show", sc.scrollHeight - sc.scrollTop - sc.clientHeight > 300); }
+$("thread-scroll").addEventListener("scroll", updateToBottom);
+$("to-bottom").onclick = () => { const sc = $("thread-scroll"); sc.scrollTo({ top: sc.scrollHeight, behavior: "smooth" }); };
+
+// Menu contextuel d'une bulle (clic droit) : copier.
+function openMenu(e, text) {
+  const m = $("menu"), r = $("screen").getBoundingClientRect();
+  m.style.left = Math.min(e.clientX - r.left, r.width - 190) + "px"; m.style.top = Math.min(e.clientY - r.top, r.height - 80) + "px";
+  m.classList.add("show");
+  $("menu-copy").onclick = async () => { closeMenu(); try { await navigator.clipboard.writeText(text); toast("Copié"); } catch (err) { toast("Copie impossible"); } };
+}
+function closeMenu() { $("menu").classList.remove("show"); }
+document.addEventListener("click", (e) => { if (!$("menu").contains(e.target)) closeMenu(); });
 
 // Réponse en cours d'écriture : chaque paragraphe devient une bulle dès qu'il est complet.
 function startLive(role) {
   const live = { id: "live" + Date.now(), from: "them", live: true, parts: [], buf: "", typing: true, caption: "", at: new Date().toISOString(), read: false };
-  S.live[role] = live; renderContacts();
+  S.live[role] = live; refreshLists();
   return {
     on(ev) {
       if (ev.type === "delta") {
-        live.read = true; live.caption = "";
-        live.buf += ev.text;
+        live.read = true; live.caption = ""; live.buf += ev.text;
         let i;
         while ((i = live.buf.search(/\n\s*\n/)) >= 0) {
           const part = live.buf.slice(0, i).trim(); live.buf = live.buf.slice(i).replace(/^\s+/, "");
           if (part) { live.parts.push(part); renderThread(role); }
         }
       } else if (ev.type === "break") {
-        const part = live.buf.trim(); live.buf = "";
-        if (part) { live.parts.push(part); renderThread(role); }
+        const part = live.buf.trim(); live.buf = ""; if (part) { live.parts.push(part); renderThread(role); }
       } else if (ev.type === "tool") {
-        live.read = true; live.caption = `${shortName(contact(role))} consulte : ${ev.label}…`; renderThread(role);
-      } else if (ev.type === "done") {
-        live.final = ev.message;
-      } else if (ev.type === "error") {
-        live.error = ev.message;
-      }
+        live.read = true; live.caption = `${shortName(contact(role))} consulte : ${ev.label}`; renderThread(role);
+      } else if (ev.type === "done") { live.final = ev.message; }
+      else if (ev.type === "error") { live.error = ev.message; }
     },
     finish() {
-      const shown = live.parts.length;          // bulles déjà affichées (pas de nouvelle animation)
+      const shown = live.parts.length;
       const part = live.buf.trim(); if (part) live.parts.push(part);
       delete S.live[role];
       const msgs = S.threads[role] || (S.threads[role] = []);
@@ -852,13 +958,12 @@ function startLive(role) {
         const seen = S.rendered[role] || (S.rendered[role] = new Set());
         bubbleKeys(live.final).slice(0, shown).forEach((k) => seen.add(k));
         msgs.push(live.final);
-      } else if (live.parts.length) {
-        msgs.push({ id: live.id, from: "them", text: live.parts.join("\n\n"), at: live.at, sources: [] });
-      }
+      } else if (live.parts.length) msgs.push({ id: live.id, from: "them", text: live.parts.join("\n\n"), at: live.at, sources: [] });
       return live;
     },
   };
 }
+function refreshLists() { if (S.view === "messages") renderConversations(); if (S.view === "contacts") renderContacts(); if (S.view === "chat") updateChips(); }
 async function runReply(role, path, body) {
   const live = startLive(role);
   renderThread(role);
@@ -867,67 +972,194 @@ async function runReply(role, path, body) {
   const done = live.finish();
   if (done.error) failed = done.error;
   renderThread(role);
-  await refreshContactsOnly();
+  try { S.contacts = await api("/api/contacts"); } catch (e) { /* hors ligne */ }
   if (done.final) {
-    if (S.view === "chat" && S.role === role) markRead(role);
-    else notify(role, done.final.text);
+    sound("receive");
+    if (S.view === "chat" && S.role === role) markRead(role); else notify(role, done.final.text);
   }
-  renderContacts();
+  renderBadges(); refreshLists();
+  if (S.view === "chat") renderChatHead();
   return failed;
 }
-async function refreshContactsOnly() {
-  try { S.contacts = await api("/api/contacts"); } catch (e) { /* hors ligne */ }
-  renderBadge();
-  if (S.view === "chat") renderChatHead();
-}
 async function send() {
-  const role = S.role; const ta = $("input"); const text = ta.value.trim();
-  const c = contact(role);
+  const role = S.role, ta = $("input"), text = ta.value.trim(), c = contact(role);
   if (!text || !c || !c.can_chat) return;
   if (S.live[role]) { toast(`${shortName(c)} est en train d'écrire…`); return; }
   ta.value = ""; autosize();
   const msgs = S.threads[role] || (S.threads[role] = []);
   const mine = { id: "me" + Date.now(), from: "me", text, at: new Date().toISOString(), game_date: S.lastGameDate };
-  msgs.push(mine); renderThread(role, true);
+  msgs.push(mine); renderThread(role, true); sound("send");
   const failed = await runReply(role, `/api/contacts/${role}/messages`, { text });
-  if (failed) { mine.failed = true; toast(failed); renderThread(role); }
-  else { try { S.threads[role] = await api(`/api/contacts/${role}/messages`); S.rendered[role] = new Set(S.threads[role].flatMap(bubbleKeys)); renderThread(role); } catch (e) { /* garde l'affichage */ } }
+  if (failed) { mine.failed = true; toast(failed); renderThread(role); return; }
+  try { S.threads[role] = await api(`/api/contacts/${role}/messages`); S.rendered[role] = new Set(S.threads[role].flatMap(bubbleKeys)); renderThread(role); } catch (e) { /* garde l'affichage */ }
 }
-async function retry(role, m) {
-  const msgs = S.threads[role] || []; const i = msgs.indexOf(m); if (i >= 0) msgs.splice(i, 1);
-  $("input").value = m.text; autosize(); send();
-}
-async function introduce(role) {
-  if (S.live[role]) return;
-  const failed = await runReply(role, `/api/contacts/${role}/intro`, {});
-  if (failed) toast(failed);
-}
+function retry(role, m) { const msgs = S.threads[role] || []; const i = msgs.indexOf(m); if (i >= 0) msgs.splice(i, 1); $("input").value = m.text; autosize(); send(); }
+async function introduce(role) { if (S.live[role]) return; const failed = await runReply(role, `/api/contacts/${role}/intro`, {}); if (failed) toast(failed); }
 let introStarted = false;
 function autoIntroduceDirector() {
   // Un nouveau directeur sportif écrit le premier, dès que le téléphone est ouvert.
   const c = contact("directeur_sportif");
   if (introStarted || !c || !c.intro_pending || S.live.directeur_sportif) return;
-  introStarted = true;
-  introduce("directeur_sportif");
+  introStarted = true; introduce("directeur_sportif");
 }
 
 // ------------------------------------------------------------------ notification
 function notify(role, text) {
   const c = contact(role); if (!c) return;
-  const a = $("banner-avatar"); a.innerHTML = ""; a.appendChild(avatar(c.name ? c : null, 38));
+  const a = $("banner-avatar"); a.innerHTML = ""; a.appendChild(contactAvatar(c, 40));
+  a.insertAdjacentHTML("beforeend", '<span class="appmini ic-messages" style="display:grid;place-items:center"><svg viewBox="0 0 40 40" width="12" height="12"><path fill="#fff" d="M20 7C11.7 7 5 12.6 5 19.5c0 3.9 2.2 7.4 5.6 9.7-.3 2-1.3 3.9-3 5.3 3.3 0 6.2-1.2 8.1-3 1.4.3 2.8.5 4.3.5 8.3 0 15-5.6 15-12.5S28.3 7 20 7z"/></svg></span>');
   $("banner-name").textContent = c.name || c.label;
   $("banner-text").textContent = splitBubbles(text)[0] || text;
   const b = $("banner"); b.classList.add("show");
-  b.onclick = () => { b.classList.remove("show"); renderContacts(); if (S.view === "home") { $("home").classList.add("behind"); } openChat(role, "contacts"); };
+  b.onclick = () => { b.classList.remove("show"); openChat(role, "messages"); };
   clearTimeout(notify._t); notify._t = setTimeout(() => b.classList.remove("show"), 6000);
 }
 
 // ------------------------------------------------------------------ saisie
 const ta = $("input");
-function autosize() { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; $("send").classList.toggle("on", !!ta.value.trim()); }
+function autosize() { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; $("send").classList.toggle("on", !!ta.value.trim()); updateChips(); }
 ta.addEventListener("input", autosize);
 ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
 $("send").onclick = send;
+
+// ------------------------------------------------------------------ Calendrier
+async function loadCalendar() {
+  const body = $("cal-body");
+  if (!S.data.fixtures) { body.innerHTML = `<div class="empty">Chargement…</div>`; try { S.data.fixtures = await api("/api/phone/fixtures"); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
+  const f = S.data.fixtures, gd = S.lastGameDate;
+  $("cal-title").textContent = gd ? cap(isoDay(gd).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })) : "Calendrier";
+  $("cal-sub").textContent = gd ? `Dans le jeu : ${gameLong(gd)}` : "";
+  const row = (m, played) => {
+    const d = isoDay(m.date);
+    const res = played && m.score ? `<span class="res">${esc(m.score)}<i class="${m.resultat === "victoire" ? "v" : m.resultat === "défaite" || m.resultat === "defaite" ? "d" : "n"}">${m.resultat === "victoire" ? "V" : m.resultat === "nul" ? "N" : m.resultat ? "D" : "?"}</i></span>` : played ? '<span class="res" style="color:var(--text2)">–</span>' : `<span class="ha">${m.home ? "DOM" : "EXT"}</span>`;
+    return `<div class="fx"><div class="day"><div class="dd">${d ? DAYS[d.getDay()].replace(".", "") : ""}</div><div class="dn">${d ? d.getDate() : ""}</div></div>
+      <div class="fb"><div class="teams"><div class="vs">${m.home ? `<b>${esc(m.short_home)}</b> – ${esc(m.short_away)}` : `${esc(m.short_home)} – <b>${esc(m.short_away)}</b>`}</div>
+      <div class="comp">${esc([m.competition, d ? d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : ""].filter(Boolean).join(" · "))}</div></div>${res}</div></div>`;
+  };
+  body.innerHTML = (f.upcoming.length ? `<div class="section-h">À venir</div><div class="group">${f.upcoming.map((m) => row(m, false)).join("")}</div>` : "")
+    + (f.recent.length ? `<div class="section-h">Résultats</div><div class="group">${f.recent.map((m) => row(m, true)).join("")}</div>` : "")
+    + (!f.upcoming.length && !f.recent.length ? `<div class="empty">Aucun match dans la sauvegarde.</div>` : "")
+    + `<div class="footnote">Matchs lus dans la dernière sauvegarde.</div>`;
+}
+
+// ------------------------------------------------------------------ Classement
+async function loadTable() {
+  const body = $("tb-body");
+  if (!S.data.table) { body.innerHTML = `<div class="empty">Chargement…</div>`; try { S.data.table = await api("/api/phone/table"); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
+  const t = S.data.table;
+  $("tb-sub").textContent = t.competition || "";
+  if (!t.rows.length) { body.innerHTML = `<div class="empty">Classement indisponible.</div>`; return; }
+  body.innerHTML = `<div class="group"><table class="tb"><thead><tr><th>#</th><th>Club</th><th>J</th><th>Diff</th><th>Pts</th></tr></thead><tbody>${t.rows.map((r) => {
+    const diff = (r.goals_for ?? 0) - (r.goals_against ?? 0);
+    return `<tr class="${r.ours ? "ours" : ""}"><td>${r.position}</td><td>${esc(r.short)}</td><td>${r.played}</td><td>${diff > 0 ? "+" : ""}${diff}</td><td>${r.points}</td></tr>`;
+  }).join("")}</tbody></table></div><div class="footnote">${esc(t.competition || "Championnat")} · état à la dernière sauvegarde.</div>`;
+  const ours = body.querySelector("tr.ours"); if (ours) ours.scrollIntoView({ block: "center" });
+}
+
+// ------------------------------------------------------------------ Effectif
+// Ligne d'un joueur d'après son premier poste.
+const LINES = [["Gardiens", (x) => x === "GK"], ["Défenseurs", (x) => /^(D[CLR]?|WB[LR]?)$/.test(x)], ["Milieux", (x) => /^(DM|M[CLR]?|AMC)$/.test(x)], ["Attaquants", () => true]];
+async function loadSquad() {
+  const body = $("sq-body");
+  if (!S.data.squad) { body.innerHTML = `<div class="empty">Chargement…</div>`; try { S.data.squad = await api("/api/phone/squad"); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
+  const sq = S.data.squad;
+  $("sq-sub").textContent = `${sq.length} joueurs · équipe première`;
+  const row = (p) => {
+    const s = p.saison || {};
+    let stat = "";
+    if (S.squadSort === "valeur") stat = `<b>${esc(p.valeur && p.valeur.texte || "—")}</b>valeur`;
+    else if (S.squadSort === "note") stat = `<b>${s.average_rating ? Number(s.average_rating).toFixed(2) : "—"}</b>note moy.`;
+    else stat = `<b>${s.goals ?? 0} b · ${s.assists ?? 0} pd</b>${s.minutes ?? 0} min`;
+    return `<button class="pl" data-uid="${p.uid}"><span class="av" data-av="${p.uid}"></span><span class="pb"><span style="min-width:0"><div class="pn">${esc(p.nom)}</div>
+      <div class="ps">${esc((p.postes || []).join(", "))}${p.age ? " · " + p.age + " ans" : ""}${p.pret ? " · prêté" : ""}</div></span><span class="stat">${stat}</span></span></button>`;
+  };
+  let html = "";
+  if (S.squadSort === "poste") {
+    const left = [...sq];
+    for (const [title, test] of LINES) {
+      const grp = left.filter((p) => test((p.postes || [])[0] || "")); grp.forEach((p) => left.splice(left.indexOf(p), 1));
+      if (grp.length) html += `<div class="section-h">${title}</div><div class="group">${grp.map(row).join("")}</div>`;
+    }
+  } else {
+    const key = { buts: (p) => (p.saison && p.saison.goals) || 0, note: (p) => (p.saison && Number(p.saison.average_rating)) || 0, valeur: (p) => (p.valeur && p.valeur.brut) || 0 }[S.squadSort];
+    html = `<div class="group">${[...sq].sort((a, b) => key(b) - key(a)).map(row).join("")}</div>`;
+  }
+  body.innerHTML = html + `<div class="footnote">Statistiques de la saison en cours (toutes compétitions) à la dernière sauvegarde.</div>`;
+  for (const el of body.querySelectorAll("[data-av]")) {
+    const p = sq.find((x) => String(x.uid) === el.dataset.av);
+    el.replaceWith(avatar(p.nom, p.unique_id, p.photo, 40));
+  }
+  for (const b of body.querySelectorAll(".pl")) b.onclick = () => openPlayer(sq.find((x) => String(x.uid) === b.dataset.uid));
+}
+for (const b of $("sq-seg").querySelectorAll("button")) b.onclick = () => {
+  S.squadSort = b.dataset.sort; for (const x of $("sq-seg").querySelectorAll("button")) x.classList.toggle("on", x === b); loadSquad();
+};
+function openPlayer(p) {
+  $("sheet-title").textContent = "";
+  const s = p.saison || {};
+  const body = $("sheet-body"); body.innerHTML = "";
+  const head = document.createElement("div"); head.className = "poster"; head.appendChild(avatar(p.nom, p.unique_id, p.photo, 110));
+  head.insertAdjacentHTML("beforeend", `<div class="pname" style="font-size:26px">${esc(p.nom)}</div><div class="prole">${esc((p.postes_libelles || p.postes || []).join(" · "))}</div>`);
+  body.appendChild(head);
+  const kv = [["Âge", p.age ? `${p.age} ans` : "—"], ["Valeur", p.valeur && p.valeur.texte || "—"], ["Salaire", p.salaire && p.salaire.texte ? `${p.salaire.texte} / sem.` : "—"],
+    ["Contrat", p.fin_contrat ? `jusqu'au ${fr(p.fin_contrat)}` : "—"], ["Matchs", `${(s.starts ?? 0)} tit. · ${(s.substitute_appearances ?? 0)} remp.`], ["Minutes", s.minutes ?? "—"],
+    ["Buts · passes", `${s.goals ?? 0} · ${s.assists ?? 0}`], ["Note moyenne", s.average_rating ? Number(s.average_rating).toFixed(2) : "—"]];
+  body.insertAdjacentHTML("beforeend", `<div class="kv">${kv.map(([k, v]) => `<div><div class="k2">${esc(k)}</div><div class="v2">${esc(v)}</div></div>`).join("")}</div>`);
+  const ds = contact("directeur_sportif"), adj = contact("entraineur_adjoint");
+  const g = document.createElement("div"); g.className = "group";
+  if (adj && adj.can_chat) g.insertAdjacentHTML("beforeend", `<button class="link-cell" data-r="entraineur_adjoint" data-q="Que penses-tu de ${esc(p.nom)} en ce moment ?">Demander l'avis de ${esc(shortName(adj))}</button>`);
+  if (ds && ds.can_chat) g.insertAdjacentHTML("beforeend", `<button class="link-cell" data-r="directeur_sportif" data-q="Quel est votre avis sur la situation de ${esc(p.nom)} (contrat, valeur, avenir) ?">Parler de son avenir avec ${esc(shortName(ds))}</button>`);
+  body.appendChild(g);
+  for (const b of g.querySelectorAll("button")) b.onclick = () => { closeSheet(); openChat(b.dataset.r, "messages"); setTimeout(() => { $("input").value = b.dataset.q; autosize(); }, 420); };
+  body.insertAdjacentHTML("beforeend", `<div style="height:30px"></div>`);
+  openSheet();
+}
+
+// ------------------------------------------------------------------ Réglages
+function renderSettings() {
+  const st = S.status || {}, h = S.home || {}, sync = st.auto_sync || {}, cur = st.currency || {}, ai = st.ai || {};
+  const theme = store("cd-theme") || "auto";
+  const me = h.manager || "—";
+  const ic = (bg, path) => `<span class="sicon" style="background:${bg}"><svg viewBox="0 0 24 24"><path d="${path}"/></svg></span>`;
+  const cell = (icon, k, v, extra = "") => `<div class="cell">${icon}<span class="body"><span class="k">${esc(k)}</span><span class="v">${v}</span>${extra}</span></div>`;
+  const ICONS = {
+    moon: "M12.5 3a8.5 8.5 0 1 0 8.5 9.8A7 7 0 0 1 12.5 3z", sound: "M4 9h4l5-4v14l-5-4H4V9zm12.5-1.5a6 6 0 0 1 0 9l-1.1-1.1a4.5 4.5 0 0 0 0-6.8l1.1-1.1z",
+    bulb: "M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2zM9 20h6v2H9z", save: "M5 3h11l3 3v15H5V3zm3 0v5h7V3M8 21v-7h8v7",
+    euro: "M15 5a7 7 0 0 0-6.3 4H6v2h2.1a7 7 0 0 0 0 2H6v2h2.7A7 7 0 0 0 15 19a7 7 0 0 0 3-.7l-.8-1.8A5 5 0 0 1 11 15h4v-2h-4.9a5 5 0 0 1 0-2H15V9h-4a5 5 0 0 1 6.2-1.5l.8-1.8A7 7 0 0 0 15 5z",
+    cpu: "M7 7h10v10H7zM9 3h2v3H9zm4 0h2v3h-2zM9 18h2v3H9zm4 0h2v3h-2zM3 9h3v2H3zm0 4h3v2H3zm15-4h3v2h-3zm0 4h3v2h-3z", key: "M7 14a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-5.1A4 4 0 0 1 7 14z",
+  };
+  const lastSync = sync.last_sync_at ? new Date(sync.last_sync_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+  const prov = (ai.providers || [])[0];
+  $("set-body").innerHTML = `
+    <div class="group" style="margin-top:6px"><div class="cell" style="padding:10px 0 10px 16px"><span id="set-av"></span><span class="body" style="border:0"><span><div style="font:600 20px var(--font-display)">${esc(me)}</div>
+      <div style="font-size:14px;color:var(--text2)">Entraîneur · ${esc(h.club_short || h.club || "")}</div></span></span></div></div>
+    <div class="section-h">Affichage</div>
+    <div class="group">${cell(ic("#5e5ce6", ICONS.moon), "Apparence", "")}<div class="seg" id="set-theme" style="margin:0 16px 12px">${[["auto", "Auto"], ["clair", "Clair"], ["sombre", "Sombre"]].map(([v, l]) => `<button data-t="${v}" class="${v === theme ? "on" : ""}">${l}</button>`).join("")}</div>
+      ${cell(ic("#ff3b30", ICONS.sound), "Sons des messages", "", `<button class="switch ${store("cd-sound") === "off" ? "" : "on"}" id="set-sound" aria-label="Sons"></button>`)}
+      ${cell(ic("#ff9500", ICONS.bulb), "Suggestions de messages", "", `<button class="switch ${store("cd-chips") === "off" ? "" : "on"}" id="set-chips" aria-label="Suggestions"></button>`)}</div>
+    <div class="section-h">Carrière</div>
+    <div class="group">${cell(ic("#34c759", ICONS.save), "Date dans le jeu", esc(gameShort(S.lastGameDate) || "—"))}
+      ${cell(ic("#34c759", ICONS.save), "Lecture automatique", sync.enabled ? (sync.in_progress ? "en cours…" : "activée") : "désactivée")}
+      ${cell(ic("#34c759", ICONS.save), "Dernière lecture", esc(lastSync))}
+      ${cell(ic("#007aff", ICONS.euro), "Devise", cur.factor ? `€ · ${String(cur.factor).replace(".", ",")} / £` : "non étalonnée")}</div>
+    <div class="section-h">Intelligence artificielle</div>
+    <div class="group">${cell(ic("#8e8e93", ICONS.cpu), "Moteur", esc(prov ? prov.name : "aucun"))}
+      ${cell(ic("#8e8e93", ICONS.key), "Raccourci", "Ctrl+Alt+D")}</div>
+    <div class="footnote">Le téléphone se déplace en saisissant l'heure en haut de l'écran. Taille : clic droit sur l'icône ClubDirector de la barre des tâches. Les données viennent uniquement de votre sauvegarde FM26 ; les photos, de votre pack de visages.</div>`;
+  $("set-av").appendChild(avatar(me, null, false, 58, "linear-gradient(180deg,#6e6cf0,#3634a3)"));
+  for (const b of $("set-theme").querySelectorAll("button")) b.onclick = () => { store("cd-theme", b.dataset.t); applyTheme(); renderSettings(); };
+  $("set-sound").onclick = () => { store("cd-sound", store("cd-sound") === "off" ? "on" : "off"); renderSettings(); if (store("cd-sound") !== "off") sound("receive"); };
+  $("set-chips").onclick = () => { store("cd-chips", store("cd-chips") === "off" ? "on" : "off"); renderSettings(); };
+}
+// Thème : « auto » suit Windows (clair ou sombre).
+const LIGHT_MQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+function applyTheme() {
+  const t = store("cd-theme") || "auto";
+  const light = t === "clair" || (t === "auto" && LIGHT_MQ && LIGHT_MQ.matches);
+  document.documentElement.dataset.theme = light ? "light" : "dark";
+}
+applyTheme();
+try { LIGHT_MQ && LIGHT_MQ.addEventListener("change", applyTheme); } catch (e) { /* ancien moteur */ }
 
 // ------------------------------------------------------------------ démarrage
 refreshAll();

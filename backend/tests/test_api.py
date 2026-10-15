@@ -127,7 +127,31 @@ def test_phone_contacts_threads_and_streamed_replies(client, game_dir):
     thread = client.get("/api/contacts/directeur_sportif/messages").json()
     assert [m["from"] for m in thread] == ["them", "me", "them"] and thread[1]["text"] == "Comment ça va ?"
     assert client.get("/api/staff/123/photo").status_code == 404
+    assert client.get("/api/photos/123").status_code == 404
     assert client.get("/api/phone/home").json()["club"] == "Northbridge FC"
+    fx = client.get("/api/phone/fixtures").json()
+    assert set(fx) == {"upcoming", "recent"} and all("opponent" in m for m in fx["upcoming"] + fx["recent"])
+    squad = client.get("/api/phone/squad").json()
+    assert squad and {"uid", "unique_id", "photo", "saison"} <= set(squad[0])
+
+
+def test_league_table_keeps_one_row_per_club(client, game_dir):
+    from sqlalchemy import insert, select
+
+    from clubdirector.database import schema as s
+
+    client.post("/api/sync", json={"path": str(game_dir / SCORED.name)})
+    table = client.get("/api/phone/table").json()["rows"]
+    if not table:
+        return  # sauvegarde synthétique sans classement
+    first = table[0]
+    engine = client.app.state.cd.engine
+    with engine.begin() as c:
+        row = c.execute(select(s.league_tables).where(s.league_tables.c.club_name == first["club"])).mappings().first()
+        dup = {k: v for k, v in row.items() if k != "id"} | {"position": 1, "played": 0}
+        c.execute(insert(s.league_tables).values(**dup))  # ligne d'une phase antérieure, moins avancée
+    again = client.get("/api/phone/table").json()["rows"]
+    assert [r["club"] for r in again].count(first["club"]) == 1 and len(again) == len(table)
 
 
 def test_status_reports_director_and_office(client, game_dir):

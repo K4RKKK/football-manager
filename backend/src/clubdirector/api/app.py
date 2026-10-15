@@ -378,6 +378,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "role": role, "label": ROLE_LABELS[role], "person": member.as_dict() if member else None,
             "name": member.name if member else (t.prefs.director_name if role == "directeur_sportif" else None),
             "wage": member.wage if member else None, "photo": bool(member and _photo_path(member.unique_id)),
+            "wage_text": t.prefs.currency.format(member.wage) if member and member.wage else None,
             "can_chat": can_chat, "corrected": role in t.prefs.staff_overrides,
             "intro_pending": can_chat and o.intro_pending(t, role, member),
             "unread": o.conversations.unread(conv) if conv else 0,
@@ -477,6 +478,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         state.warm_in_background()
         return _contact(state.tool_context(), role)
 
+    @app.get("/api/photos/{unique_id}", dependencies=A)
     @app.get("/api/staff/{unique_id}/photo", dependencies=A)
     def staff_photo(unique_id: int):
         f = _photo_path(unique_id)
@@ -498,10 +500,59 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         short = state.repo.club_short_name(t.ctx, t.ctx.club_uid)
         names = {m[k] for m in (nxt[:1] + last[:1]) for k in ("domicile", "exterieur") if m.get(k)}
         return {"club": t.ctx.club_name, "club_short": short or t.ctx.club_name, "manager": t.ctx.manager_name,
+                "club_uid": t.ctx.club_uid,
                 "short_names": state.repo.club_short_names(t.ctx, names),
                 "game_date": t.ctx.game_date.isoformat() if t.ctx.game_date else None,
                 "next_match": nxt[0] if nxt else None, "last_match": last[0] if last else None,
                 "league": ours, "sync": state.watcher.as_dict()}
+
+    @app.get("/api/phone/table", dependencies=A)
+    def phone_table():
+        """Classement du championnat du club (app Classement)."""
+        t = state.tool_context()
+        rows = state.repo.league_table(t.ctx)
+        short = state.repo.club_short_names(t.ctx, {r["club_name"] for r in rows if r.get("club_name")})
+        return {"competition": next((r.get("competition_name") for r in rows if r.get("competition_name")), None),
+                "rows": [{"position": r["position"], "club": r["club_name"], "short": short.get(r["club_name"], r["club_name"]),
+                          "played": r["played"], "won": r["won"], "drawn": r["drawn"], "lost": r["lost"],
+                          "goals_for": r["goals_for"], "goals_against": r["goals_against"], "points": r["points"],
+                          "ours": r.get("club_uid") == t.ctx.club_uid} for r in rows]}
+
+    @app.get("/api/phone/fixtures", dependencies=A)
+    def phone_fixtures():
+        """Matchs à venir et récents du club (app Calendrier)."""
+        t = state.tool_context()
+
+        def data(name, args):
+            r = state.registry.execute(name, args, t)
+            return r.data if r.ok and isinstance(r.data, list) else []
+        upcoming = data("get_upcoming_matches", {"limit": 10})
+        recent = data("get_recent_matches", {"limit": 10})
+        names = {m[k] for m in upcoming + recent for k in ("domicile", "exterieur") if m.get(k)}
+        short = state.repo.club_short_names(t.ctx, names)
+
+        def out(m):
+            home = m.get("domicile") == t.ctx.club_name
+            return {**m, "home": home, "opponent": short.get(m.get("exterieur" if home else "domicile"),
+                                                             m.get("exterieur" if home else "domicile")),
+                    "short_home": short.get(m.get("domicile"), m.get("domicile")),
+                    "short_away": short.get(m.get("exterieur"), m.get("exterieur"))}
+        return {"upcoming": [out(m) for m in upcoming], "recent": [out(m) for m in recent]}
+
+    @app.get("/api/phone/squad", dependencies=A)
+    def phone_squad():
+        """Effectif de l'équipe première avec la ligne de saison (app Effectif)."""
+        t = state.tool_context()
+        rows = state.repo.squad(t.ctx)
+        lines = state.repo.season_lines(t.ctx, [r["uid"] for r in rows])
+        out = []
+        for r in rows:
+            p = player_summary(r, t.prefs)
+            p["unique_id"] = r.get("unique_id")
+            p["photo"] = bool(_photo_path(r.get("unique_id")))
+            p["saison"] = lines.get(r["uid"])
+            out.append(p)
+        return out
 
     @app.get("/api/conversations", dependencies=A)
     def conversations():

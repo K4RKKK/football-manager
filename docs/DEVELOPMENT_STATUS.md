@@ -28,6 +28,7 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 3 | Fenêtre ClubDirector externe au-dessus de FM26 | ✅ | `overlay/ClubDirector.Overlay` (WebView2, Ctrl+Alt+D, zone de notification) + page `/overlay` ; testée au-dessus de FM26 |
 | Phase 4 | Identité du directeur sportif en poste (sauvegarde) | ✅ | code de fonction 10 hors départements ; vérifié sur 11 directeurs réels + confirmé par l'utilisateur (Francis Cagigao) |
 | Phase 4 | Script de rôle complet (`ai/role_directeur_sportif.md`) | ✅ | rôle exact FM26, limites, méthode, style ; présentation + bienvenue testées |
+| Phase 3 | Téléphone v2 : widgets (date du jeu, classement, dernier match), apps Messages, Contacts, Calendrier, Classement, Effectif (photos des joueurs), Réglages ; suggestions, sons, emojis, copie | ✅ | `web/phone.html` ; vérifié sur une copie de la vraie carrière |
 | Phase 3 | Téléphone (iPhone) : accueil, Contacts, fiche, Messages | ✅ | `web/phone.html` sur `/overlay` ; fenêtre en forme de téléphone (coins arrondis, déplaçable, 3 tailles) ; testé sur la vraie carrière |
 | Phase 4 | Trois contacts : directeur sportif, directeur technique, entraîneur adjoint | ✅ / 🟡 adjoint | DT = code 88 (Freund, Lange, Moncada, Maldini) ; adjoint = code 20 liste entraînement, équipe première, mieux payé (heuristique 5/6, corrigeable) |
 | Phase 4 | Scripts de rôle DT et adjoint + format messages commun | ✅ | `role_directeur_technique.md`, `role_entraineur_adjoint.md`, `style_messagerie.md` |

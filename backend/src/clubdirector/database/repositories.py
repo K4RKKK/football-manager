@@ -168,6 +168,20 @@ class Repository:
             )
             return {r[0]: r[1] for r in rows}
 
+    def season_lines(self, ctx: CareerContext, uids: list[int], kind: str = "overall") -> dict[int, dict]:
+        """Ligne de saison (titularisations, minutes, buts, passes, note) par joueur, dernier relevé."""
+        if not uids:
+            return {}
+        params = {f"u{i}": u for i, u in enumerate(uids)}
+        sql = ("SELECT player_uid, starts, substitute_appearances, minutes, goals, assists, average_rating, "
+               "clean_sheets FROM fm_player_season_stats WHERE career_id = :k AND kind = :kind AND player_uid IN "
+               f"({', '.join(':' + k for k in params)})")
+        try:
+            with self.engine.connect() as c:
+                return {r.player_uid: dict(r._mapping) for r in c.execute(text(sql), {"k": ctx.career_id, "kind": kind, **params})}
+        except Exception:  # noqa: BLE001 — miroir absent
+            return {}
+
     def club_short_name(self, ctx: CareerContext, club_uid: int | None) -> str | None:
         """Nom court du club (miroir `fm_clubs`), ex. « AS Roma »."""
         if club_uid is None:
@@ -397,7 +411,15 @@ class Repository:
                     competition_id = comp
             if competition_id is not None:
                 conds.append(t.competition_id == competition_id)
-            return [_row(r) for r in c.execute(select(s.league_tables).where(*conds).order_by(t.competition_id, t.position))]
+            rows = [_row(r) for r in c.execute(select(s.league_tables).where(*conds).order_by(t.competition_id, t.position))]
+        # Une même équipe peut apparaître deux fois dans un classement relu (ligne d'une phase antérieure,
+        # ex. Bologne « 1er après 2 matchs ») : on garde, par compétition, la ligne la plus avancée.
+        best: dict[tuple, dict] = {}
+        for r in rows:
+            key = (r.get("competition_id"), r.get("club_uid") or r.get("club_name"), r.get("team_slot"))
+            if key not in best or (r.get("played") or 0) > (best[key].get("played") or 0):
+                best[key] = r
+        return sorted(best.values(), key=lambda r: (r.get("competition_id") or 0, r.get("position") or 0))
 
     # -- finances --------------------------------------------------------------------------
     def finances(self, ctx: CareerContext, club_uid: int | None = None, months: int = 12) -> list[dict]:
