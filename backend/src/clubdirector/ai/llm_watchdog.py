@@ -143,12 +143,16 @@ class WindowsServerControl:
         cmd = self.command(params) if self.command else [
             "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.script),
             *params.script_args(self.journal)]
-        kwargs: dict[str, Any] = {"stdin": subprocess.DEVNULL, "close_fds": True}
+        # Aucune sortie héritée du service : le serveur vit plus longtemps que lui, et une sortie vers un
+        # tube que plus personne ne lit finirait par bloquer ses écritures de journal (serveur figé).
+        kwargs: dict[str, Any] = {"close_fds": True}
+        if sys.platform != "win32" or self.window == "hidden":
+            kwargs["stdin"] = kwargs["stdout"] = kwargs["stderr"] = subprocess.DEVNULL
         if sys.platform == "win32":
             if self.window == "hidden":
                 kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-                kwargs["stdout"] = kwargs["stderr"] = subprocess.DEVNULL
             else:
+                # Sa propre console (réduite) : aucun descripteur passé, il écrit dans sa fenêtre.
                 si = subprocess.STARTUPINFO()
                 si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 si.wShowWindow = 7  # SW_SHOWMINNOACTIVE : réduite, sans voler le focus au jeu

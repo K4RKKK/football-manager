@@ -191,6 +191,8 @@ le service et l'IA en cours d'utilisation n'ont pas été redémarrés.
 | Erreurs claires | ✅ | serveur arrêté : « injoignable sur 127.0.0.1:8080 : serveur arrêté ou pas encore démarré » ; relance échouée : message et journaux à consulter |
 | `pytest` backend | ✅ | 192 / 192 (nouveaux : `test_llm_watchdog.py` 14, `test_sync_speed.py` 5) ; au premier passage, `test_lineup.py` échouait pendant une modification en cours d'une autre session, réussi relancé |
 | fmsave (fork) `uv run pytest` | ✅ | 2 981 réussis (+1 : noms des joueurs d'une offre), 1 échec d'environnement connu (`test_guard`, liens symboliques sous Windows) |
+| Couches MoE sur le CPU en match 3D (`scripts/mesure_llm.ps1`, accord de l'utilisateur) | ✅ 12 gardé | 12 couches : carte 15,4 Go / 16, FM26 3,5 Go, 33,6 jetons/s ; 8 couches : carte 15,6 Go saturée, llama-server déborde en mémoire partagée (0,49 Go), FM26 repoussé à 2,8 Go, 35,5 jetons/s (gain dans le bruit) ; 6 non tenté ; retour à 12 |
+| Relance par la surveillance : sorties du serveur | corrigé | au 1er essai réel, le serveur relancé écrivait dans la sortie du programme lanceur (risque de blocage si personne ne la lit) : il a désormais sa propre console réduite (test) ; journal sans codes couleur |
 
 ### Session 4 — téléphone : apps, interactions iMessage, recherche, installateur
 Vérifié sur une copie de la vraie carrière (AS Roma, base copiée par l'API de sauvegarde SQLite, service de

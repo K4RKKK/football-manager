@@ -194,6 +194,19 @@ def test_diagnostic_only_never_restarts(tmp_path):
     assert wd.status.state == "fige" and control.calls == []
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="fenêtre de console Windows")
+def test_relaunched_server_gets_its_own_console_not_the_service_outputs(monkeypatch):
+    """Le serveur relancé ne doit pas écrire dans la sortie du service : il lui survit, et un tube que
+    plus personne ne lit finirait par bloquer ses écritures de journal (constaté au premier essai)."""
+    seen = {}
+    monkeypatch.setattr(subprocess, "Popen", lambda cmd, **kw: seen.update(cmd=cmd, **kw))
+    WindowsServerControl(Path("start_llm.ps1"), journal=Path("llm.log")).start(LaunchParams(8080, 32768, True, 8))
+    assert not {"stdin", "stdout", "stderr"} & set(seen)
+    assert seen["creationflags"] & subprocess.CREATE_NEW_CONSOLE
+    assert seen["startupinfo"].wShowWindow == 7  # réduite, sans prendre le focus au jeu
+    assert seen["cmd"][-9:] == ["-Port", "8080", "-Ctx", "32768", "-ModeJeu", "-CoucheCpu", "8", "-Journal", "llm.log"]
+
+
 def test_watchdog_is_built_for_the_local_provider_only(tmp_path):
     s = Settings(home=tmp_path, save_dirs=[], auto_sync=False)
     local = OpenAICompatProvider("llama.cpp local", "http://127.0.0.1:8080/v1", "m")

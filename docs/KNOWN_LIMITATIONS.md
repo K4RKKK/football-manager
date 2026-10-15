@@ -78,6 +78,8 @@
     trace d'un blocage) ; décisions de la surveillance : `llm-watchdog.log`. Un serveur jamais vu depuis
     le démarrage du service n'est pas lancé d'office. La surveillance n'est active qu'après un
     redémarrage du service ; elle n'a pas encore été éprouvée sur un vrai blocage.
+    Mode jeu : 12 couches MoE restent sur le CPU. En match 3D la carte est déjà à 15,4 Go sur 16 ; à 8
+    couches elle sature (FM26 perd de la mémoire vidéo) sans gain de vitesse mesurable (≈ 34 jetons/s).
 20. **Messages** : appels, vidéo et e-mail du téléphone sont décoratifs. Entre deux messages, le staff
     ne travaille qu'à chaque nouvelle sauvegarde lue (messages proactifs, suivi des dossiers, voir 27) ;
     il n'agit jamais dans le jeu (voir 12 et 14).

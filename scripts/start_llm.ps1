@@ -15,6 +15,9 @@
                pleine puissance : 14,9 Go de VRAM, ~116 tokens/s
                -ModeJeu (12)    : 11,4 Go de VRAM, ~41 tokens/s
                -ModeJeu -CoucheCpu 20 : 8,7 Go de VRAM, ~29 tokens/s
+             En match 3D (FM26 ≈ 3,5 Go), mesuré le 15/10/2026 avec scripts\mesure_llm.ps1 : 12 couches → carte à
+             15,4 Go sur 16, ≈ 34 tokens/s ; 8 couches → carte saturée (15,6 Go, débordement en mémoire partagée,
+             FM26 perd de la VRAM) pour ≈ 35 tokens/s : 12 reste le réglage du mode jeu.
 #>
 param(
   [int]$Port = 8080,
@@ -53,5 +56,5 @@ if ($ModeJeu) { $extra += @("--n-cpu-moe", "$CoucheCpu") }
   -np 1 `
   --jinja `
   --alias clubdirector-local `
-  --log-file $Journal `
+  --log-file $Journal --log-colors off `
   @extra
