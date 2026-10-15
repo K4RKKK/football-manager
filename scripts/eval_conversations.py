@@ -55,7 +55,7 @@ DEFERRED_RE = re.compile(
     re.IGNORECASE)
 RELAY_RE = re.compile(r"je (?:lui|leur) (?:demande|transmets|transmettrai|fais passer|signale)|je (?:préviens|vais prévenir) "
                       r"(?:francis|paolo|antonio|l'adjoint|le directeur)", re.IGNORECASE)
-GREETING_Q = re.compile(r"(bonjour|salut|hello|coucou|bonsoir|hey|yo)", re.IGNORECASE)
+GREETING_Q = re.compile(r"\b(bonjour|salut|hello|coucou|bonsoir|hey|yo)\b", re.IGNORECASE)
 ACTION_RE = re.compile(
     r"j'ai (?:contacté|appelé|envoyé|soumis|signé|prolongé|transmis|fait une offre|lancé les négociations|parlé (?:à|avec) (?:l'agent|son agent))|"
     r"je viens (?:d'envoyer|de contacter|de faire une offre|de signer)|offre (?:envoyée|transmise)|c'est signé",
@@ -242,7 +242,7 @@ def check(role: str, question: str, reply: str, tools: list[str], expect: dict, 
         fails.append(f"promesse différée : « {DEFERRED_RE.search(reply).group(0)} »")
     if RELAY_RE.search(reply):
         fails.append(f"intermédiaire entre collègues : « {RELAY_RE.search(reply).group(0)} »")
-    if re.match(r"\W*(bonjour|salut)", reply, re.IGNORECASE) and not GREETING_Q.search(question):
+    if re.match(r"\W*(bonjour|salut)\b", reply, re.IGNORECASE) and not GREETING_Q.search(question):
         fails.append("salutation hors de propos")
     if ACTION_RE.search(reply):
         fails.append(f"action dans le jeu prétendue : « {ACTION_RE.search(reply).group(0)} »")
