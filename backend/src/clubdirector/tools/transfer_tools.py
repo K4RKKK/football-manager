@@ -12,6 +12,7 @@ from typing import Literal
 
 from pydantic import Field
 
+from clubdirector.memory.decisions import coach_rules
 from clubdirector.positions import LABEL_FR, normalize_position
 from clubdirector.tools.registry import ToolArgs, ToolContext, ToolRegistry, ToolResult
 from clubdirector.transfers.market import (
@@ -196,7 +197,7 @@ def register_transfer_tools(reg: ToolRegistry) -> None:
     def prepare_sale(t: ToolContext, a: PlayerArgs):
         p = _player(t, a.player_uid, a.name)
         plan = sale_plan(_market(t), p, exclude=set(t.prefs.limits.excluded_clubs))
-        if p["uid"] in t.prefs.limits.never_sell:
+        if p["uid"] in coach_rules(t.engine, t.ctx.career_id, t.prefs).never_sell:  # préférences ou décision retenue
             plan["strategie"]["alerte"] = "joueur marqué « jamais vendre » par l'entraîneur"
         st = plan["strategie"]
         return ToolResult("", True, data={
@@ -216,11 +217,13 @@ def register_transfer_tools(reg: ToolRegistry) -> None:
         if p.get("club_uid") == t.ctx.club_uid:
             raise ValueError(f"{p['name']} est déjà au club : utilisez prepare_contract_proposal pour le prolonger.")
         plan = purchase_plan(_market(t), p, t.ctx.club_uid)
-        lim = t.prefs.limits
+        rules = coach_rules(t.engine, t.ctx.career_id, t.prefs)  # préférences + décisions retenues
         warnings = list(plan["alertes"])
-        if lim.max_fee is not None and t.prefs.currency.to_display(plan["offre"]["plafond"]) and \
-                t.prefs.currency.to_display(plan["offre"]["plafond"]) > lim.max_fee:
+        if rules.max_fee is not None and t.prefs.currency.to_display(plan["offre"]["plafond"]) and \
+                t.prefs.currency.to_display(plan["offre"]["plafond"]) > rules.max_fee:
             warnings.append("plafond au-dessus de l'indemnité maximale fixée par l'entraîneur")
+        if rules.max_age is not None and p.get("age") is not None and p["age"] > rules.max_age:
+            warnings.append(f"{p['age']} ans : au-dessus de l'âge maximum fixé par l'entraîneur ({rules.max_age} ans)")
         return ToolResult("", True, data={
             "joueur": plan["joueur"], "club_vendeur": plan["club_vendeur"], "valeur": _valuation_view(t, plan["valeur"]),
             "offre": {k: (_eur(t, v) if k != "structure" else v) for k, v in plan["offre"].items()},
@@ -236,6 +239,8 @@ def register_transfer_tools(reg: ToolRegistry) -> None:
         p = _player(t, a.player_uid, a.name)
         raw = t.prefs.currency.to_raw(a.montant_recu) if a.montant_recu is not None else None
         r = counter_offer(_market(t), p, raw)
+        if p["uid"] in coach_rules(t.engine, t.ctx.career_id, t.prefs).never_sell:
+            r["decision"] = "refuser : l'entraîneur a décidé de ne pas vendre ce joueur"
         return ToolResult("", True, data={
             "joueur": r["joueur"], "offre_recue": _eur(t, r["offre_recue"]), "decision": r["decision"],
             "contre_offre": _eur(t, r["contre_offre"]), "plancher": _eur(t, r["plancher"]),

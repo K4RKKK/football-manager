@@ -78,8 +78,9 @@
     trace d'un blocage) ; décisions de la surveillance : `llm-watchdog.log`. Un serveur jamais vu depuis
     le démarrage du service n'est pas lancé d'office. La surveillance n'est active qu'après un
     redémarrage du service ; elle n'a pas encore été éprouvée sur un vrai blocage.
-20. **Messages** : appels, vidéo et e-mail du téléphone sont décoratifs ; le directeur ne travaille pas
-    entre deux messages (pas de tâche de fond) et n'agit pas dans le jeu (voir 12 et 14).
+20. **Messages** : appels, vidéo et e-mail du téléphone sont décoratifs. Entre deux messages, le staff
+    ne travaille qu'à chaque nouvelle sauvegarde lue (messages proactifs, suivi des dossiers, voir 27) ;
+    il n'agit jamais dans le jeu (voir 12 et 14).
 21. **Marché des transferts** : les offres de la sauvegarde sont lues (club acheteur, vendeur,
     montant, dates). Seuls les états « conclue » (0x14) et « échouée » (0x0F) sont établis ; les autres
     codes sont affichés « en cours », « sans suite » (échéance passée) ou « accord pour plus tard »
@@ -105,6 +106,22 @@
     Suspensions : la sauvegarde garde aussi des sanctions que le jeu n'affiche plus, et le nombre de
     matchs restants n'est pas lu. Les sections féminines portant le nom d'un club masculin sont
     écartées par les classements du marché (joueurs classés chez les hommes).
+27. **Staff vivant (messages proactifs, dossiers, mémoire)** : un contact écrit de lui-même seulement
+    quand une sauvegarde est lue (pas d'horloge propre), au plus un message par sauvegarde et quatre faits
+    par message (les suivants attendent la sauvegarde d'après). La première lecture d'une carrière sert de
+    base : arrivées, départs et changements de staff ne sont signalés qu'à partir de la deuxième.
+    **Fin de fenêtre des transferts** : la sauvegarde contient 22 fenêtres sans pays ni compétition
+    (fmsave) ; le directeur ne l'annonce que si l'entraîneur a donné la date (« le mercato ferme le
+    2 février »), jamais par supposition. **Dossiers** : un dossier suit ce qui est visible dans la
+    sauvegarde (offre enregistrée, état conclue / échouée / accord, club et contrat du joueur) ; une
+    offre refusée par le club vendeur peut rester « en cours » (voir 21) ; un dossier sans aucun
+    mouvement pendant 90 jours de jeu est classé sans suite. **Décisions** : reconnues sans IA pour
+    des formulations courantes (« on ne vend pas X », « X n'est pas à vendre », « âge max 26 ans »,
+    « pas plus de 30 M€ par transfert », « salaire max … par semaine », « retiens que … ») ; une
+    formulation inhabituelle dépend du modèle (outil `remember`). Un joueur n'est retenu que s'il est
+    de notre club et reconnu sans ambiguïté. **Résumés** : faits par le modèle local (quand au moins
+    8 messages sortent de la fenêtre de 12) ; sans modèle, pas de résumé. Le texte proactif est rédigé
+    par le modèle à partir des seuls faits fournis ; sans modèle, les faits sont envoyés tels quels.
 28. **Téléphone : réactions, réponses rapides, notifications** : une réaction (tapback) est enregistrée
     avec le message et relue par le téléphone, mais n'est pas transmise au modèle (le contact ne « voit »
     pas un ❤️). Les réponses rapides apparaissent quand le dernier message du contact finit par « ? » ;

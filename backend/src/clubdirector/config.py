@@ -93,7 +93,13 @@ class Settings(BaseModel):
     auto_sync: bool = True
     auto_sync_settle_s: float = 20.0
     auto_sync_poll_s: float = 5.0
+    # Messages proactifs du staff après chaque synchronisation (None : suit auto_sync, coupé pendant les tests).
+    staff_proactive: bool | None = None
     ai: AIConfig = Field(default_factory=AIConfig)
+
+    @property
+    def proactive_enabled(self) -> bool:
+        return self.auto_sync if self.staff_proactive is None else self.staff_proactive
 
     @property
     def db_path(self) -> Path:

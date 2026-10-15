@@ -60,8 +60,19 @@ def _m5_phone_reactions_and_name_index(engine: Engine) -> None:
         )
 
 
+def _m6_staff_notices_and_dossiers(engine: Engine) -> None:
+    """Messages proactifs du staff, dossiers suivis et résumés de conversation (session « staff vivant »)."""
+    schema.staff_notices.create(engine, checkfirst=True)
+    schema.dossiers.create(engine, checkfirst=True)
+    with engine.begin() as conn:
+        conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_dossiers_career ON dossiers (career_id, status)")
+        cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(conversations)")}
+        if "summary_upto" not in cols:
+            conn.exec_driver_sql("ALTER TABLE conversations ADD COLUMN summary_upto INTEGER")
+
+
 MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot, _m3_dedupe_snapshot_rows, _m4_contact_threads,
-                               _m5_phone_reactions_and_name_index]
+                               _m5_phone_reactions_and_name_index, _m6_staff_notices_and_dossiers]
 CURRENT_VERSION = len(MIGRATIONS)
 
 

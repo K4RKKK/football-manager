@@ -48,17 +48,21 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 4 | Compositions calculées (`tools/lineup.py`, `propose_lineup`) | ✅ | affectation optimale sur les notes de poste FM26 (9 systèmes), calculée avant le modèle pour toute demande de onze ; effectif nominatif + notes dans le dossier ; plus de joueurs inventés (Rui Patrício) ni hors poste (Pellegrini ailier) |
 | Phase 4 | Photos du staff | ✅ | pack de visages de l'utilisateur (`graphics/faces/<unique_id>.png`), lu en local |
 | Phase 3 | Entrée dans le menu latéral natif | 🧪 | outil de relevé UI prêt (Maj+F10) |
-| Phase 4 | Registre d'outils (33 disponibles / 51) | ✅ | |
+| Phase 4 | Registre d'outils (50 disponibles / 60) | ✅ | dont `generate_scout_report`, `plan_transfer_window`, `analyze_player_performance`, `list_dossiers` (session staff vivant) |
 | Phase 4 | Routage niveau 0 (sans IA) | ✅ | 13 formulations testées |
 | Phase 4 | Connecteur OpenAI-compatible (llama.cpp, Ollama, OpenRouter) | ✅ | vrai modèle local (Gemma 4) |
 | Phase 4 | Connecteur Anthropic (SDK officiel) | 🟡 | aucune clé dans l'environnement |
 | Phase 4 | Mémoire (préférences, objectifs) | ✅ | |
-| Phase 4 | Résumés de conversation, cache des requêtes | ⬜ | |
+| Phase 4 | Mémoire longue : décisions de l'entraîneur partagées par les trois contacts | ✅ | `memory/decisions.py` : « on ne vend pas X », « âge max 26 ans », plafonds, fin du mercato reconnus sans IA ; appliqués par les outils (vente, contre-offre, achat, cibles, plan) ; `tests/test_staff_live.py` |
+| Phase 4 | Résumés de conversation | ✅ / 🟡 vrai modèle | `memory/summaries.py` : partie ancienne des fils résumée par le modèle local, placée dans le dossier du contact ; testé avec un modèle simulé |
+| Phase 4 | Cache des requêtes | ⬜ | |
 | Phase 5 | Recherche multicritère, score de compatibilité explicable, comparateur | ✅ | |
 | Phase 5 | Brouillard de recrutement | ❌ actuellement | limitation affichée |
+| Phase 6 | Dossiers suivis (achat, vente, contre-offre, contrat) | ✅ | `transfers/dossiers.py` : ouvert quand le directeur prépare l'opération, vérifié à chaque sauvegarde (offre faite / reçue / conclue / échouée, joueur parti, contrat prolongé, cible prolongée chez son club) et signalé une fois ; démontré sur la vraie carrière (voir TEST_REPORT) |
 | Phase 6 | Moteur d'exécution transactionnel (table `operations`) | ⬜ | schéma prêt |
 | Phase 6 | Actions dans FM26 | 🧪 | toutes marquées indisponibles |
 | Phase 7 | Alertes proactives déterministes | ✅ | contrats, profondeur, forme, finances |
+| Phase 7 | Messages proactifs du staff après chaque sauvegarde | ✅ | `proactive/staff_messages.py` : règles déterministes par contact (offres, contrats < 6 mois, arrivées/départs, blessures et retours, suspensions, prochain match + onze calculé, staff, finances, dossiers), un fait = un message une seule fois, rédigé par le modèle ; démontré sur la vraie carrière |
 | Phase 7 | Personnalités | ✅ | 5 profils |
 | Phase 8 | Installateur Windows (menu Démarrer, lancement à l'ouverture de session) + désinstallateur | ✅ testé / 🟡 machine | `scripts/install_windows.ps1`, `uninstall_windows.ps1` : création puis retrait vérifiés dans des dossiers temporaires ; pas encore installé sur le PC (accord de l'utilisateur requis) |
 | Phase 8 | Intégration continue GitHub (tests, lint, .NET) | 🟡 | `.github/workflows/tests.yml` écrit, s'exécutera au premier envoi |

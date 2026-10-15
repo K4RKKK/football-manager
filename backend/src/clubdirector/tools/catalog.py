@@ -19,6 +19,7 @@ from clubdirector.proactive.rules import POSITION_GROUPS, contract_alerts, depth
 from clubdirector.recruitment.roles import ROLES
 from clubdirector.recruitment.scoring import METHOD, role_with_adjustments, score_player
 from clubdirector.sync.season import season_label
+from clubdirector.tools.analysis_tools import register_analysis_tools
 from clubdirector.tools.game_tables import register_game_table_tools
 from clubdirector.tools.lineup import register_lineup_tools
 from clubdirector.tools.presenters import (
@@ -606,10 +607,17 @@ def build_registry() -> ToolRegistry:
             max_value, max_wage = _to_raw(t, a.max_value), _to_raw(t, a.max_wage)
         except UncalibratedCurrency as exc:
             raise ValueError(str(exc)) from exc
+        from clubdirector.memory.decisions import coach_rules
+
+        rules = coach_rules(t.engine, t.ctx.career_id, t.prefs)
+        max_age, notes = a.max_age, []
+        if max_age is None and rules.max_age is not None:  # décision de l'entraîneur, partagée par tout le staff
+            max_age = rules.max_age
+            notes.append(f"Âge maximum de l'entraîneur appliqué : {rules.max_age} ans ({rules.sources.get('age_max_recrue', 'mémoire')}).")
         pool: dict[int, dict] = {}
         for pos in role.positions:
             _, rows = t.repo.search_players(
-                t.ctx, position=pos, min_age=a.min_age, max_age=a.max_age, max_value=max_value, max_wage=max_wage,
+                t.ctx, position=pos, min_age=a.min_age, max_age=max_age, max_value=max_value, max_wage=max_wage,
                 exclude_club_uid=t.ctx.club_uid, order_by="transfer_value", limit=a.candidate_pool,
             )
             pool.update({r["uid"]: r for r in rows})
@@ -623,7 +631,7 @@ def build_registry() -> ToolRegistry:
             "role": role.label, "candidats_evalues": len(pool), "methode": METHOD,
             "cibles": [player_summary(r, t.prefs) | {"compatibilite": f.score, "points_forts": f.strengths,
                         "points_faibles": f.weaknesses, "meilleur_poste": f.best_position} for f, r in scored[: a.limit]],
-        }, limitations=[FOG_LIMITATION, "Le pool de candidats est limité aux joueurs les plus valorisés respectant les filtres (paramètre candidate_pool)."])
+        }, limitations=[FOG_LIMITATION, "Le pool de candidats est limité aux joueurs les plus valorisés respectant les filtres (paramètre candidate_pool).", *notes])
 
     @T("estimate_wage_affordability", "Vérifie si une indemnité et un salaire tiennent dans les budgets actuels.", "analyse", AffordArgs)
     def estimate_wage_affordability(t: ToolContext, a: AffordArgs):
@@ -671,11 +679,9 @@ def build_registry() -> ToolRegistry:
         lim = [] if advanced_allowed(t.prefs) else ["Potentiel (PA) masqué en mode réaliste/analyste."]
         return ToolResult("", True, data=out, limitations=lim)
 
-    for name, desc in [("generate_scout_report", "Rapport de recrutement rédigé."),
-                       ("plan_transfer_window", "Plan de mercato complet."),
-                       ("analyze_player_performance", "Analyse fine des performances (par 90 min)."),
-                       ("build_transfer_shortlist", "Shortlist interne persistante.")]:
-        reg.register(ToolSpec(name, desc, "analyse", NoArgs, None, False, "Non encore implémenté (prévu phases 5-7)."))
+    reg.register(ToolSpec("build_transfer_shortlist", "Shortlist interne persistante.", "analyse", NoArgs, None, False,
+                          "Non encore implémenté (prévu phases 5-7)."))
+    register_analysis_tools(reg)  # performance par 90 min, rapport de recrutement, plan de mercato, dossiers
 
     # ---------------------------------------------------------------- mémoire
     @T("remember", "Mémorise une préférence, un objectif, une décision ou une cible de l'utilisateur.", "memoire", MemoryArgs)

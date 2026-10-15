@@ -32,6 +32,7 @@ from clubdirector.ai.orchestrator import CONTACT_ROLES, Orchestrator, tool_label
 from clubdirector.ai.persona import ROLE_LABELS
 from clubdirector.ai.providers.base import status_sink
 from clubdirector.api.live import Heartbeat, PluginBridge
+from clubdirector.api.staff_routes import register_staff_routes, run_after_sync_in_background
 from clubdirector.config import Settings, load_settings
 from clubdirector.database.db import open_database
 from clubdirector.database.repositories import CareerNotFound, Repository
@@ -118,7 +119,10 @@ class AppState:
             prefs = self.prefs
             prefs.active_career_id = res.career_id
             self.prefs_store.save(prefs)
-        self.warm_in_background()
+        if self.settings.proactive_enabled and not res.reused:
+            run_after_sync_in_background(self)  # résumés, messages proactifs du staff, puis préchauffage
+        else:
+            self.warm_in_background()
         return asdict(res)
 
     def warm_in_background(self) -> None:
@@ -187,6 +191,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(401, "Jeton ClubDirector invalide ou absent.")
 
     A = [Depends(auth)]
+    register_staff_routes(app, state, A)  # dossiers, faits signalés, travail d'après synchronisation
 
     # ----------------------------------------------------------------- interface diagnostic
     @app.get("/", response_class=HTMLResponse)

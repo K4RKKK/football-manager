@@ -42,9 +42,13 @@ from clubdirector.ai.topics import (
     unknown_people,
 )
 from clubdirector.database import schema as s
+from clubdirector.memory.decisions import capture_decisions, decisions_hint
 from clubdirector.memory.store import ConversationStore, MemoryStore
+from clubdirector.memory.summaries import summarize, summary_block
 from clubdirector.sync.season import season_label
 from clubdirector.tools.registry import ToolContext, ToolRegistry, ToolResult
+from clubdirector.transfers.dossiers import DOSSIER_TOOLS, DossierStore
+from clubdirector.transfers.operations import operation_brief, operation_request
 
 log = logging.getLogger(__name__)
 MAX_TOOL_RESULT_CHARS = 12000
@@ -223,7 +227,9 @@ TOOL_LABELS = {
     "evaluate_youth_prospects": "jeunes", "remember": "mémoire", "list_memories": "mémoire", "forget": "mémoire",
     "describe_game_tables": "données du jeu", "query_game_table": "données du jeu",
     "get_club_league_history": "palmarès", "get_club_staff": "staff", "get_current_save": "sauvegarde",
-    "get_managed_club": "club", "propose_lineup": "composition",
+    "get_managed_club": "club", "propose_lineup": "composition", "list_dossiers": "dossiers",
+    "generate_scout_report": "rapport de recrutement", "plan_transfer_window": "plan de mercato",
+    "analyze_player_performance": "performances",
 }
 Event = Callable[[dict], None]
 
@@ -422,6 +428,72 @@ class Orchestrator:
             with self._intro_lock:
                 self._intros.discard(conv)
 
+    def notify(self, tctx: ToolContext, role: str, instruction: str, fallback: str,
+               on_event: Event | None = None) -> ChatAnswer | None:
+        """Message que le contact écrit DE LUI-MÊME (faits nouveaux après une sauvegarde).
+
+        `instruction` (cachée) donne les faits au modèle, qui rédige ; sans modèle, `fallback` (les faits
+        eux-mêmes) est écrit tel quel. Un contact qui n'a jamais écrit se présente d'abord. None : poste vacant."""
+        member = self.staff(tctx, role)
+        if member is None and role != DIRECTOR:
+            return None
+        conv = self.thread(tctx, role, member)
+        if self.conversations.count(conv) == 0:
+            self.introduce(tctx, role)
+        answer = self.ask(tctx, instruction, conversation_id=conv, role=role, member=member, on_event=on_event,
+                          hidden_question=True, force_tier=1)
+        if answer.route == "indisponible" or answer.message_id is None:
+            mid = self.conversations.add_message(conv, "assistant", fallback, game_date=tctx.ctx.game_date, route="niveau0")
+            answer = ChatAnswer(fallback, "niveau0", conv, answer.tools, answer.limitations, message_id=mid)
+        return answer
+
+    def summarize_threads(self, tctx: ToolContext, roles: tuple[str, ...] = CONTACT_ROLES) -> list[str]:
+        """Résume la partie ancienne des fils (hors fenêtre d'historique) sur le modèle local. Rôles résumés."""
+        provider = self.choose_provider("", 1)
+        if provider is None:
+            return []
+        done = []
+        for role in roles:
+            if self._active:
+                break  # une vraie conversation passe avant
+            member = self.staff(tctx, role)
+            conv = self.conversations.find_thread(tctx.ctx.career_id, role, member.uid if member else 0)
+            if conv is None:
+                continue
+            label = f"{ROLE_LABELS[role]} ({member.name})" if member else ROLE_LABELS[role]
+            try:
+                if summarize(self.engine, provider, conv, label, self.history_messages):
+                    done.append(role)
+            except ProviderError as exc:
+                log.info("Résumé interrompu : %s", exc)
+                break
+        return done
+
+    def _capture_decisions(self, tctx: ToolContext, question: str) -> list:
+        """Décisions durables de l'entraîneur (« on ne vend pas Soulé ») retenues pour tout le staff."""
+        try:
+            squad = tctx.repo.squad(tctx.ctx, team_slot=None)
+            return capture_decisions(self.engine, tctx.ctx.career_id, question, squad, tctx.ctx.game_date)
+        except Exception:  # noqa: BLE001 — la mémoire ne bloque jamais une réponse
+            log.exception("Capture des décisions en échec")
+            return []
+
+    def _operation(self, tctx: ToolContext, question: str) -> tuple[str, dict] | None:
+        """Outil de préparation (et arguments) d'une opération demandée au directeur sportif, ou None."""
+        try:
+            op = operation_request(tctx, question)
+        except Exception:  # noqa: BLE001 — la détection ne bloque jamais une réponse
+            log.exception("Détection d'opération en échec")
+            return None
+        return (op[0], op[1]) if op else None
+
+    def _open_dossier(self, tctx: ToolContext, tool: str, args: dict, result: ToolResult, role: str, conv: int) -> None:
+        """Une préparation (achat, vente, contre-offre, contrat) devient un dossier suivi dans les sauvegardes."""
+        try:
+            DossierStore(self.engine).open_from_tool(tctx, tool, args, result.data, role=role, conversation_id=conv)
+        except Exception:  # noqa: BLE001 — le suivi ne bloque jamais une réponse
+            log.exception("Ouverture de dossier en échec")
+
     def ask(self, tctx: ToolContext, question: str, *, conversation_id: int | None = None,
             force_tier: int | None = None, taking_office: bool | None = None, role: str = DIRECTOR,
             member: Any = None, on_event: Event | None = None, hidden_question: bool = False) -> ChatAnswer:
@@ -431,8 +503,12 @@ class Orchestrator:
             for m in self.conversations.messages(conv, limit=self.history_messages)
             if m["role"] in ("user", "assistant")
         ]
+        notes: list[str] = []
         if not hidden_question:
             self.conversations.add_message(conv, "user", question, game_date=tctx.ctx.game_date)
+            saved = self._capture_decisions(tctx, question)
+            if saved:
+                notes.append(decisions_hint(saved))
         trace: list[dict] = []
 
         def run(tool: str, args: dict):
@@ -461,7 +537,7 @@ class Orchestrator:
             # La prise de poste est le premier message du directeur (`introduce`, ou `take_office`) :
             # elle ne détourne jamais une question de l'entraîneur.
             office = bool(taking_office) and role == DIRECTOR
-            answer = self._llm(tctx, question, history, conv, trace, force_tier, office, member, role, on_event)
+            answer = self._llm(tctx, question, history, conv, trace, force_tier, office, member, role, on_event, notes)
             if role == DIRECTOR and answer.route.startswith("niveau") and (office or self.office_pending(tctx, member)):
                 self._mark_office_taken(tctx, member)
         if answer.route != "indisponible" or not hidden_question:
@@ -470,7 +546,8 @@ class Orchestrator:
         return answer
 
     def _prompt(self, tctx: ToolContext, role: str, member: Any, history: list[dict], question: str,
-                taking_office: bool = False) -> tuple[str, list[dict]]:
+                taking_office: bool = False, conv: int | None = None,
+                notes: list[str] | None = None) -> tuple[str, list[dict]]:
         ctx = tctx.ctx
         team = self.team(tctx)
         team[role] = member
@@ -480,7 +557,7 @@ class Orchestrator:
         context = build_context_message(
             club=ctx.club_name, game_date=ctx.game_date.isoformat() if ctx.game_date else None,
             season=season_label(ctx.season_start_year), dossier=build_club_dossier(self.registry, tctx, role),
-            memories=MemoryStore(self.engine).list(ctx.career_id))
+            memories=MemoryStore(self.engine).list(ctx.career_id)) + summary_block(self.engine, conv)
         if taking_office and role == DIRECTOR and not question.startswith("[Message automatique"):
             question = first_contact_request(role, taking_office=True) + "\n\nDemande de l'entraîneur : " + question
         if not question.startswith("[Message automatique"):
@@ -509,12 +586,14 @@ class Orchestrator:
                              f"(terrain, forme, temps de jeu) ou de {ds.name if ds else 'le directeur sportif'} (contrat, "
                              "marché), sans donner toi-même de statistiques ni d'avis sur le joueur, puis propose l'angle "
                              "staff si c'est pertinent.]")
+        for note in notes or ():
+            question += "\n\n" + note
         messages = _alternate([{"role": "user", "content": context}, *history, {"role": "user", "content": question}])
         return system, messages
 
     def _llm(self, tctx: ToolContext, question: str, history: list[dict], conv: int, trace: list[dict],
              force_tier: int | None, taking_office: bool = False, member=None, role: str = DIRECTOR,
-             on_event: Event | None = None) -> ChatAnswer:
+             on_event: Event | None = None, notes: list[str] | None = None) -> ChatAnswer:
         provider = self.choose_provider(question, force_tier)
         if provider is None:
             text = ("Cette question demande une analyse par le modèle IA, mais aucun moteur n'est disponible "
@@ -523,7 +602,7 @@ class Orchestrator:
             if on_event:
                 on_event({"type": "delta", "text": text})
             return ChatAnswer(text, "indisponible", conv, trace)
-        system, messages = self._prompt(tctx, role, member, history, question, taking_office)
+        system, messages = self._prompt(tctx, role, member, history, question, taking_office, conv, notes)
         last_said = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
         lineup_args = (lineup_request(question, last_said) if role == "entraineur_adjoint"  # la composition, c'est l'adjoint
                        and not question.startswith("[Message automatique") else None)
@@ -534,6 +613,19 @@ class Orchestrator:
             trace.append({"tool": "propose_lineup", "args": lineup_args, "ok": r.ok, "error": r.error})
             if r.ok:
                 messages[-1] = {"role": "user", "content": messages[-1]["content"] + "\n\n" + lineup_brief(r.data)}
+        if role == DIRECTOR and not question.startswith("[Message automatique") and message_kind(question, last_said) == "demande":
+            # Achat demandé (offre pour un joueur d'un autre club) : plan préparé AVANT le modèle, dossier ouvert, chiffres
+            # imposés. Vente, prolongation et contre-offre de nos joueurs : préchargées plus bas (ai/prefetch.py).
+            op = self._operation(tctx, question)
+            if op is not None:
+                tool, args = op
+                if on_event:
+                    on_event({"type": "tool", "name": tool, "label": tool_label(tool)})
+                r = self.registry.execute(tool, args, tctx)
+                trace.append({"tool": tool, "args": args, "ok": r.ok, "error": r.error})
+                if r.ok:
+                    self._open_dossier(tctx, tool, args, r, role, conv)
+                    messages[-1] = {"role": "user", "content": messages[-1]["content"] + "\n\n" + operation_brief(tool, r.data)}
         tools = self._tools_for(role)
         restricted = ROLE_TOOLS.get(role)  # None : tous les outils (les actions non prouvées restent refusées par le registre)
         cost = 0.0
@@ -549,6 +641,8 @@ class Orchestrator:
                 r = self.registry.execute(name, args, tctx)
                 trace.append({"tool": name, "args": args, "ok": r.ok, "error": r.error})
                 if r.ok:
+                    if name in DOSSIER_TOOLS:
+                        self._open_dossier(tctx, name, args, r, role, conv)
                     limitations.extend(r.limitations)
                     messages[-1] = {"role": "user", "content": messages[-1]["content"] + "\n\n" + prefetch_brief(name, r.data)}
         with self._active_lock:
@@ -581,6 +675,8 @@ class Orchestrator:
                         r = ToolResult(call.name, False, error="Outil hors de ton rôle : renvoie l'entraîneur vers le bon interlocuteur.")
                     else:
                         r = self.registry.execute(call.name, call.arguments, tctx)
+                        if r.ok and call.name in DOSSIER_TOOLS:
+                            self._open_dossier(tctx, call.name, call.arguments, r, role, conv)
                     trace.append({"tool": call.name, "args": call.arguments, "ok": r.ok, "error": r.error})
                     limitations.extend(r.limitations)
                     payload = json.dumps(r.as_dict(), ensure_ascii=False, default=str, separators=(",", ":"))
@@ -632,7 +728,8 @@ class Orchestrator:
             if self._active:
                 break
             member = self.staff(tctx, role)
-            system, messages = self._prompt(tctx, role, member, [], ".")
+            conv = self.conversations.find_thread(tctx.ctx.career_id, role, member.uid if member else 0)
+            system, messages = self._prompt(tctx, role, member, [], ".", conv=conv)
             tools = self._tools_for(role)
             key = hashlib.sha256(json.dumps([system, messages, tools], ensure_ascii=False, default=str)
                                  .encode("utf-8")).hexdigest()

@@ -284,6 +284,7 @@ conversations = T(
     Column("title", String(200)),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("summary", Text),
+    Column("summary_upto", Integer),  # dernier message couvert par le résumé (migration 6)
     # Fil de messages d'un contact du téléphone (rôle du staff + personne) ; None = ancienne conversation.
     Column("contact_role", String(40)),
     Column("staff_uid", Integer),
@@ -394,3 +395,49 @@ alerts = T(
     Column("dismissed", Boolean, nullable=False, default=False),
     UniqueConstraint("career_id", "rule", "subject_key", name="uq_alert"),
 )
+
+# --- Staff vivant : messages proactifs et dossiers suivis (migration 6) ----------------------
+
+# Faits de la sauvegarde déjà signalés par un contact du téléphone : un fait = un message, une seule
+# fois. `message_id` NULL : fait enregistré sans message (base de départ, état mémorisé d'un relevé).
+staff_notices = T(
+    "staff_notices",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("career_id", ForeignKey("careers.id", ondelete="CASCADE"), nullable=False),
+    Column("role", String(40), nullable=False),
+    Column("fact_key", String(160), nullable=False),
+    Column("kind", String(40), nullable=False),
+    Column("data", JSON),
+    Column("game_date", Date),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("message_id", Integer),
+    UniqueConstraint("career_id", "fact_key", name="uq_staff_notice"),
+)
+
+# Opérations préparées par le directeur sportif (achat, vente, contre-offre, contrat) et suivies dans
+# les sauvegardes suivantes : offre faite, acceptée, refusée, joueur parti, contrat prolongé…
+dossiers = T(
+    "dossiers",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("career_id", ForeignKey("careers.id", ondelete="CASCADE"), nullable=False),
+    Column("kind", String(20), nullable=False),  # achat | vente | contre_offre | contrat
+    Column("player_uid", Integer, nullable=False),
+    Column("player_name", String(200)),
+    Column("club_uid", Integer),  # club en face (vendeur pour un achat)
+    Column("club_name", String(200)),
+    # ouvert | offre_faite | offre_recue | conclu | refuse | sans_suite | parti | clos
+    Column("status", String(30), nullable=False),
+    Column("detail", Text),
+    Column("plan", JSON),
+    Column("baseline", JSON),
+    Column("events", JSON),
+    Column("role", String(40)),
+    Column("conversation_id", Integer),
+    Column("opened_game_date", Date),
+    Column("closed_game_date", Date),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+Index("ix_dossiers_career", dossiers.c.career_id, dossiers.c.status)
