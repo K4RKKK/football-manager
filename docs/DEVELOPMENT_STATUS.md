@@ -37,6 +37,7 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 4 | Scripts de rôle DT et adjoint + format messages commun | ✅ | `role_directeur_technique.md`, `role_entraineur_adjoint.md`, `style_messagerie.md` |
 | Phase 4 | Types de messages (politesse, discussion, question, demande, réponse) | ✅ | 19/19 exemples classés ; consigne adaptée à chaque type |
 | Phase 4 | Réponses rapides | ✅ | réflexion coupée sauf analyse demandée, dossier après les outils (cache), préchauffage, affichage au fil de l'écriture : « ça va » 1,7 s, question 1,9 s, demande avec données 20 s |
+| Phase 4 | Compositions calculées (`tools/lineup.py`, `propose_lineup`) | ✅ | affectation optimale sur les notes de poste FM26 (9 systèmes), calculée avant le modèle pour toute demande de onze ; effectif nominatif + notes dans le dossier ; plus de joueurs inventés (Rui Patrício) ni hors poste (Pellegrini ailier) |
 | Phase 4 | Photos du staff | ✅ | pack de visages de l'utilisateur (`graphics/faces/<unique_id>.png`), lu en local |
 | Phase 3 | Entrée dans le menu latéral natif | 🧪 | outil de relevé UI prêt (Maj+F10) |
 | Phase 4 | Registre d'outils (33 disponibles / 51) | ✅ | |

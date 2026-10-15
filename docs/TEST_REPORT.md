@@ -142,3 +142,13 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Tests fork / backend | ✅ | fork : 6 nouveaux tests (`tests/test_transfers.py`) ; backend : 6 nouveaux (`tests/test_transfers.py`) |
 | « On veut faire venir Hugo López : prépare-moi l'offre, le plafond et le contrat » | ✅ après correctif | 1er essai : pris pour une discussion (demande après « : »), aucun calcul ; corrigé (détection des demandes) : 43 s, plan d'achat, accord existant détecté (5,3 M€ au 02/01/2026), structure 40 % + 2 versements, contrat 5 ans |
 | « Prépare-moi la prolongation de Lorenzo Pellegrini » | ✅ après correctif | 1er essai : 5 échecs de fiche (deux homonymes) puis chiffres inventés ; corrigé (homonyme du club d'abord, outils nommés dans le script) : 18 s, 3 ans, 131 k€ cible / 150 k€ plafond, +6 k€/sem. |
+
+### Session 3 (suite) — joueurs réels et compositions
+| Test | Résultat | Détail |
+|---|---|---|
+| Joueur inventé (« Rui Patrício ») | corrigé | effectif COMPLET nominatif dans le dossier + règle commune ; onze contre Samsunspor 100 % tiré de l'effectif |
+| Joueur hors poste (Pellegrini ailier droit) | corrigé | `propose_lineup` : Pellegrini MC 20/AMC 20 jamais ailier ; onze réel 4-2-3-1 : Svilar ; Wesley, Mancini, Gadou, Angeliño ; Koné, Cristante ; Soulé, Dybala, Malen ; Dovbyk (postes notés 18-20) |
+| Demande de onze (vrai modèle, copie) | ✅ 6,8 s | composition calculée reprise telle quelle, absents demandés |
+| Détection (« onze », « compo », « en 4-3-3 », « sans X », rotation) | ✅ | tests `test_lineup.py` |
+| `pytest` backend | ✅ | 138 / 138 |
+

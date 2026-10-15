@@ -80,3 +80,7 @@
 24. **Délégation à Cagigao dans FM26** : le directeur explique quoi déléguer (responsabilités du
     staff, négociation d'une offre, liste des transferts) ; il ne voit pas ces réglages dans la
     sauvegarde et les intitulés exacts des écrans sont à vérifier dans le jeu.
+25. **Compositions** : calculées sur les notes de poste (familiarité 1-20), le temps de jeu, la note moyenne, la
+    valeur et la condition, jamais sur les attributs cachés. L'infirmerie du jour n'est pas lue dans la sauvegarde :
+    l'adjoint demande les absents (« sans Dybala » est compris). La tactique active (26.3.0) n'est pas lue : système
+    4-2-3-1 par défaut, ou celui demandé.
