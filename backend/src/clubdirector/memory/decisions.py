@@ -222,20 +222,25 @@ def detect_decisions(text: str, squad: list[dict], game_date: date | None) -> li
 
 def capture_decisions(engine: Engine, career_id: int, text: str, squad: list[dict],
                       game_date: date | None) -> list[Decision]:
-    """Enregistre les décisions du message (une décision identique déjà en vigueur n'est pas dupliquée)."""
+    """Enregistre les décisions du message, datées (date du jeu) et avec la phrase de l'entraîneur ; une décision
+    identique déjà en vigueur n'est pas dupliquée."""
     found = detect_decisions(text, squad, game_date)
     if not found:
         return []
     store = MemoryStore(engine)
     active = store.list(career_id)
+    source = " ".join(text.split())
+    source = source if len(source) <= 160 else source[:159] + "…"
     saved = []
     for d in found:
         same = [m for m in active if (d.key and m["cle"] == d.key and (m["valeur"] or {}).get("regle") == d.value.get("regle")
                                       and (m["valeur"] or {}).get("value") == d.value.get("value"))
-                or (not d.key and m["texte"] == d.text)]
+                or (not d.key and m["texte"].startswith(d.text))]
         if same:
             continue
-        store.add(career_id, d.kind, d.text, key=d.key, value=d.value, game_date=game_date)
+        d.value = d.value | {"phrase": source}
+        when = f" le {game_date.strftime('%d/%m/%Y')}" if game_date else ""
+        store.add(career_id, d.kind, f"{d.text} Dit{when} : « {source} »", key=d.key, value=d.value, game_date=game_date)
         saved.append(d)
     return saved
 

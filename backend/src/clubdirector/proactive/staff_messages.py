@@ -267,9 +267,11 @@ def technical_facts(tctx, notices: NoticeStore) -> list[Fact]:
 def field_facts(tctx, registry, notices: NoticeStore) -> list[Fact]:
     """Terrain, pour l'entraîneur adjoint : blessures, retours, suspensions, prochain match (onze calculé), série.
 
-    Blessés du jour : lignes « typed » de `fm_injuries` (blessure en cours, date de retour prévue ; vérifié dans
-    FM26, voir game/availability.py). Une blessure, un retour ou une suspension est un fait la première fois
-    qu'il apparaît d'une sauvegarde à l'autre (état mémorisé)."""
+    Disponibilité du jour : `game/availability.py` (blessures en cours avec date de retour prévue, suspensions ;
+    vérifié dans FM26). Une blessure, un retour ou une suspension est un fait la première fois qu'il apparaît d'une
+    sauvegarde à l'autre (état mémorisé) ; un retour prévu dans 3 jours ou moins est annoncé une fois."""
+    from clubdirector.game.availability import club_availability
+
     ctx = tctx.ctx
     out: list[Fact] = []
     today = ctx.game_date
@@ -277,32 +279,26 @@ def field_facts(tctx, registry, notices: NoticeStore) -> list[Fact]:
         return out
     stamp = today.isoformat()
     first_team = {p["uid"] for p in tctx.repo.squad(ctx)}
-    hurt = {r["player_uid"]: r for r in _rows(tctx.engine, """
-        SELECT i.player_uid, p.name, i.type_name, i.date AS retour FROM fm_injuries i
-        JOIN players_current p ON p.career_id = i.career_id AND p.uid = i.player_uid
-        WHERE i.career_id = :k AND i.kind = 'typed' AND p.club_uid = :c AND i.date >= :today""",
-        k=ctx.career_id, c=ctx.club_uid, today=stamp) if r["player_uid"] in first_team}
-    bans = {r["player_uid"]: r for r in _rows(tctx.engine, """
-        SELECT s.player_uid, p.name, s.issued_date, s.competition_id,
-               (SELECT st.competition_name FROM fm_stages st WHERE st.career_id = s.career_id AND st.id = s.competition_id
-                LIMIT 1) AS competition
-        FROM fm_suspensions s JOIN players_current p ON p.career_id = s.career_id AND p.uid = s.player_uid
-        WHERE s.career_id = :k AND p.club_uid = :c""", k=ctx.career_id, c=ctx.club_uid) if r["player_uid"] in first_team}
+    avail = club_availability(tctx.engine, ctx.career_id, ctx.club_uid, today)
+    hurt = {r["player_uid"]: r for r in avail["blesses"] if r["player_uid"] in first_team}
+    bans = {r["player_uid"]: r for r in avail["suspendus"] if r["player_uid"] in first_team}
     previous = notices.state(ctx.career_id, "infirmerie")
     notices.set_state(ctx.career_id, "infirmerie", {
-        "blesses": {str(u): {"nom": r["name"], "type": r["type_name"]} for u, r in hurt.items()},
-        "suspendus": {str(u): {"nom": r["name"], "depuis": str(r["issued_date"])[:10]} for u, r in bans.items()}}, today)
+        "blesses": {str(u): {"nom": r["joueur"], "type": r["blessure"]} for u, r in hurt.items()},
+        "suspendus": {str(u): {"nom": r["joueur"], "depuis": r["depuis"]} for u, r in bans.items()}}, today)
     was_hurt = {int(k): v for k, v in ((previous or {}).get("blesses") or {}).items()}
     was_banned = {int(k): v for k, v in ((previous or {}).get("suspendus") or {}).items()}
     for uid, r in hurt.items():
-        if uid in was_hurt and was_hurt[uid].get("type") == r["type_name"]:
-            continue  # déjà signalé
-        back = _d(r["retour"])
-        days = (back - today).days if back else None
-        out.append(Fact(ADJ, f"blessure|{uid}|{r['type_name'] or '?'}|{stamp}", "blessure", 1,
-                        f"{r['name']} est blessé : {r['type_name'] or 'blessure de type non lu'}, retour prévu le {_fr(back)}"
-                        + (f" (dans {days} jours ; le jeu affiche une fourchette autour de cette date)" if days is not None else "")
-                        + ".", {"joueur": r["name"], "blessure": r["type_name"], "retour_prevu": _d(back).isoformat() if back else None}))
+        back, days = _d(r.get("retour_prevu")), r.get("jours_restants")
+        if uid not in was_hurt or was_hurt[uid].get("type") != r["blessure"]:
+            out.append(Fact(ADJ, f"blessure|{uid}|{r['blessure'] or '?'}|{stamp}", "blessure", 1,
+                            f"{r['joueur']} est blessé : {r['blessure'] or 'blessure de type non lu'}, retour prévu le {_fr(back)}"
+                            + (f" (dans {days} jours ; le jeu affiche une fourchette autour de cette date)" if days is not None else "")
+                            + ".", {"joueur": r["joueur"], "blessure": r["blessure"], "retour_prevu": r.get("retour_prevu")}))
+        elif days is not None and days <= 3:
+            out.append(Fact(ADJ, f"retour_imminent|{uid}|{r.get('retour_prevu')}", "retour_imminent", 2,
+                            f"{r['joueur']} devrait revenir de blessure ({r['blessure'] or 'blessure'}) le {_fr(back)}, "
+                            f"dans {days} jour(s).", {"joueur": r["joueur"], "retour_prevu": r.get("retour_prevu")}))
     if previous is not None:
         for uid, v in was_hurt.items():
             if uid not in hurt and uid in first_team:
@@ -310,16 +306,16 @@ def field_facts(tctx, registry, notices: NoticeStore) -> list[Fact]:
                                 f"{v.get('nom')} n'est plus à l'infirmerie ({v.get('type') or 'blessure'} terminée).",
                                 {"joueur": v.get("nom")}))
     for uid, r in bans.items():
-        since = str(r["issued_date"])[:10] if r.get("issued_date") else "?"
+        since = r.get("depuis") or "?"
         if previous is None and _d(since) and (today - _d(since)).days > RECENT_DAYS:
             continue  # première lecture : seules les sanctions récentes sont des nouvelles
         if uid in was_banned and was_banned[uid].get("depuis") == since:
             continue
         comp = f" ({r['competition']})" if r.get("competition") else ""
         out.append(Fact(ADJ, f"suspension|{uid}|{since}", "suspension", 1,
-                        f"{r['name']} est suspendu{comp}, sanction du {_fr(since)} (nombre de matchs non lu dans la "
-                        "sauvegarde).", {"joueur": r["name"]}))
-    injured = [r["name"] for r in hurt.values()] + [r["name"] for r in bans.values()]
+                        f"{r['joueur']} est suspendu{comp}, sanction du {_fr(since)} (nombre de matchs non lu dans la "
+                        "sauvegarde).", {"joueur": r["joueur"]}))
+    injured = [r["joueur"] for r in hurt.values()] + [r["joueur"] for r in bans.values()]
     nxt = tctx.repo.fixtures(ctx, date_from=today + timedelta(days=1), date_to=today + timedelta(days=MATCH_DAYS),
                              limit=1, newest_first=False)
     if nxt:

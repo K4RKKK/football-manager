@@ -109,10 +109,34 @@ def test_injuries_and_returns_are_announced_by_the_assistant(engine, registry, t
     text_ = _thread_texts(orch, tctx, ADJ)[-1]
     assert "Sam Sample est blessé : Entorse de la cheville, retour prévu le 20/03/2031 (dans 19 jours" in text_
     assert "Indisponibles (blessés ou suspendus) : Sam Sample" in text_
+    soon = _next_save(engine, tctx, "2031-03-18")  # toujours blessé, retour dans 2 jours : annoncé une fois
+    run_proactive(soon, orch, registry, roles=(ADJ,))
+    assert "Sam Sample devrait revenir de blessure (Entorse de la cheville) le 20/03/2031, dans 2 jour(s)." in \
+        _thread_texts(orch, soon, ADJ)[-1]
+    assert run_proactive(soon, orch, registry, roles=(ADJ,)).messages == []
     _mirror(engine, k, MirrorTable("injuries", INJURY_COLS, []))  # sauvegarde suivante : guéri
     later = _next_save(engine, tctx, "2031-03-21")
     run_proactive(later, orch, registry, roles=(ADJ,))
     assert "Sam Sample n'est plus à l'infirmerie" in _thread_texts(orch, later, ADJ)[-1]
+
+
+def test_a_contact_waits_for_a_real_reply_and_writes_one_message_at_a_time(engine, registry, tctx, monkeypatch):
+    import time
+
+    import clubdirector.ai.orchestrator as orch_mod
+
+    orch = Orchestrator(engine, registry, [])
+    conv = orch.thread(tctx, DS)
+    orch.conversations.add_message(conv, "assistant", "Bonjour Coach.")
+    with orch._intro_lock:
+        orch._intros.add(conv)  # un message de lui-même déjà en cours d'écriture pour ce contact
+    assert orch.notify(tctx, DS, "[Message automatique — test]", "Fait.") is None
+    orch._intros.discard(conv)
+    monkeypatch.setattr(orch_mod, "NOTIFY_WAIT_S", 0.6)
+    orch._active = 1  # une vraie réponse est en cours : on attend (ici, jusqu'au délai)
+    t0 = time.monotonic()
+    answer = orch.notify(tctx, DS, "[Message automatique — test]", "Fait.")
+    assert time.monotonic() - t0 >= 0.5 and answer.text == "Fait." and answer.route == "niveau0"
 
 
 def test_a_vacant_post_writes_nothing(engine, registry, tctx):
@@ -273,8 +297,9 @@ def test_a_decision_told_to_one_contact_is_kept_and_applied_by_all(engine, regis
     orch.send(tctx, DS, "On ne vend pas Sam Sample. Et âge max 26 ans pour les recrues.")
     assert "décision de l'entraîneur retenue dans la mémoire du club" in p.history[-1]["content"]
     texts = [m["texte"] for m in MemoryStore(engine).list(k)]
-    assert "Sam Sample : ne pas vendre (décision de l'entraîneur)." in texts
-    assert "Recrues : 26 ans maximum (décision de l'entraîneur)." in texts
+    said = "Dit le 01/03/2031 : « On ne vend pas Sam Sample. Et âge max 26 ans pour les recrues. »"
+    assert f"Sam Sample : ne pas vendre (décision de l'entraîneur). {said}" in texts  # datée, phrase source
+    assert f"Recrues : 26 ans maximum (décision de l'entraîneur). {said}" in texts
     orch.send(tctx, ADJ, "Salut")  # un autre contact connaît la décision
     assert "Sam Sample : ne pas vendre" in p.history[0]["content"]
     # Les outils l'appliquent.

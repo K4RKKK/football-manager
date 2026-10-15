@@ -12,6 +12,7 @@ import json
 import logging
 import re
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -54,6 +55,7 @@ log = logging.getLogger(__name__)
 MAX_TOOL_RESULT_CHARS = 12000
 CONTACT_ROLES: tuple[str, ...] = tuple(STAFF_ROLES)
 DIRECTOR = "directeur_sportif"
+NOTIFY_WAIT_S = 180  # message de lui-même : attendre au plus 3 min la fin d'une vraie réponse
 # Réflexion préalable du modèle : seulement quand l'entraîneur demande une vraie analyse.
 DEEP_RE = re.compile(
     r"r[ée]fl[ée]chi|en profondeur|analyse (approfondie|d[ée]taill[ée]e|compl[èe]te)|plan complet|"
@@ -433,19 +435,32 @@ class Orchestrator:
         """Message que le contact écrit DE LUI-MÊME (faits nouveaux après une sauvegarde).
 
         `instruction` (cachée) donne les faits au modèle, qui rédige ; sans modèle, `fallback` (les faits
-        eux-mêmes) est écrit tel quel. Un contact qui n'a jamais écrit se présente d'abord. None : poste vacant."""
+        eux-mêmes) est écrit tel quel. Un contact qui n'a jamais écrit se présente d'abord. Une vraie conversation
+        passe avant : on attend qu'aucune réponse ne soit en cours. None : poste vacant (ou fil déjà occupé)."""
         member = self.staff(tctx, role)
         if member is None and role != DIRECTOR:
             return None
         conv = self.thread(tctx, role, member)
+        deadline = time.monotonic() + NOTIFY_WAIT_S
+        while self._active and time.monotonic() < deadline:
+            time.sleep(0.5)
         if self.conversations.count(conv) == 0:
             self.introduce(tctx, role)
-        answer = self.ask(tctx, instruction, conversation_id=conv, role=role, member=member, on_event=on_event,
-                          hidden_question=True, force_tier=1)
-        if answer.route == "indisponible" or answer.message_id is None:
-            mid = self.conversations.add_message(conv, "assistant", fallback, game_date=tctx.ctx.game_date, route="niveau0")
-            answer = ChatAnswer(fallback, "niveau0", conv, answer.tools, answer.limitations, message_id=mid)
-        return answer
+        with self._intro_lock:  # un seul message de lui-même à la fois par contact
+            if conv in self._intros:
+                return None
+            self._intros.add(conv)
+        try:
+            answer = self.ask(tctx, instruction, conversation_id=conv, role=role, member=member, on_event=on_event,
+                              hidden_question=True, force_tier=1)
+            if answer.route == "indisponible" or answer.message_id is None:
+                mid = self.conversations.add_message(conv, "assistant", fallback, game_date=tctx.ctx.game_date,
+                                                     route="niveau0")
+                answer = ChatAnswer(fallback, "niveau0", conv, answer.tools, answer.limitations, message_id=mid)
+            return answer
+        finally:
+            with self._intro_lock:
+                self._intros.discard(conv)
 
     def summarize_threads(self, tctx: ToolContext, roles: tuple[str, ...] = CONTACT_ROLES) -> list[str]:
         """Résume la partie ancienne des fils (hors fenêtre d'historique) sur le modèle local. Rôles résumés."""
