@@ -86,7 +86,10 @@ def classify(question: str) -> Intent | None:
     if re.search(r"meilleur passeur|plus de passes decisives|top passeurs?", q):
         return Intent("top_stat", {"stat": "assists", "relative_season": rel})
 
-    if m := re.search(r"combien (?:de buts )?(?P<name>[a-z' .-]{2,40}?) a(?:[- ]t[- ](?:il|elle))? (?:t[- ]il |t[- ]elle )?marque", q):
+    m = (re.search(r"combien de buts (?:a|as)(?:[- ]t[- ](?:il|elle))? marque (?P<name>[a-z' .-]{2,40}?)\s*\??$", q)
+         or re.search(r"(?P<name>[a-z' .-]{2,40}?) a marque combien de buts", q)
+         or re.search(r"combien (?:de buts )?(?P<name>[a-z' .-]{2,40}?) a(?:[- ]t[- ](?:il|elle))? (?:t[- ]il |t[- ]elle )?marque", q))
+    if m and not m.group("name").strip().startswith(("de buts", "buts")):
         name = m.group("name").strip()
         if name not in {"nous", "on", "l'equipe", "le club"}:
             return Intent("player_goals", {"name": name, "relative_season": rel})

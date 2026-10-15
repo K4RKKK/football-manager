@@ -89,7 +89,9 @@ plutôt plutot pas jamais surtout laisse laissez attends attendez je j' évidemm
 voilà voila parfait top nickel ça ca les le la lui eux aucun aucune tous toutes""".split())
 KIND_HINTS = {
     "politesse": ("[Consigne automatique — type de message : DISCUSSION (politesse). Réponds en UNE seule bulle d'une "
-                  "ou deux phrases, tout de suite, sans consulter de données et sans proposer d'action.]"),
+                  "ou deux phrases, tout de suite, sans consulter de données et sans proposer d'action. Réagis exactement "
+                  "à ce que dit l'entraîneur : un merci appelle « avec plaisir », un au revoir appelle un au revoir, un "
+                  "« ça va ? » appelle une réponse ; ne dis « bonjour » que s'il vient de te saluer.]"),
     "discussion": ("[Consigne automatique — type de message : DISCUSSION. L'entraîneur partage un avis ou une "
                    "information : réagis naturellement en une ou deux bulles, comme un collègue (accord, nuance, "
                    "conséquence pour ton domaine). Pas de rapport, pas de liste.]"),

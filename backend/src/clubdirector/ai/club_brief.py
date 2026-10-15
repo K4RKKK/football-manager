@@ -126,7 +126,7 @@ def _staff_overview(tctx: ToolContext) -> list[str]:
     try:
         with tctx.engine.connect() as c:
             rows = c.execute(text(
-                "SELECT name, age, team_slot, unknown_r4 AS code, list_indexes, contract_end, is_human_manager "
+                "SELECT name, age, team_slot, unknown_r4 AS code, list_indexes, contract_end, is_human_manager, wage "
                 "FROM fm_staff WHERE career_id = :k AND club_uid = :u ORDER BY coalesce(team_slot, 0), wage DESC"),
                 {"k": tctx.ctx.career_id, "u": tctx.ctx.club_uid}).mappings().all()
     except Exception as exc:  # noqa: BLE001
@@ -145,6 +145,8 @@ def _staff_overview(tctx: ToolContext) -> list[str]:
         depts = staff_departments(r["list_indexes"]) or ["Direction et hors département"]
         end = r["contract_end"]
         bits = [function, f"{r['age']} ans" if r["age"] else None, teams.get(r["team_slot"] or 0, "équipe")]
+        if r.get("wage"):
+            bits.append(f"{tctx.prefs.currency.format(r['wage'])}/sem.")
         if end:
             bits.append(f"contrat {_fr(str(end))}")
             try:

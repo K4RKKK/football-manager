@@ -46,3 +46,18 @@ def test_a_remark_is_not_answered_with_a_raw_fact(engine, registry, tctx):
     a = Orchestrator(engine, registry, [p]).send(tctx, "directeur_sportif",
                                                   "Le groupe a bien réagi après le dernier match, je suis content")
     assert a.route == "niveau1"  # discussion : pas de réponse factuelle sans IA
+
+
+def test_goals_question_with_the_name_after_the_verb():
+    from clubdirector.ai.router import classify
+
+    for q in ("Combien de buts a marqué Paulo Dybala ?", "Dybala a marqué combien de buts ?",
+              "Combien Dybala a-t-il marqué ?"):
+        intent = classify(q)
+        assert intent and intent.name == "player_goals" and "dybala" in intent.args["name"], q
+
+
+def test_politeness_hint_asks_to_answer_the_exact_message(engine, registry, tctx):
+    p = ScriptedProvider([StepResult("Avec plaisir, Coach.")])
+    Orchestrator(engine, registry, [p]).send(tctx, "directeur_technique", "Merci Paolo")
+    assert "un merci appelle" in p.history[-1]["content"]
