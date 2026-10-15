@@ -1,0 +1,27 @@
+# Limitations vérifiées et problèmes ouverts
+
+1. **Aucune validation sur une vraie carrière FM26** : l'environnement de la session 1 ne contenait
+   ni le jeu ni de sauvegarde. Tout ce qui touche au jeu reste 🟡.
+2. **Statistiques des saisons passées** : FM26 ne conserve dans la sauvegarde que la saison en cours
+   (fmsave). ClubDirector archive à chaque synchronisation ; une saison jamais synchronisée reste
+   inconnue et l'assistant le dit.
+3. **Scores partiels** : certains matchs joués n'ont pas de score décodable ; ils sont affichés
+   « score non disponible ». Un score connu n'est jamais écrasé par une absence de score.
+4. **Unité monétaire** : la sauvegarde stocke l'argent dans une unité interne. Sans étalonnage,
+   aucune comparaison avec un montant en euros n'est faite (outils en erreur explicite).
+5. **Brouillard de recrutement** non reproductible : les attributs visibles affichés pour les joueurs
+   d'autres clubs sont les valeurs réelles. CA/PA, attributs cachés et personnalité restent masqués
+   hors mode avancé confirmé.
+6. **Champs non confirmés par fmsave** (`age`, `club_uid`, `wage`, `ability`) : leur statut est
+   transmis à l'IA (`statut_champs`).
+7. **Non lus** : disponibilité du jour, compositions de match, dette, prix demandés, noms de
+   compétitions (pas de fichier de noms fourni), instructions tactiques détaillées, staff complet.
+8. **Identité de carrière** : un « Enregistrer sous » crée une nouvelle carrière (choix prudent) ;
+   la fusion manuelle n'est pas encore exposée dans l'UI.
+9. **Recherche par nom** : balayage `LIKE` (≈ 250 ms sur 100 000 joueurs) ; FTS5 prévu.
+10. **Synchronisation** : manuelle (UI/CLI) pour l'instant.
+11. **Plugin** : non compilé ni chargé dans FM26 ; détection du chargement de carrière non implémentée ;
+    entrée de menu native non réalisée.
+12. **Actions** : aucune action dans le jeu n'est disponible (aucun mécanisme prouvé).
+13. **Risque légal** : l'EULA SEGA générique restreint la rétro-ingénierie « sauf si la loi le
+    permet ». Le projet est limité au solo local, en lecture seule, sans contournement de protection.

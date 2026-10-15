@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+
+# Données utilisateur — ne jamais versionner
+*.sqlite3
+*.sqlite3-*
+plugin.token
+preferences.json
+config.toml
+audit-report.json
+snapshots/
+ui-dump-*.txt
+*.fm
+!backend/tests/fixtures/saves/*.fm
+
+# Divers
+node_modules/
+.DS_Store

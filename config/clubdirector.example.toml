@@ -1,0 +1,44 @@
+# Copier vers %LOCALAPPDATA%\ClubDirectorAI\config.toml (ou définir CLUBDIRECTOR_CONFIG).
+# AUCUNE clé API ici : utiliser CLUBDIRECTOR_SECRET_<REF> ou le trousseau Windows.
+
+# save_dirs = ["C:/Users/<vous>/Documents/Sports Interactive/Football Manager 26/games"]
+port = 8765
+snapshot_retention = 10
+
+[ai]
+mode = "local"            # local | hybride (niveaux 1-2) | premium (niveaux 1-3)
+monthly_budget_usd = 5.0
+max_tool_rounds = 6
+
+[[ai.providers]]
+name = "llama.cpp local"
+kind = "openai_compat"
+base_url = "http://127.0.0.1:8080/v1"   # llama-server --jinja ; Ollama : http://127.0.0.1:11434/v1
+model = "local-model"
+tier = 1
+
+# [[ai.providers]]
+# name = "Claude Haiku 5.5"
+# kind = "anthropic"
+# model = "claude-haiku-5-5"
+# api_key_ref = "anthropic"           # → CLUBDIRECTOR_SECRET_ANTHROPIC
+# tier = 2
+# input_cost_per_mtok = 0.10
+# output_cost_per_mtok = 0.50
+
+# [[ai.providers]]
+# name = "Claude Opus 5.5"
+# kind = "anthropic"
+# model = "claude-opus-5-5"
+# api_key_ref = "anthropic"
+# tier = 3
+# input_cost_per_mtok = 4.0
+# output_cost_per_mtok = 20.0
+
+# [[ai.providers]]
+# name = "OpenRouter"
+# kind = "openai_compat"
+# base_url = "https://openrouter.ai/api/v1"
+# model = "<modele>"
+# api_key_ref = "openrouter"
+# tier = 2
