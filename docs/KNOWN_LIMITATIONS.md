@@ -132,3 +132,8 @@
     une offre refusée par le club vendeur peut rester « en cours ». La taille du téléphone choisie dans
     Réglages demande la fenêtre recompilée (`dotnet build overlay\ClubDirector.Overlay -c Release`, fenêtre
     fermée) ; sinon, clic droit sur l'icône de la zone de notification.
+29. **Dynamique du vestiaire** : la hiérarchie (leaders, très influents, influents, autres) est celle que
+    le jeu calcule pour notre club seulement, à la date de sa dernière liste (souvent quelques jours avant
+    la sauvegarde) ; les seuils des groupes ont été vérifiés sur une seule sauvegarde. Les joueurs prêtés n'y
+    figurent pas. **L'état d'esprit (moral) n'est pas lu** : aucun champ de la sauvegarde ne reproduit à ce
+    jour l'écran du jeu ; le staff ne doit ni l'inventer ni le déduire.
