@@ -85,3 +85,14 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | FM26 avec BepInEx désactivé, `winhttp.dll` présent | **échec** | même message (journal BepInEx inchangé : le mod n'a pas tourné) |
 | FM26 sans `winhttp.dll` | **OK** | démarrage normal, aucune fenêtre de protection |
 | Conclusion | — | le chargeur Doorstop suffit à déclencher la protection ; injection suspendue, aucun contournement |
+
+### Session 2 (suite) — fenêtre externe, synchronisation automatique, identité du directeur
+| Test | Résultat | Détail |
+|---|---|---|
+| Fenêtre au-dessus de FM26 (FM26 ouvert) | **OK** | 460 px à droite, WS_EX_TOPMOST, rendu vérifié par capture ; reconnexion automatique au service |
+| Discussion dans la fenêtre (vraie carrière) | **OK** | prise de poste rendue (titres, listes, gras), 62 s en mode jeu |
+| Synchronisation automatique | **OK (tests)** | stabilité 20 s, sauvegardes `*backup*` ignorées, erreurs non bloquantes ; active sur le dossier `games` |
+| Détection du directeur sportif | **OK** | 11/11 directeurs réels = code 10 hors départements ; AS Roma → Francis Cagigao (confirmé par l'utilisateur) |
+| Présentation du directeur (vrai modèle) | **OK** | 63 s : identité, âge, arrivée, contrat, méthode issue de son profil, état des lieux conforme, 3 priorités |
+| Réponse à la bienvenue | **OK** | 35 s : remerciement bref, prêt à travailler, première étape concrète |
+| `pytest` backend | **112 / 112** | tests fenêtre (C#) 6/6, cœur du plugin 9/9 |

@@ -11,6 +11,7 @@ from typing import Any
 from sqlalchemy import Engine, func, insert, select
 
 from clubdirector.ai.club_brief import build_club_dossier
+from clubdirector.ai.director_identity import find_director
 from clubdirector.ai.persona import TAKE_OFFICE_REQUEST, build_system_prompt
 from clubdirector.ai.providers.base import IAIProvider, ProviderError
 from clubdirector.ai.router import answer_intent, classify, wants_premium
@@ -100,18 +101,28 @@ class Orchestrator:
         conv = self.conversations.create(tctx.ctx.career_id, "Prise de poste")
         return self.ask(tctx, TAKE_OFFICE_REQUEST, conversation_id=conv, force_tier=1, taking_office=True)
 
-    def _office_pending(self, tctx: ToolContext) -> bool:
-        return tctx.ctx.career_id not in tctx.prefs.office_taken
+    def director(self, tctx: ToolContext):
+        """Directeur sportif en poste dans la carrière (sauvegarde), ou None."""
+        return find_director(self.engine, tctx.ctx.career_id, tctx.ctx.club_uid, tctx.prefs.director_staff_uid)
 
-    def _mark_office_taken(self, tctx: ToolContext) -> None:
-        if tctx.ctx.career_id in tctx.prefs.office_taken:
-            return
-        tctx.prefs.office_taken.append(tctx.ctx.career_id)
+    def office_pending(self, tctx: ToolContext, director=None) -> bool:
+        """Vrai si le directeur en poste n'a pas encore fait sa prise de poste (nouvelle carrière ou nouveau directeur)."""
+        director = director if director is not None else self.director(tctx)
+        uid = director.uid if director else 0
+        return tctx.prefs.office_by_career.get(str(tctx.ctx.career_id)) != uid
+
+    def _mark_office_taken(self, tctx: ToolContext, director) -> None:
+        uid = director.uid if director else 0
+        key = str(tctx.ctx.career_id)
+        tctx.prefs.office_by_career[key] = uid
+        if tctx.ctx.career_id not in tctx.prefs.office_taken:
+            tctx.prefs.office_taken.append(tctx.ctx.career_id)
         if self.prefs_store is not None:
             prefs = self.prefs_store.load()
+            prefs.office_by_career[key] = uid
             if tctx.ctx.career_id not in prefs.office_taken:
                 prefs.office_taken.append(tctx.ctx.career_id)
-                self.prefs_store.save(prefs)
+            self.prefs_store.save(prefs)
 
     def ask(self, tctx: ToolContext, question: str, *, conversation_id: int | None = None,
             force_tier: int | None = None, taking_office: bool | None = None) -> ChatAnswer:
@@ -138,16 +149,17 @@ class Orchestrator:
             except LookupError as exc:
                 answer = ChatAnswer(f"Donnée non disponible : {exc}", "niveau0", conv, trace)
         else:
-            office = self._office_pending(tctx) if taking_office is None else taking_office
-            answer = self._llm(tctx, question, history, conv, trace, force_tier, office)
+            director = self.director(tctx)
+            office = self.office_pending(tctx, director) if taking_office is None else taking_office
+            answer = self._llm(tctx, question, history, conv, trace, force_tier, office, director)
             if office and answer.route.startswith("niveau"):
-                self._mark_office_taken(tctx)
+                self._mark_office_taken(tctx, director)
         self.conversations.add_message(conv, "assistant", answer.text, game_date=tctx.ctx.game_date,
                                        route=answer.route, tool_trace=trace)
         return answer
 
     def _llm(self, tctx: ToolContext, question: str, history: list[dict], conv: int, trace: list[dict],
-             force_tier: int | None, taking_office: bool = False) -> ChatAnswer:
+             force_tier: int | None, taking_office: bool = False, director=None) -> ChatAnswer:
         provider = self.choose_provider(question, force_tier)
         if provider is None:
             return ChatAnswer(
@@ -162,7 +174,7 @@ class Orchestrator:
             season=season_label(ctx.season_start_year), knowledge=tctx.prefs.knowledge_mode,
             memories=MemoryStore(self.engine).list(ctx.career_id),
             manager=ctx.manager_name, dossier=build_club_dossier(self.registry, tctx),
-            taking_office=taking_office,
+            taking_office=taking_office, identity=director,
         )
         tools = [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
                  for t in self.registry.for_llm()]

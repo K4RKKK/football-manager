@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Fenêtre ClubDirector au-dessus de FM26, HORS du processus du jeu (aucune injection, aucun accès
+    à la mémoire de FM26) : WinForms + WebView2 affichant http://127.0.0.1:8765/overlay.
+    dotnet build overlay/ClubDirector.Overlay -c Release
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ClubDirector.Overlay</AssemblyName>
+    <RootNamespace>ClubDirector.Overlay</RootNamespace>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Version>0.1.0</Version>
+    <!-- Le paquet WebView2 ajoute aussi sa variante WPF (WindowsBase 5.0) : sans effet pour WinForms. -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+</Project>

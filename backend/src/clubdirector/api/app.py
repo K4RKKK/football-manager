@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hmac
 import logging
+import threading
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,7 @@ from clubdirector.money import calibrate
 from clubdirector.preferences import Preferences, PreferenceStore
 from clubdirector.security.secrets import load_or_create_token, redact
 from clubdirector.sync.service import SyncService
+from clubdirector.sync.watcher import SaveWatcher
 from clubdirector.tools.catalog import build_registry
 from clubdirector.tools.presenters import player_full, player_summary
 from clubdirector.tools.registry import ToolContext
@@ -74,11 +76,26 @@ class AppState:
         self.token = load_or_create_token(settings.token_path)
         self.bridge = PluginBridge()
         self.sync_service = SyncService(self.engine, FmsaveSaveReader(), settings.snapshot_dir)
+        # Une seule synchronisation à la fois (manuelle ou automatique).
+        self.sync_lock = threading.Lock()
+        self.watcher = SaveWatcher(settings.save_dirs, self.sync_and_activate, poll_s=settings.auto_sync_poll_s,
+                                   settle_s=settings.auto_sync_settle_s)
+        self.watcher.status.enabled = settings.auto_sync
         providers, self.provider_errors = build_providers(settings)
         self.orchestrator = Orchestrator(self.engine, self.registry, providers, mode=settings.ai.mode,
                                          monthly_budget_usd=settings.ai.monthly_budget_usd,
                                          max_tool_rounds=settings.ai.max_tool_rounds,
                                          prefs_store=self.prefs_store)
+
+    def sync_and_activate(self, path: Path) -> dict:
+        """Synchronise une sauvegarde et en fait la carrière active (copie sûre, verrou commun)."""
+        with self.sync_lock:
+            res = self.sync_service.sync_save(path)
+            prune_snapshots(self.settings.snapshot_dir, self.settings.snapshot_retention)
+            prefs = self.prefs
+            prefs.active_career_id = res.career_id
+            self.prefs_store.save(prefs)
+        return asdict(res)
 
     @property
     def prefs(self) -> Preferences:
@@ -100,6 +117,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     state = AppState(settings)
     app = FastAPI(title="ClubDirector AI", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.cd = state
+    if settings.auto_sync:
+        state.watcher.start()  # relit chaque nouvelle sauvegarde FM26 (copie sûre)
     allowed_hosts = {f"127.0.0.1:{settings.port}", f"localhost:{settings.port}", "127.0.0.1", "localhost", "testserver"}
 
     @app.middleware("http")
@@ -125,6 +144,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
         return html.replace("__CLUBDIRECTOR_TOKEN__", state.token)
 
+    @app.get("/overlay", response_class=HTMLResponse)
+    def overlay() -> str:
+        """Panneau compact de discussion (fenêtre ClubDirector au-dessus de FM26)."""
+        html = (WEB_DIR / "overlay.html").read_text(encoding="utf-8")
+        return html.replace("__CLUBDIRECTOR_TOKEN__", state.token)
+
     @app.get("/api/health")
     def health():
         return {"status": "ok", "version": __version__}
@@ -148,9 +173,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 {"name": p.name, "model": p.model, "tier": p.tier} for p in state.orchestrator.providers],
                 "errors": state.provider_errors, "month_spend_usd": state.orchestrator.month_spend(),
                 "monthly_budget_usd": settings.ai.monthly_budget_usd},
+            "auto_sync": state.watcher.as_dict(),
+            "director": _director_status(),
             "save_dirs": [str(d) for d in settings.save_dirs],
             "data_dir": str(settings.home),
         }
+
+    def _director_status() -> dict:
+        prefs = state.prefs
+        try:
+            t = state.tool_context()
+        except CareerNotFound:
+            return {"name": prefs.director_name, "persona": prefs.persona, "office_taken": False, "identity": None}
+        d = state.orchestrator.director(t)
+        return {"name": d.name if d else prefs.director_name, "persona": prefs.persona,
+                "office_taken": not state.orchestrator.office_pending(t, d),
+                "identity": d.as_dict() if d else None}
 
     @app.get("/api/saves", dependencies=A)
     def saves():
@@ -158,11 +196,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/api/sync", dependencies=A)
     def sync(req: SyncRequest):
-        path = Path(req.path)
+        return _sync(Path(req.path))
+
+    @app.post("/api/sync/latest", dependencies=A)
+    def sync_latest():
+        """Synchronise la sauvegarde la plus récente (celle que l'entraîneur vient d'enregistrer)."""
+        found = discover_saves(settings.save_dirs)
+        if not found:
+            raise HTTPException(404, "Aucune sauvegarde FM26 trouvée dans les dossiers configurés.")
+        return _sync(found[0].path) | {"source": found[0].path.name}
+
+    def _sync(path: Path) -> dict:
         if path.suffix.lower() != ".fm":
             raise HTTPException(400, "Seuls les fichiers de sauvegarde .fm sont acceptés.")
+        if state.sync_lock.locked():
+            raise HTTPException(409, "Une synchronisation est déjà en cours (automatique ou manuelle).")
         try:
-            res = state.sync_service.sync_save(path)
+            return state.sync_and_activate(path)
         except FileNotFoundError as exc:
             raise HTTPException(404, str(exc)) from exc
         except SaveBusyError as exc:
@@ -170,11 +220,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except Exception as exc:  # lecture impossible : on informe sans planter le service
             log.exception("Synchronisation échouée")
             raise HTTPException(422, redact(f"Lecture de la sauvegarde impossible : {type(exc).__name__}: {exc}")) from exc
-        prune_snapshots(settings.snapshot_dir, settings.snapshot_retention)
-        prefs = state.prefs
-        prefs.active_career_id = res.career_id
-        state.prefs_store.save(prefs)
-        return asdict(res)
 
     @app.post("/api/careers/{career_id}/activate", dependencies=A)
     def activate(career_id: int):

@@ -73,6 +73,10 @@ class Settings(BaseModel):
     autonomy: AutonomyMode = "conseiller"
     persona: str = "equilibre"
     snapshot_retention: int = 10
+    # Synchronisation automatique dès que FM26 enregistre (sync/watcher.py).
+    auto_sync: bool = True
+    auto_sync_settle_s: float = 20.0
+    auto_sync_poll_s: float = 5.0
     ai: AIConfig = Field(default_factory=AIConfig)
 
     @property

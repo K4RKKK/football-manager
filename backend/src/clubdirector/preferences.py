@@ -40,6 +40,11 @@ class Preferences(BaseModel):
     active_career_id: int | None = None
     # Carrières dans lesquelles le directeur sportif a déjà fait sa prise de poste.
     office_taken: list[int] = Field(default_factory=list)
+    # Directeur ayant fait sa prise de poste, par carrière ("id carrière" -> uid du staff ; 0 = sans identité).
+    # Un nouveau directeur recruté dans FM26 a un autre uid : il se présente à son tour.
+    office_by_career: dict[str, int] = Field(default_factory=dict)
+    # Forcer l'identité du directeur sportif (uid du staff) si la détection automatique se trompe.
+    director_staff_uid: int | None = None
 
 
 class PreferenceStore:

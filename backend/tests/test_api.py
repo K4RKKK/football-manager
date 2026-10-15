@@ -71,3 +71,29 @@ def test_plugin_heartbeat_updates_live_status(client):
     assert r.json()["silent"] is True
     st = client.get("/api/plugin/status").json()
     assert st["state"] == "carriere_chargee" and st["plugin_version"] == "0.1.0"
+
+
+def test_overlay_page_injects_token_and_loads_offline(client):
+    html = client.get("/overlay").text
+    assert client.app.state.cd.token in html and "Directeur sportif IA" in html
+    assert "<script src=" not in html and "https://" not in html  # autonome, hors ligne
+
+
+def test_status_reports_director_and_office(client, game_dir):
+    client.post("/api/sync", json={"path": str(game_dir / SCORED.name)})
+    d = client.get("/api/status").json()["director"]
+    assert d["office_taken"] is False and d["name"]
+
+
+def test_sync_latest_picks_the_newest_save(client, game_dir):
+    import os
+    import time
+    newest = game_dir / SCORED.name
+    os.utime(newest, (time.time() + 60, time.time() + 60))
+    r = client.post("/api/sync/latest")
+    assert r.status_code == 200 and r.json()["source"] == SCORED.name
+
+
+def test_status_is_exposed_by_the_api(client):
+    st = client.get("/api/status").json()["auto_sync"]
+    assert st["enabled"] is False and st["syncs"] == 0

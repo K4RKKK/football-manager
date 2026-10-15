@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Directeur sportif IA</title>
+<style>
+:root{
+  --bg:#0B141B;--surface:#13212B;--surface2:#192A34;--border:#263C45;
+  --green:#29C77B;--green2:#65E5A5;--text:#F2F6F8;--muted:#9BAEB8;--warn:#E6B85D;--err:#E36E75;
+  --font:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.5 var(--font);overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+.app{display:flex;flex-direction:column;height:100%;border-left:1px solid var(--border)}
+
+/* En-tête */
+header{display:flex;align-items:center;gap:12px;padding:14px 14px 12px;background:linear-gradient(180deg,#13212B,#0F1B23);border-bottom:1px solid var(--border)}
+.avatar{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:700;letter-spacing:.5px;
+  background:radial-gradient(circle at 30% 25%,#3AD98E,#168A55);color:#06120C;box-shadow:0 0 0 2px #0B141B,0 0 0 3px #29C77B55}
+.who{min-width:0;flex:1}
+.who .name{font-weight:650;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .sub{color:var(--muted);font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-top:3px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--green);box-shadow:0 0 8px #29C77B99}.dot.warn{background:var(--warn)}.dot.err{background:var(--err)}
+.hbtn{flex:none;width:32px;height:32px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);display:grid;place-items:center;transition:.15s}
+.hbtn:hover{border-color:#3B5866;background:#1F3440}.hbtn:disabled{opacity:.45;cursor:default}
+.hbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.spin svg{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Fil */
+main{flex:1;overflow-y:auto;padding:16px 14px 8px;scroll-behavior:smooth}
+main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:#22363F;border-radius:8px}
+.msg{display:flex;gap:10px;margin:0 0 14px;animation:rise .22s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msg .mini{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;background:#168A55;color:#06120C;margin-top:2px}
+.bubble{min-width:0;max-width:100%;padding:10px 13px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border)}
+.msg.user{justify-content:flex-end}
+.msg.user .bubble{background:#173A2B;border-color:#245C43;max-width:86%;white-space:pre-wrap;word-break:break-word}
+.msg.err .bubble{border-color:#6B2E33;background:#2A1619}
+.bubble h1,.bubble h2,.bubble h3{font-size:14px;margin:12px 0 6px;color:var(--green2)}
+.bubble h1:first-child,.bubble h2:first-child,.bubble h3:first-child{margin-top:0}
+.bubble p{margin:0 0 8px}.bubble p:last-child{margin-bottom:0}
+.bubble ul,.bubble ol{margin:4px 0 8px;padding-left:20px}.bubble li{margin:2px 0}
+.bubble strong{color:#fff}.bubble hr{border:0;border-top:1px solid var(--border);margin:10px 0}
+.bubble code{background:#0E1920;padding:1px 5px;border-radius:5px;font-size:12.5px}
+.tablewrap{overflow-x:auto;margin:6px 0 10px}
+.bubble table{border-collapse:collapse;font-size:12.5px;width:100%}
+.bubble th,.bubble td{border-bottom:1px solid var(--border);padding:5px 8px;text-align:left;white-space:nowrap}
+.bubble th{color:var(--muted);font-weight:600}
+.meta{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:#0F1A21;border:1px solid var(--border);font-size:11px;color:var(--muted)}
+.chip.bad{border-color:#6B2E33;color:#F0A3A8}
+details.lim{margin-top:6px;font-size:11.5px;color:var(--warn)}
+details.lim summary{cursor:pointer;list-style:none}details.lim summary::-webkit-details-marker{display:none}
+details.lim ul{margin:4px 0 0;padding-left:18px;color:#D9C08A}
+
+/* Réflexion */
+.thinking .bubble{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.dots{display:inline-flex;gap:4px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+
+/* Accueil */
+.welcome{padding:6px 2px 4px}
+.card{border:1px solid var(--border);background:linear-gradient(160deg,#152631,#111D25);border-radius:14px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:15px}.card p{margin:0 0 12px;color:var(--muted);font-size:13px}
+.primary{border:0;border-radius:10px;padding:9px 14px;background:var(--green);color:#06120C;font-weight:650;transition:.15s}
+.primary:hover{background:var(--green2)}.primary:disabled{opacity:.5;cursor:default}
+.sugg-title{font-size:12px;color:var(--muted);margin:2px 0 8px}
+.suggestions{display:flex;flex-wrap:wrap;gap:7px}
+.sugg{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 11px;font-size:12.5px;transition:.15s;text-align:left}
+.sugg:hover{border-color:#29C77B88;background:#16302A}
+
+/* Saisie */
+footer{padding:10px 12px 12px;border-top:1px solid var(--border);background:#0E1920}
+.composer{display:flex;align-items:flex-end;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px 6px 6px 12px;transition:.15s}
+.composer:focus-within{border-color:#29C77B99;box-shadow:0 0 0 3px #29C77B1F}
+textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--text);font:14px/1.45 var(--font);max-height:140px;padding:6px 0}
+textarea::placeholder{color:#6F8590}
+.send{flex:none;width:36px;height:36px;border-radius:9px;border:0;background:var(--green);display:grid;place-items:center;transition:.15s}
+.send:hover{background:var(--green2)}.send:disabled{background:#2A3C45;cursor:default}
+.send svg{width:17px;height:17px;stroke:#06120C;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.hint{margin-top:6px;font-size:11px;color:#6F8590;display:flex;justify-content:space-between;gap:8px}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:#1C2F39;border:1px solid var(--border);padding:8px 12px;border-radius:10px;font-size:12.5px;box-shadow:0 8px 24px #0008;opacity:0;transition:.25s;pointer-events:none;max-width:90%}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="avatar" id="avatar">DS</div>
+    <div class="who">
+      <div class="name" id="dirName">Directeur sportif</div>
+      <div class="sub" id="clubLine">Connexion au service…</div>
+      <div class="pill"><span class="dot" id="aiDot"></span><span id="aiText">—</span></div>
+    </div>
+    <button class="hbtn" id="btnSync" title="Resynchroniser la dernière sauvegarde">
+      <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.9-3.9M4 5v4h4M4 13a8 8 0 0 0 14.9 3.9M20 19v-4h-4"/></svg></button>
+    <button class="hbtn" id="btnNew" title="Nouvelle discussion">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="hbtn" id="btnHide" title="Masquer (Échap)">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <main id="thread"></main>
+  <footer>
+    <div class="composer">
+      <textarea id="input" rows="1" placeholder="Écrivez à votre directeur sportif…" maxlength="4000"></textarea>
+      <button class="send" id="btnSend" title="Envoyer (Entrée)">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+    <div class="hint"><span>Entrée : envoyer · Maj+Entrée : nouvelle ligne</span><span id="hotkeyHint">Échap : masquer</span></div>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+const TOKEN = "__CLUBDIRECTOR_TOKEN__";
+const $ = (id) => document.getElementById(id);
+const thread = $("thread"), input = $("input");
+let status = null, convId = null, busy = false, lastKey = null, lastError = null, lastDirector;
+
+const SUGGESTIONS = [
+  "Fais-moi un bilan complet de notre effectif.",
+  "Quel est notre prochain match et que faut-il surveiller ?",
+  "Quels contrats de l'équipe première faut-il traiter en priorité ?",
+  "Qui sont nos joueurs les plus dangereux en xG et en xA ?",
+  "Trouve-moi cinq ailiers droits de moins de 24 ans qui conviendraient.",
+  "Comment avons-nous fini en championnat ces cinq dernières saisons ?",
+];
+
+// ------------------------------------------------------------------ hôte (fenêtre Windows)
+const host = window.chrome && window.chrome.webview ? window.chrome.webview : null;
+function hostSend(msg) { try { if (host) host.postMessage(msg); } catch (e) {} }
+if (host) host.addEventListener("message", (e) => {
+  if (e.data === "focus") { input.focus(); }
+  else if (typeof e.data === "string" && e.data.startsWith("hotkey:")) { $("hotkeyHint").textContent = "Échap / " + e.data.slice(7) + " : masquer"; }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hostSend("hide"); });
+$("btnHide").onclick = () => hostSend("hide");
+
+// ------------------------------------------------------------------ API
+async function api(path, opts = {}) {
+  const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json", "X-ClubDirector-Token": TOKEN, ...(opts.headers || {})}});
+  if (!r.ok) {
+    let detail = r.status + "";
+    try { const j = await r.json(); detail = j.detail || JSON.stringify(j); } catch (e) {}
+    throw new Error(detail);
+  }
+  return r.json();
+}
+function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3800); }
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} },
+};
+
+// ------------------------------------------------------------------ Markdown sûr (texte échappé d'abord)
+function esc(s) { return s.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function inline(s) {
+  return esc(s)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+}
+function md(src) {
+  const lines = (src || "").replace(/\r/g, "").split("\n");
+  let html = "", i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (!l.trim()) { i++; continue; }
+    let m;
+    if ((m = l.match(/^(#{1,4})\s+(.*)$/))) { html += `<h3>${inline(m[2].replace(/\*\*/g, ""))}</h3>`; i++; continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { html += "<hr>"; i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(l)) {
+      const rows = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) { rows.push(lines[i]); i++; }
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+      const body = rows.filter((r) => !/^[\s|:-]+$/.test(r)); // retire la ligne de séparation |---|
+      if (body.length) {
+        const head = cells(body[0]);
+        html += '<div class="tablewrap"><table><thead><tr>' + head.map((c) => `<th>${inline(c)}</th>`).join("") + "</tr></thead><tbody>";
+        for (const r of body.slice(1)) html += "<tr>" + cells(r).map((c) => `<td>${inline(c)}</td>`).join("") + "</tr>";
+        html += "</tbody></table></div>";
+      }
+      continue;
+    }
+    if (/^\s*([-*•]|\d+[.)])\s+/.test(l)) {
+      const ordered = /^\s*\d+[.)]/.test(l);
+      html += ordered ? "<ol>" : "<ul>";
+      while (i < lines.length && /^\s*([-*•]|\d+[.)])\s+/.test(lines[i])) {
+        html += `<li>${inline(lines[i].replace(/^\s*([-*•]|\d+[.)])\s+/, ""))}</li>`; i++;
+      }
+      html += ordered ? "</ol>" : "</ul>";
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|\s*\||\s*([-*•]|\d+[.)])\s+|\s*-{3,}\s*$)/.test(lines[i])) { para.push(lines[i]); i++; }
+    html += `<p>${para.map(inline).join("<br>")}</p>`;
+  }
+  return html;
+}
+
+// ------------------------------------------------------------------ rendu du fil
+function initials(name) { const w = (name || "DS").split(/\s+/).filter(Boolean); return ((w[0] || "D")[0] + (w[1] || w[0] || "S")[0]).toUpperCase(); }
+function scrollEnd() { thread.scrollTop = thread.scrollHeight; }
+function addUser(text) {
+  const d = document.createElement("div"); d.className = "msg user";
+  d.innerHTML = `<div class="bubble">${esc(text)}</div>`; thread.appendChild(d); scrollEnd();
+}
+function addDirector(ans, opts = {}) {
+  const d = document.createElement("div"); d.className = "msg" + (opts.error ? " err" : "");
+  const tools = ans.tools || [], lim = [...new Set(ans.limitations || [])];
+  const route = {niveau0: "réponse directe (sans IA)", niveau1: "IA locale", niveau2: "IA économique", niveau3: "IA avancée", indisponible: "IA indisponible"}[ans.route] || ans.route || "";
+  let meta = "";
+  if (!opts.error && (route || tools.length)) {
+    meta = `<div class="meta"><span>${esc(route)}${opts.seconds ? " · " + opts.seconds + " s" : ""}</span>` +
+      tools.map((t) => `<span class="chip${t.ok === false ? " bad" : ""}" title="${esc(JSON.stringify(t.args || {}))}">${esc(t.tool)}</span>`).join("") + "</div>";
+  }
+  const limHtml = lim.length ? `<details class="lim"><summary>⚠ ${lim.length} limite${lim.length > 1 ? "s" : ""} des données</summary><ul>${lim.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : "";
+  d.innerHTML = `<div class="mini">${esc(initials(status && status.director ? status.director.name : ""))}</div><div class="bubble">${md(ans.text)}${meta}${limHtml}</div>`;
+  thread.appendChild(d); scrollEnd();
+}
+function thinking() {
+  const d = document.createElement("div"); d.className = "msg thinking";
+  d.innerHTML = `<div class="mini">…</div><div class="bubble"><span class="dots"><i></i><i></i><i></i></span><span class="label">Le directeur étudie les données du club… <span class="t">0</span> s</span></div>`;
+  thread.appendChild(d); scrollEnd();
+  const t0 = Date.now(); const h = setInterval(() => { d.querySelector(".t").textContent = Math.round((Date.now() - t0) / 1000); }, 500);
+  return { done() { clearInterval(h); d.remove(); return Math.round((Date.now() - t0) / 1000); } };
+}
+function arrivalCard(dir, club) {
+  const id = dir.identity;
+  if (id) {
+    const since = id.contract_start ? ` Arrivé le ${frDate(id.contract_start)}, sous contrat jusqu'au ${frDate(id.contract_end)}.` : "";
+    return `<div class="card"><h2>${esc(id.name)} prend ses fonctions</h2>
+      <p>Votre nouveau directeur sportif${id.age ? ", " + id.age + " ans" : ""}, a étudié ${esc(club)} à partir de votre sauvegarde.${since} Il veut se présenter et vous exposer ses priorités ; souhaitez-lui la bienvenue ensuite.</p>
+      <button class="primary btnOffice">Recevoir sa présentation</button></div>`;
+  }
+  return `<div class="card"><h2>Votre directeur sportif prend ses fonctions</h2>
+    <p>Aucun directeur sportif n'est en poste dans votre sauvegarde : le directeur IA travaille sans identité de jeu. S'il en arrive un, il se présentera.</p>
+    <button class="primary btnOffice">Recevoir sa prise de poste</button></div>`;
+}
+function showArrival() {
+  if (!status || !status.director || !status.active) return;
+  const w = document.createElement("div"); w.className = "welcome";
+  w.innerHTML = arrivalCard(status.director, status.active.club_name);
+  thread.appendChild(w); scrollEnd();
+  w.querySelector(".btnOffice").onclick = takeOffice;
+}
+function welcome() {
+  thread.innerHTML = "";
+  const w = document.createElement("div"); w.className = "welcome";
+  const dir = status && status.director;
+  const club = status && status.active ? status.active.club_name : null;
+  let html = "";
+  if (club && dir && !dir.office_taken) {
+    html += arrivalCard(dir, club);
+  } else if (!club) {
+    html += `<div class="card"><h2>Aucune carrière synchronisée</h2><p>Sauvegardez votre partie dans FM26, puis cliquez sur ⟳ pour que le directeur lise la sauvegarde la plus récente.</p></div>`;
+  }
+  html += `<div class="sugg-title">Suggestions</div><div class="suggestions">` +
+    SUGGESTIONS.map((s) => `<button class="sugg">${esc(s)}</button>`).join("") + "</div>";
+  w.innerHTML = html; thread.appendChild(w);
+  w.querySelectorAll(".sugg").forEach((b) => b.onclick = () => send(b.textContent));
+  w.querySelectorAll(".btnOffice").forEach((b) => b.onclick = takeOffice);
+}
+
+// ------------------------------------------------------------------ actions
+function setBusy(v) { busy = v; $("btnSend").disabled = v; $("btnSync").disabled = v; $("btnNew").disabled = v; }
+async function send(text) {
+  text = (text || "").trim(); if (!text || busy) return;
+  if (thread.querySelector(".welcome")) thread.innerHTML = "";
+  addUser(text); input.value = ""; autosize(); setBusy(true);
+  const th = thinking();
+  try {
+    const ans = await api("/api/chat", {method: "POST", body: JSON.stringify({question: text, conversation_id: convId})});
+    const s = th.done();
+    convId = ans.conversation_id; saveConv();
+    addDirector(ans, {seconds: s});
+    if (ans.route && ans.route.startsWith("niveau") && ans.route !== "niveau0" && status && status.director) status.director.office_taken = true;
+  } catch (e) {
+    th.done(); addDirector({text: "Le service n'a pas pu répondre : " + e.message}, {error: true});
+  } finally { setBusy(false); input.focus(); }
+}
+async function takeOffice() {
+  if (busy) return; thread.innerHTML = ""; setBusy(true);
+  const th = thinking();
+  try {
+    const ans = await api("/api/director/take-office", {method: "POST"});
+    const s = th.done(); convId = ans.conversation_id; saveConv(); addDirector(ans, {seconds: s});
+    if (status && status.director) status.director.office_taken = true;
+  } catch (e) { th.done(); addDirector({text: "Prise de poste impossible : " + e.message}, {error: true}); }
+  finally { setBusy(false); input.focus(); }
+}
+async function syncLatest() {
+  if (busy) return; setBusy(true); $("btnSync").classList.add("spin");
+  toast("Lecture de la dernière sauvegarde (copie sûre)… cela peut prendre 2 à 3 minutes.");
+  try {
+    const r = await api("/api/sync/latest", {method: "POST"});
+    toast(r.reused ? "Sauvegarde déjà à jour." : `Synchronisé : ${r.source} — date du jeu ${frDate(r.game_date)}.`);
+    await loadStatus();
+  } catch (e) { toast("Synchronisation impossible : " + e.message); }
+  finally { $("btnSync").classList.remove("spin"); setBusy(false); }
+}
+$("btnSync").onclick = syncLatest;
+$("btnNew").onclick = () => { convId = null; saveConv(); welcome(); input.focus(); };
+$("btnSend").onclick = () => send(input.value);
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input.value); } });
+function autosize() { input.style.height = "auto"; input.style.height = Math.min(140, input.scrollHeight) + "px"; }
+input.addEventListener("input", autosize);
+
+// ------------------------------------------------------------------ état
+function frDate(d) { if (!d) return "?"; const [y, m, j] = d.slice(0, 10).split("-"); return `${j}/${m}/${y}`; }
+function convKey() { return "cd.conv." + (status && status.active ? status.active.career_id : "none"); }
+function saveConv() { store.set(convKey(), convId == null ? null : String(convId)); }
+async function loadStatus() {
+  status = await api("/api/status");
+  const dir = status.director || {name: "Directeur sportif"};
+  const a = status.active;
+  $("dirName").textContent = dir.name || "Directeur sportif";
+  $("avatar").textContent = initials(dir.name);
+  $("clubLine").textContent = a ? `${a.club_name || "Club"} · date du jeu ${frDate(a.game_date)}` : "Aucune carrière synchronisée";
+  const as = status.auto_sync || {};
+  const key = a ? a.career_id + ":" + a.game_date + ":" + a.snapshot_id : null;
+  if (lastKey && key && key !== lastKey) toast(`Données à jour : ${a.club_name} au ${frDate(a.game_date)} (nouvelle sauvegarde lue).`);
+  if (as.last_error && as.last_error !== lastError) toast("Lecture automatique impossible : " + as.last_error);
+  lastKey = key; lastError = as.last_error;
+  const dirUid = dir.identity ? dir.identity.uid : 0;
+  if (lastDirector !== undefined && dirUid !== lastDirector && !dir.office_taken) {
+    toast(dir.identity ? `Nouveau directeur sportif : ${dir.identity.name} vient d'arriver au club.` : "Le poste de directeur sportif est vacant dans la sauvegarde.");
+    if (!thread.querySelector(".welcome")) showArrival();
+  }
+  lastDirector = dirUid;
+  const ai = status.ai || {}, errs = ai.errors || [], prov = ai.providers || [];
+  let cls = "ok", txt = prov.length ? "IA : " + prov.map((p) => p.name).join(", ") : "Sans IA : faits seulement";
+  if (!prov.length) cls = "warn";
+  if (errs.length) { cls = "warn"; txt += " (configuration à vérifier)"; }
+  if (as.in_progress) { cls = "warn"; txt = "Lecture de la nouvelle sauvegarde… (" + as.in_progress + ")"; }
+  else if (as.enabled) { txt += " · synchro auto"; }
+  $("aiDot").className = "dot " + cls; $("aiText").textContent = txt;
+}
+async function loadHistory() {
+  const saved = store.get(convKey());
+  if (!saved) return false;
+  try {
+    const msgs = await api("/api/conversations/" + encodeURIComponent(saved));
+    if (!msgs.length) return false;
+    convId = Number(saved); thread.innerHTML = "";
+    for (const m of msgs) {
+      if (m.role === "user") addUser(m.content);
+      else if (m.role === "assistant") addDirector({text: m.content, route: m.route, tools: (m.tool_trace || [])});
+    }
+    return true;
+  } catch (e) { return false; }
+}
+(async function start() {
+  try { await loadStatus(); } catch (e) {
+    $("clubLine").textContent = "Service ClubDirector injoignable"; $("aiDot").className = "dot err"; $("aiText").textContent = e.message;
+  }
+  if (!(await loadHistory())) welcome();
+  else if (status && status.director && status.active && !status.director.office_taken) showArrival();
+  input.focus();
+  // Suivi en continu de la carrière : chaque sauvegarde du jeu est relue automatiquement par le service.
+  setInterval(() => { loadStatus().catch(() => {}); }, 10000);
+})();
+</script>
+</body>
+</html>

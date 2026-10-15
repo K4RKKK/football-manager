@@ -1,12 +1,13 @@
 ﻿<#
-  Lance tout ClubDirector AI : l'IA locale (llama-server) puis le service (http://127.0.0.1:8765).
+  Lance tout ClubDirector AI : l'IA locale (llama-server), la fenêtre ClubDirector (au-dessus de FM26,
+  raccourci Ctrl+Alt+D par défaut) puis le service (http://127.0.0.1:8765).
   - L'IA est démarrée dans sa propre fenêtre réduite si elle ne répond pas déjà sur 127.0.0.1:8080.
   - Le service attend que l'IA soit prête (chargement du modèle : ~10-60 s), puis démarre.
   Par défaut l'IA démarre en MODE JEU (moins de mémoire vidéo, pour jouer à FM26 en même temps).
   Usage : double-cliquer « Lancer ClubDirector.cmd » à la racine du projet,
           ou : powershell -ExecutionPolicy Bypass -File scripts\start_clubdirector.ps1 [-SansIA] [-PleinePuissance]
 #>
-param([switch]$SansIA, [switch]$PleinePuissance)
+param([switch]$SansIA, [switch]$PleinePuissance, [switch]$SansFenetre)
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 $llmUrl = "http://127.0.0.1:8080/health"
@@ -33,6 +34,20 @@ if (-not $SansIA) {
       Start-Sleep -Seconds 2
     }
     if (Test-Llm) { Write-Host "IA locale prête." }
+  }
+}
+
+if (-not $SansFenetre) {
+  $exe = Join-Path $root "overlay\ClubDirector.Overlay\bin\Release\net8.0-windows\ClubDirector.Overlay.exe"
+  if (-not (Test-Path $exe)) {
+    Write-Host "Première utilisation : compilation de la fenêtre ClubDirector..."
+    dotnet build (Join-Path $root "overlay\ClubDirector.Overlay") -c Release --nologo -v q | Out-Null
+  }
+  if (Test-Path $exe) {
+    Start-Process $exe
+    Write-Host "Fenêtre ClubDirector lancée (afficher / masquer : voir %LOCALAPPDATA%\ClubDirectorAI\overlay.json, Ctrl+Alt+D par défaut)."
+  } else {
+    Write-Warning "Fenêtre ClubDirector non compilée : utilisez http://127.0.0.1:8765/overlay dans un navigateur."
   }
 }
 

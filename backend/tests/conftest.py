@@ -38,7 +38,7 @@ def game_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def settings(tmp_path: Path, game_dir: Path) -> Settings:
-    s = Settings(home=tmp_path / "home", save_dirs=[game_dir])
+    s = Settings(home=tmp_path / "home", save_dirs=[game_dir], auto_sync=False)
     s.ensure_dirs()
     return s
 

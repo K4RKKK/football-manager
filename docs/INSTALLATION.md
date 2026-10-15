@@ -40,7 +40,14 @@ Options : `scripts\start_clubdirector.ps1 -PleinePuissance` (jeu fermé) ou `-Sa
 Le directeur sportif fait sa **prise de poste** à la première conversation IA d'une carrière
 (ou à la demande : `uv run clubdirector prise-de-poste`).
 
-## 4. Plugin FM26 (expérimental, non validé)
+## 3 ter. Fenêtre ClubDirector au-dessus du jeu
+- Lancée par `Lancer ClubDirector.cmd` (compilée au premier lancement : `dotnet build overlay\ClubDirector.Overlay -c Release`).
+- **Ctrl+Alt+D** : afficher / masquer (même quand FM26 a le focus) ; Échap : masquer ; icône « DS » dans la zone de notification.
+- FM26 doit être en **fenêtré sans bordure** (Préférences → Interface → mode d'affichage).
+- Réglages : `%LOCALAPPDATA%\ClubDirectorAI\overlay.json` (raccourci, largeur, côté, opacité).
+- La synchronisation est automatique à chaque sauvegarde du jeu ; bouton ⟳ pour forcer la lecture de la dernière sauvegarde.
+
+## 4. Plugin FM26 (expérimental — bloqué par la protection du jeu, voir KNOWN_LIMITATIONS 14)
 1. Fermer FM26. Installer BepInEx 6 Bleeding Edge IL2CPP ≥ build 738 (pack Thunderstore FM26 conseillé).
 2. Dans `doorstop_config.ini` : `ignore_disable_switch = true`.
 3. Lancer FM26 une fois (génération de `BepInEx\interop`), le fermer.

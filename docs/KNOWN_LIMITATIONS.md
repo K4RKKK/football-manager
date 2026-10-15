@@ -41,3 +41,13 @@
     ClubDirector reste utilisable hors du processus du jeu (sauvegardes, IA, interface externe).
     État laissé : `winhttp.dll` mis de côté dans `C:\AI\downloads\fm26-desactive\`, dossier
     `BepInEx\` inerte (désinstallation complète : `scripts\uninstall_bepinex.ps1`).
+
+15. **Temps réel = à chaque sauvegarde** : sans plugin dans le jeu, le directeur voit l'état de la
+    dernière sauvegarde. La synchronisation automatique la relit 20 s après chaque enregistrement
+    (≈ 2 à 3 min de lecture sur une grosse base). Régler la sauvegarde automatique de FM26 sur une
+    fréquence élevée pour suivre la partie au plus près.
+16. **Fonction du staff** : seul le code « directeur sportif » (10, hors départements) est établi ;
+    les autres fonctions (adjoint, chef recruteur…) restent non décodées. Forçage possible :
+    `director_staff_uid` dans `preferences.json`.
+17. **Fenêtre externe** : visible au-dessus de FM26 en mode « fenêtré sans bordure » ; un plein écran
+    exclusif passe devant toute fenêtre.
