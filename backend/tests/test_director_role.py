@@ -214,3 +214,11 @@ def test_the_detected_message_type_guides_the_reply(engine, registry, tctx):
     assert "type de message : DEMANDE" in p.history[-1]["content"]
     stored = [m["content"] for m in orch.conversations.messages(orch.thread(tctx, "directeur_sportif"))]
     assert "Consigne automatique" not in " ".join(stored)  # la consigne n'est jamais enregistrée
+
+
+def test_dossier_names_the_whole_first_team_so_the_model_never_invents_players(registry, tctx):
+    dossier = build_club_dossier(registry, tctx)
+    roster = next(line for line in dossier.splitlines() if "Effectif COMPLET" in line)
+    for player in tctx.repo.squad(tctx.ctx):
+        assert player["name"] in roster
+    assert "aucun autre joueur n'est à nous" in roster

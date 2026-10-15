@@ -9,8 +9,10 @@ le directeur reste tenu d'interroger les outils.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
+from clubdirector.positions import split_positions
 from clubdirector.tools.registry import ToolContext, ToolRegistry, ToolResult
 
 log = logging.getLogger(__name__)
@@ -43,6 +45,47 @@ def _match(m: dict) -> str:
     return f"{_fr(m['date'])} — {m['domicile']} – {m['exterieur']}{comp}"
 
 
+# Ligne d'un joueur d'après son premier poste (mêmes regroupements que l'app Effectif du téléphone).
+LINES = (
+    ("Gardiens", lambda p: p == "GK"),
+    ("Défenseurs", lambda p: bool(re.fullmatch(r"D[CLR]?|WB[LR]?", p))),
+    ("Milieux", lambda p: bool(re.fullmatch(r"DM|M[CLR]?|AMC", p))),
+    ("Attaquants", lambda p: True),
+)
+
+
+def _roster(tctx: ToolContext) -> str | None:
+    """Liste nominative de l'équipe première par ligne, avec le temps de jeu de la saison.
+
+    Sans elle, le modèle complétait une composition avec sa mémoire du football réel (joueurs
+    partis depuis, jamais présents dans la sauvegarde)."""
+    try:
+        rows = tctx.repo.squad(tctx.ctx)
+        season = tctx.repo.season_lines(tctx.ctx, [r["uid"] for r in rows])
+    except Exception as exc:  # noqa: BLE001
+        log.debug("dossier du club : effectif indisponible (%s)", exc)
+        return None
+    if not rows:
+        return None
+    groups: dict[str, list[str]] = {title: [] for title, _ in LINES}
+    for r in sorted(rows, key=lambda r: -((season.get(r["uid"]) or {}).get("minutes") or 0)):
+        positions = split_positions(r.get("positions"))
+        first = positions[0] if positions else ""
+        title = next(t for t, test in LINES if test(first))
+        s = season.get(r["uid"]) or {}
+        bits = [f"{r['age']} ans" if r.get("age") else None, "/".join(positions) or None, f"{s.get('minutes') or 0} min"]
+        if s.get("goals"):
+            bits.append(f"{s['goals']} b")
+        if s.get("assists"):
+            bits.append(f"{s['assists']} pd")
+        if r.get("on_loan"):
+            bits.append("en prêt")
+        groups[title].append(f"{r['name']} ({', '.join(b for b in bits if b)})")
+    body = " ; ".join(f"{title} : {', '.join(names)}" for title, names in groups.items() if names)
+    return ("Effectif COMPLET de l'équipe première (aucun autre joueur n'est à nous ; minutes = saison en cours) : "
+            + body)
+
+
 def build_club_dossier(registry: ToolRegistry, tctx: ToolContext) -> str:
     ctx = tctx.ctx
     if ctx.club_uid is None:
@@ -62,6 +105,9 @@ def build_club_dossier(registry: ToolRegistry, tctx: ToolContext) -> str:
         per_team = club.get("joueurs_par_equipe") or {}
         extra = f" (toutes équipes : {sum(per_team.values())})" if per_team else ""
         lines.append(f"Équipe première : {club['effectif']} joueurs, âge moyen {club.get('age_moyen')} ans{extra}")
+    roster = _roster(tctx)
+    if roster:
+        lines.append(roster)
 
     recent = _call(registry, tctx, "get_recent_matches", limit=3) or []
     if recent:
