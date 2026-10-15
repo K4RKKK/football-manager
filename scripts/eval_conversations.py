@@ -114,7 +114,8 @@ def wait_llm_free(max_wait_s: float = 900) -> None:
     while time.time() - t0 < max_wait_s:
         try:
             slots = httpx.get(f"{LLM}/slots", timeout=3).json()
-            if not any(s.get("is_processing") for s in slots):
+            # En redémarrage, le serveur répond {"error": …} : on patiente comme s'il était occupé.
+            if isinstance(slots, list) and not any(s.get("is_processing") for s in slots):
                 return
         except (httpx.HTTPError, ValueError):
             pass  # serveur occupé ou en redémarrage : on patiente
@@ -288,11 +289,16 @@ def run(copy: Path, roles: list[str], ids: set[str] | None, label: str) -> Path:
             for i, turn in enumerate(conv["turns"]):
                 question = fill(turn["text"], v)
                 kind = message_kind(question, previous)
-                wait_llm_free()
-                events: list[dict] = []
-                t0 = time.perf_counter()
-                ans = orch.ask(tctx, question, conversation_id=cid, role=role, member=member, on_event=events.append)
-                dt = time.perf_counter() - t0
+                for _attempt in range(3):  # IA locale relancée pendant la réponse : on rejoue le tour
+                    wait_llm_free()
+                    events: list[dict] = []
+                    t0 = time.perf_counter()
+                    ans = orch.ask(tctx, question, conversation_id=cid, role=role, member=member, on_event=events.append)
+                    dt = time.perf_counter() - t0
+                    if ans.route != "indisponible":
+                        break
+                    print(f"        (IA indisponible, tour rejoué : {ans.text[:120]})")
+                    time.sleep(20)
                 tools = [t["tool"] for t in ans.tools]
                 xi = None
                 lineup_call = next((t for t in ans.tools if t["tool"] == "propose_lineup" and t.get("ok")), None)
