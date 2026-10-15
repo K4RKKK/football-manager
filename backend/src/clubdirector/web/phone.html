@@ -734,7 +734,8 @@ function renderContacts() {
     const parts = name.split(" "); const last = parts.length > 1 ? parts.pop() : ""; const first = parts.join(" ");
     b.insertAdjacentHTML("beforeend", `<span class="meta"><span class="txt"><div class="name">${esc(first)} <b>${esc(last)}</b></div>
       <div class="role">${esc(c.label)}${c.can_chat ? "" : " · poste vacant"}</div></span>${c.unread ? `<span class="pill">${c.unread}</span>` : ""}</span>`);
-    b.onclick = () => openCard(role, "contacts");
+    // Toucher un contact ouvre directement la discussion ; la fiche s'ouvre depuis l'en-tête du fil.
+    b.onclick = () => (c.can_chat ? openChat(role, "contacts") : openCard(role, "contacts"));
     list.appendChild(b);
   }
 }
