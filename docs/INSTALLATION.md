@@ -17,12 +17,28 @@ uv run clubdirector serve    # puis ouvrir http://127.0.0.1:8765
 ```
 Données : `%LOCALAPPDATA%\ClubDirectorAI` (base, copies de sauvegarde, jeton, préférences).
 
-## 3. IA locale (optionnel, recommandé)
-llama.cpp (build Vulkan pour la RX 9070 XT) :
-`llama-server -m <modele.gguf> --jinja -ngl 99 --port 8080` — le paramètre `--jinja` est requis
-pour les appels d'outils. Ollama : configurer `base_url = "http://127.0.0.1:11434/v1"`.
-Voir `config/clubdirector.example.toml` (copier en `%LOCALAPPDATA%\ClubDirectorAI\config.toml`).
-Clés API : variable `CLUBDIRECTOR_SECRET_<REF>` ou trousseau Windows — jamais dans le fichier.
+## 3. IA locale (installée et testée en session 2)
+- Moteur : llama.cpp b11658 Vulkan — `C:\AI\llama.cpp-b11658-vulkan\` (empreinte SHA-256 vérifiée).
+- Modèle : Gemma 4 26B-A4B (unsloth UD-IQ4_XS, Apache 2.0) — `C:\AI\models\gemma-4-26B-A4B-it\`.
+- Chemins modifiables : variables `CLUBDIRECTOR_LLM_SERVER`, `CLUBDIRECTOR_LLM_MODEL`, `CLUBDIRECTOR_LLM_DEVICE`.
+- Démarrer seule : `powershell -ExecutionPolicy Bypass -File scripts\start_llm.ps1 [-ModeJeu] [-CoucheCpu N]`
+  (127.0.0.1:8080, carte dédiée `Vulkan0`, contexte 32k).
+
+| Mode | VRAM | Génération | Usage |
+|---|---:|---:|---|
+| pleine puissance | 14,9 Go | ~116 tokens/s | FM26 fermé |
+| `-ModeJeu` (12 couches d'experts en RAM, défaut du lanceur) | 11,4 Go | ~41 tokens/s | FM26 ouvert |
+| `-ModeJeu -CoucheCpu 20` | 8,7 Go | ~29 tokens/s | si FM26 manque de mémoire vidéo |
+
+Config ClubDirector : `%LOCALAPPDATA%\ClubDirectorAI\config.toml` (fournisseur `llama.cpp local`,
+modèle `clubdirector-local`). Clés API éventuelles : variable `CLUBDIRECTOR_SECRET_<REF>` ou trousseau.
+
+## 3 bis. Tout lancer d'un clic
+Double-cliquer **`Lancer ClubDirector.cmd`** (racine du projet) : l'IA démarre en mode jeu dans une
+fenêtre réduite « ClubDirector IA », puis le service sur http://127.0.0.1:8765.
+Options : `scripts\start_clubdirector.ps1 -PleinePuissance` (jeu fermé) ou `-SansIA`.
+Le directeur sportif fait sa **prise de poste** à la première conversation IA d'une carrière
+(ou à la demande : `uv run clubdirector prise-de-poste`).
 
 ## 4. Plugin FM26 (expérimental, non validé)
 1. Fermer FM26. Installer BepInEx 6 Bleeding Edge IL2CPP ≥ build 738 (pack Thunderstore FM26 conseillé).

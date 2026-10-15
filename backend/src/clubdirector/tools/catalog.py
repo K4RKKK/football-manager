@@ -36,6 +36,26 @@ from clubdirector.tools.registry import (
     ToolSpec,
 )
 
+
+def _season_stat_columns() -> tuple[str, ...]:
+    """Colonnes numériques de fmsave.PlayerSeasonStats (y compris les colonnes calculées par 90 minutes)."""
+    import dataclasses
+    import typing
+
+    import fmsave
+    from fmsave import export
+
+    hints = typing.get_type_hints(fmsave.PlayerSeasonStats)
+    skip = {"player_uid", "team_id", "club_uid", "team_slot"}
+    numeric = {f.name for f in dataclasses.fields(fmsave.PlayerSeasonStats)
+               if f.name not in skip and any(x in (int, float) for x in typing.get_args(hints[f.name]) or (hints[f.name],))}
+    computed = set(getattr(fmsave.PlayerSeasonStats, "COMPUTED_FIELDS", ()))
+    return tuple(c for c in export.column_names(fmsave.PlayerSeasonStats) if c in numeric or c in computed)
+
+
+SEASON_STATS = _season_stat_columns()
+SeasonStat = Literal[SEASON_STATS]  # type: ignore[valid-type]
+
 NOT_PROVEN = (
     "Exécution dans FM26 non prouvée : aucun mécanisme d'action n'a encore été validé dans le jeu. "
     "Je peux préparer l'opération, mais pas l'exécuter."
@@ -71,10 +91,14 @@ class MatchOnDateArgs(ToolArgs):
 
 
 class TopStatArgs(ToolArgs):
-    stat: Literal["goals", "assists", "average_rating", "minutes", "player_of_the_match", "expected_goals"] = "goals"
+    stat: SeasonStat = Field("goals", description="Statistique : buts, passes décisives, xG, xA (expected_assists), passes clés, "
+                             "passes progressives, centres, dribbles, tacles, interceptions, distance, sprints, versions *_per_90…")
     scope: Literal["club", "tous"] = "club"
     season_start_year: int | None = None
     relative_season: int | None = Field(None, description="0 = saison en cours, -1 = précédente.")
+    competitions: Literal["overall", "league", "cup", "continental", "international"] = Field(
+        "overall", description="Périmètre : toutes compétitions (overall), championnat, coupes, coupes d'Europe, sélection.")
+    min_minutes: int = Field(0, ge=0, description="Minutes minimum (conseillé pour les stats par 90 minutes).")
     limit: int = Field(5, ge=1, le=50)
 
 
@@ -483,6 +507,17 @@ def build_registry() -> ToolRegistry:
     @T("get_top_players_stat", "Classement des joueurs sur une statistique de saison archivée (buteurs, passeurs, notes...).", "lecture", TopStatArgs)
     def get_top_players_stat(t: ToolContext, a: TopStatArgs):
         season = _season(t, a.season_start_year, a.relative_season)
+        if season == t.ctx.season_start_year and a.stat in SEASON_STATS:
+            # Saison en cours : toutes les colonnes de fmsave (table miroir du dernier relevé).
+            rows = t.repo.mirror_season_stats(t.ctx, a.stat, kind=a.competitions, min_minutes=a.min_minutes,
+                                              club_uid=t.ctx.club_uid if a.scope == "club" else None, limit=a.limit)
+            return ToolResult("", True, data={"saison": season_label(season), "statistique": a.stat, "portee": a.scope,
+                                              "competitions": a.competitions,
+                                              "classement": [{"joueur": r["player_name"], "uid": r["player_uid"], "club": r["club_name"],
+                                                              "valeur": r["value"], "minutes": r["minutes"]} for r in rows]},
+                              limitations=[] if rows else [f"Aucune donnée « {a.stat} » pour {season_label(season)}."])
+        if a.stat not in ("goals", "assists", "average_rating", "minutes", "player_of_the_match", "expected_goals"):
+            raise ValueError(f"« {a.stat} » n'est archivée que pour la saison en cours ({season_label(t.ctx.season_start_year)}).")
         rows = t.repo.season_stats(t.ctx, season_start_year=season, kind="overall",
                                    club_uid=t.ctx.club_uid if a.scope == "club" else None)
         rows = [r for r in rows if r[a.stat] is not None]

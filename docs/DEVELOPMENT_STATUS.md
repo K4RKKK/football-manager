@@ -14,7 +14,9 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Données | Noms de compétitions stockés dans la sauvegarde | ✅ | 39 compétitions (actualités, séance de match) ; catalogue complet = base du jeu installé ⬜ |
 | Données | Historique des championnats (`tc_league_history_dt`) | ✅ format / 🟡 rattachement | 174 525 saisons ; vérifié sur la réalité (Roma 2018-2025) ; 894 clubs rattachés (ordre de l'index), reste non attribué |
 | Données | Historique des coupes / stats d'historique | 🧪 | structure relevée, sens non confirmé (`docs/SECTION_MAP.md`) |
-| Phase 4 | IA locale (llama.cpp b11658 Vulkan + Gemma 4 26B-A4B) | 🟡 | installation en cours (session 2) ; `scripts/start_llm.ps1`, `scripts/eval_ai.py` |
+| Phase 4 | IA locale (llama.cpp b11658 Vulkan + Gemma 4 26B-A4B) | ✅ | testée sur la vraie carrière : 8 questions, outils corrects, 9-65 s ; mode jeu 11,4 Go VRAM |
+| Phase 4 | Rôle du directeur sportif, dossier du club automatique, prise de poste | ✅ | `ai/persona.py`, `ai/club_brief.py` ; testé sur l'AS Roma |
+| Phase 4 | Lanceur unique (IA + service) | ✅ | `Lancer ClubDirector.cmd` |
 | Données | Sections non décodées (≈ 58) | ⬜ | coupes, stats joueurs passées, transferts, liste de recrutement, palmarès… (`docs/SECTION_MAP.md`) |
 | Phase 1 | Plugin minimal BepInEx + détection du jeu | 🟡 | `plugin/src/ClubDirector.Plugin` |
 | Phase 1 | Outil de diagnostic | ✅ | interface web + CLI `clubdirector tool …` |
@@ -25,7 +27,7 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 3 | Entrée dans le menu latéral natif | 🧪 | outil de relevé UI prêt (Maj+F10) |
 | Phase 4 | Registre d'outils (33 disponibles / 51) | ✅ | |
 | Phase 4 | Routage niveau 0 (sans IA) | ✅ | 13 formulations testées |
-| Phase 4 | Connecteur OpenAI-compatible (llama.cpp, Ollama, OpenRouter) | ✅ protocole / 🟡 vrai modèle | |
+| Phase 4 | Connecteur OpenAI-compatible (llama.cpp, Ollama, OpenRouter) | ✅ | vrai modèle local (Gemma 4) |
 | Phase 4 | Connecteur Anthropic (SDK officiel) | 🟡 | aucune clé dans l'environnement |
 | Phase 4 | Mémoire (préférences, objectifs) | ✅ | |
 | Phase 4 | Résumés de conversation, cache des requêtes | ⬜ | |

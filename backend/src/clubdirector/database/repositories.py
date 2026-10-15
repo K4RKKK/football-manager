@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Engine, and_, desc, func, or_, select
+from sqlalchemy import Engine, and_, desc, func, or_, select, text
 
 from clubdirector.database import schema as s
 from clubdirector.domain.models import Provenance
@@ -140,6 +140,22 @@ class Repository:
         with self.engine.connect() as c:
             rows = c.execute(select(s.players_current).where(*conds).order_by(p.name))
             return [_row(r) for r in rows]
+
+    def mirror_season_stats(self, ctx: CareerContext, stat: str, *, kind: str = "overall", min_minutes: int = 0,
+                            club_uid: int | None = None, limit: int = 5) -> list[dict]:
+        """Classement sur une colonne de fm_player_season_stats (saison en cours, dernier relevé).
+        `stat` doit venir d'une liste blanche (outil get_top_players_stat)."""
+        sql = (f'SELECT player_uid, player_name, club_name, minutes, "{stat}" AS value FROM fm_player_season_stats '
+               'WHERE career_id = :k AND kind = :kind AND "{stat}" IS NOT NULL AND coalesce(minutes, 0) >= :m '
+               + ("AND club_uid = :club " if club_uid is not None else "")
+               + 'ORDER BY value DESC LIMIT :lim').replace("{stat}", stat)
+        with self.engine.connect() as c:
+            try:
+                rows = c.exec_driver_sql("SELECT 1 FROM fm_player_season_stats LIMIT 1")
+            except Exception:  # noqa: BLE001 — miroir absent avant la première synchronisation
+                return []
+            rows = c.execute(text(sql), {"k": ctx.career_id, "kind": kind, "m": min_minutes, "club": club_uid, "lim": limit})
+            return [dict(r._mapping) for r in rows]
 
     def team_counts(self, ctx: CareerContext, club_uid: int | None = None) -> dict[int | None, int]:
         club = club_uid if club_uid is not None else ctx.club_uid

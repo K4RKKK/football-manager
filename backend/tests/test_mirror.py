@@ -113,3 +113,16 @@ def test_club_staff_comes_from_the_save(registry, tctx):
     assert r.ok, r.error
     assert r.data["nombre"] == len(r.data["staff"])
     assert any("rôle" in lim for lim in r.limitations)  # le rôle n'est pas inventé
+
+
+def test_top_players_on_any_current_season_stat(registry, tctx, engine):
+    r = run(registry, tctx, "get_top_players_stat", stat="expected_assists", scope="tous", limit=3)
+    assert r.ok, r.error
+    with engine.connect() as c:
+        best = c.execute(text("SELECT player_name, expected_assists FROM fm_player_season_stats "
+                              "WHERE kind = 'overall' AND expected_assists IS NOT NULL "
+                              "ORDER BY expected_assists DESC LIMIT 1")).first()
+    if best:
+        assert (r.data["classement"][0]["joueur"], r.data["classement"][0]["valeur"]) == (best[0], best[1])
+    bad = run(registry, tctx, "get_top_players_stat", stat="name; DROP TABLE careers")
+    assert not bad.ok

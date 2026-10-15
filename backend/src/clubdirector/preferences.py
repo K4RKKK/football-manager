@@ -48,7 +48,7 @@ class PreferenceStore:
 
     def load(self) -> Preferences:
         if self.path.exists():
-            return Preferences.model_validate_json(self.path.read_text(encoding="utf-8"))
+            return Preferences.model_validate_json(self.path.read_text(encoding="utf-8-sig"))  # BOM toléré (éditeurs Windows)
         return Preferences()
 
     def save(self, prefs: Preferences) -> None:

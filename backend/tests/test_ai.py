@@ -160,3 +160,12 @@ def test_openai_compatible_unreachable_server():
     p = OpenAICompatProvider("ollama", "http://127.0.0.1:11434/v1", "m", transport=httpx.MockTransport(handler))
     with pytest.raises(ProviderError, match="injoignable"):
         p.start("s", [], []).step()
+
+
+@pytest.mark.parametrize("q", [
+    "Quel est notre prochain match et que faut-il surveiller ?",
+    "Qui est notre meilleur buteur et que penses-tu de sa forme ?",
+    "Quel était notre score il y a une semaine ? Analyse-le.",
+])
+def test_fact_plus_advice_goes_to_llm(q):
+    assert classify(q) is None

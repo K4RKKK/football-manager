@@ -53,10 +53,21 @@ def _position(word: str) -> str | None:
     return normalize_position(w)
 
 
+ADVICE_RE = re.compile(
+    r"surveiller|pourquoi|analyse|conseil|recommand|penses?[- ]tu|pensez[- ]vous|avis|que faut[- ]il|faudrait[- ]il|"
+    r"devrions|dois[- ]je|doit[- ]on|comment (?:ameliorer|faire|expliquer|corriger)|strategie|priorit|bilan|"
+    r"compar|explique|propose|suggere|que faire"
+)
+
+
 def classify(question: str) -> Intent | None:
     """Reconnaît les questions résolubles exactement par les données. None → IA."""
     q = fold(question).replace("’", "'")
     q = re.sub(r"\s+", " ", q)
+    # Une demande d'avis ou d'analyse, même accolée à une question factuelle, va à l'IA :
+    # le niveau 0 ne sait répondre qu'au fait, pas au conseil.
+    if ADVICE_RE.search(q):
+        return None
 
     if m := re.search(r"combien (?:de |d')?(?:joueurs? )?" + POSITION_WORDS + r"(?: avons[- ]nous| a[- ]t[- ]on| on a| dans)", q) \
             or re.search(r"combien (?:avons[- ]nous|a[- ]t[- ]on|on a) (?:de |d')" + POSITION_WORDS, q):

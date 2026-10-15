@@ -57,3 +57,21 @@ Ces temps concernent le service, **hors du processus FM26**. L'impact sur les FP
 | Historique des championnats | **OK** | Roma 2018/19 → 2024/25 identique à la réalité (positions, V/N/D, buts, points) |
 | Doublons à la relecture | **corrigé** | classements dupliqués à chaque relecture d'un relevé → migration 3 + test |
 | `pytest` backend | **91 / 91** | fmsave (fork) : **2 961** réussis, 1 échec d'environnement (liens symboliques) |
+
+### Session 2 (suite) — IA locale réelle (Gemma 4 26B-A4B, llama.cpp b11658 Vulkan, RX 9070 XT)
+| Question (carrière AS Roma, 21/10/2025) | Route | Durée | Outils | Vérification |
+|---|---|---:|---|---|
+| Bilan complet de l'effectif | niveau 1 | 37 s | analyze_squad, identify_weak_positions, analyze_contract_risks, evaluate_youth_prospects, budgets | chiffres conformes (24 joueurs, contrats Pellegrini/Dybala, budget 0) |
+| Prise de poste | niveau 1 | — | dossier du club | état des lieux conforme (3e, 14 pts, buteurs, contrats, finances) |
+| Joueurs dangereux xG / xA | niveau 1 | 23 s | get_top_players_stat ×2 | xG et xA identiques à fm_player_season_stats |
+| 5 ailiers droits < 24 ans | niveau 1 | 47 s | get_club_squad, budgets, find_recruitment_targets | joueurs réels ; budget 0 signalé |
+| Serie A, 5 dernières saisons | niveau 1 | 9 s | get_club_league_history | conforme à la réalité |
+| Staff et contrats | niveau 1 | 31 s | get_club_staff | noms et dates conformes ; rôle non inventé |
+| Recrue à 200 M | niveau 1 | 15 s | dossier | refus argumenté (budget 0) |
+| Prochain match + quoi surveiller (API, mode jeu) | niveau 1 | 65 s | get_upcoming_matches, get_injured_players, get_alerts | conforme |
+| Mesures | — | — | — | pleine puissance 14,9 Go / 116 tok/s ; mode jeu 11,4 Go / 41 tok/s |
+| `pytest` backend | — | — | — | **103 / 103** |
+
+Défauts corrigés pendant les tests : xA non disponible (outil étendu à 104 stats), staff (outil
+implémenté), question fait + avis traitée sans IA (routage), préférences avec BOM.
+Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3).

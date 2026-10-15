@@ -45,3 +45,9 @@ def test_take_office_command(engine, registry, tctx):
 def test_no_taking_of_office_without_a_model(engine, registry, tctx):
     a = Orchestrator(engine, registry, []).ask(tctx, "Que penses-tu de notre saison ?")
     assert a.route == "indisponible" and tctx.ctx.career_id not in tctx.prefs.office_taken
+
+
+def test_preferences_with_a_windows_bom_still_load(tmp_path):
+    p = tmp_path / "preferences.json"
+    p.write_bytes(b"\xef\xbb\xbf" + b'{"office_taken": [3]}')
+    assert PreferenceStore(p).load().office_taken == [3]
