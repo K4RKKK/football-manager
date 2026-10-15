@@ -30,6 +30,7 @@ from clubdirector.ai.persona import (
 )
 from clubdirector.ai.providers.base import IAIProvider, ProviderError
 from clubdirector.ai.router import answer_intent, classify, intent_allowed, wants_premium
+from clubdirector.ai.topics import redirect_hint, topic_owner, unknown_hint, unknown_people
 from clubdirector.database import schema as s
 from clubdirector.memory.store import ConversationStore, MemoryStore
 from clubdirector.sync.season import season_label
@@ -99,10 +100,17 @@ KIND_HINTS = {
                 "nécessaires puis livre un résultat concret (noms, chiffres, recommandation) en bulles aérées. Si "
                 "une action dans FM26 est nécessaire, prépare-la et dis précisément ce que l'entraîneur doit faire "
                 "dans le jeu.]"),
+    "accord": ("[Consigne automatique — type de message : RÉPONSE (accord) à ta proposition. L'entraîneur accepte : fais "
+               "MAINTENANT ce que tu proposais (consulte les données nécessaires) et livre le résultat concret dans ce "
+               "message. Interdit : « je m'en occupe », « je reviens vers vous », « je lance ça ».]"),
     "reponse": ("[Consigne automatique — type de message : RÉPONSE de l'entraîneur à ta dernière question. Prends-la "
                 "en compte : si c'est un accord sur ce que tu proposais, fais-le maintenant ; si c'est une décision "
                 "durable, retiens-la ; sinon accuse réception en une bulle et enchaîne sur la suite logique.]"),
 }
+
+
+AGREE_RE = re.compile(r"^\W*(oui|ouais|ok|okay|d'accord|dac|vas-y|allez-y|go|banco|lance|fonce|parfait|top|"
+                      r"carr[ée]ment|bien s[uû]r|[ée]videmment|volontiers|fais[- ]le|faites[- ]le)\b", re.IGNORECASE)
 
 
 def message_kind(text: str, previous: str | None = None) -> str:
@@ -415,6 +423,9 @@ class Orchestrator:
         intent = classify(question) if force_tier is None and not hidden_question else None
         if not intent_allowed(role, intent):  # chaque contact ne répond sans IA que dans son métier
             intent = None
+        previous = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
+        if intent is not None and message_kind(question, previous) != "question":
+            intent = None  # « le groupe a bien réagi après le dernier match » est une discussion, pas une question
         if intent is not None:
             try:
                 text, lim = answer_intent(intent, run, lambda names: tctx.repo.club_short_names(tctx.ctx, names))
@@ -452,8 +463,19 @@ class Orchestrator:
         if taking_office and role == DIRECTOR and not question.startswith("[Message automatique"):
             question = first_contact_request(role, taking_office=True) + "\n\nDemande de l'entraîneur : " + question
         if not question.startswith("[Message automatique"):
+            original = question
             previous = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
-            question += "\n\n" + KIND_HINTS[message_kind(question, previous)]
+            kind = message_kind(question, previous)
+            if kind == "reponse" and AGREE_RE.search(question):
+                kind = "accord"
+            question += "\n\n" + KIND_HINTS[kind]
+            owner = topic_owner(original, role)
+            if owner and not (role == "directeur_technique" and self._mentions_player(tctx, original)):
+                other = team.get(owner)
+                question += "\n\n" + redirect_hint(owner, other.name if other else None)
+            unknown = unknown_people(self.engine, tctx.ctx.career_id, original)
+            if unknown:
+                question += "\n\n" + unknown_hint(unknown)
             if role == "directeur_technique" and self._mentions_player(tctx, question):
                 adj, ds = team.get("entraineur_adjoint"), team.get(DIRECTOR)
                 question += ("\n\n[Consigne automatique : la question porte sur un joueur, ce n'est pas ton métier. "
@@ -476,7 +498,8 @@ class Orchestrator:
                 on_event({"type": "delta", "text": text})
             return ChatAnswer(text, "indisponible", conv, trace)
         system, messages = self._prompt(tctx, role, member, history, question, taking_office)
-        lineup_args = lineup_request(question) if not question.startswith("[Message automatique") else None
+        lineup_args = (lineup_request(question) if role == "entraineur_adjoint"  # la composition, c'est l'adjoint
+                       and not question.startswith("[Message automatique") else None)
         if lineup_args is not None and self.registry.get("propose_lineup") is not None:
             if on_event:
                 on_event({"type": "tool", "name": "propose_lineup", "label": tool_label("propose_lineup")})

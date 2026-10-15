@@ -208,7 +208,7 @@ def test_messages_are_told_apart_question_request_reply_discussion():
 def test_the_detected_message_type_guides_the_reply(engine, registry, tctx):
     p = ScriptedProvider([StepResult("50 k€ par semaine."), StepResult("Je m'en occupe.")])
     orch = Orchestrator(engine, registry, [p])
-    orch.send(tctx, "directeur_sportif", "Combien il reste sur la marge salariale ?")
+    orch.send(tctx, "directeur_sportif", "Combien gagne notre joueur le mieux payé ?")
     assert "type de message : QUESTION" in p.history[-1]["content"]
     orch.send(tctx, "directeur_sportif", "Prépare-moi une offre pour un ailier droit")
     assert "type de message : DEMANDE" in p.history[-1]["content"]

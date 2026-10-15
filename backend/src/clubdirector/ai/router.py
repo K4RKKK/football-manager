@@ -106,7 +106,7 @@ def classify(question: str) -> Intent | None:
         return Intent("table")
     if re.search(r"budget (?:des )?transferts?|budget mercato", q):
         return Intent("transfer_budget")
-    if re.search(r"budget salari|masse salariale", q):
+    if re.search(r"budget salari|masse salariale|marge salariale", q):
         return Intent("wage_budget")
     if re.search(r"contrats? (?:qui )?(?:expir|se termin|arriv)|fins? de contrat", q):
         return Intent("expiring")
