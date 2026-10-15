@@ -156,7 +156,10 @@ button.cell:active { background: var(--fill); }
 .conv .cbody { flex: 1; min-width: 0; padding: 11px 16px 12px 0; border-bottom: .5px solid var(--sep); }
 .conv:last-child .cbody { border-bottom: 0; }
 .conv .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.conv .nm { font-weight: 600; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conv .nm { font-weight: 600; font-size: 17px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.paren { font-weight: 400; color: var(--text2); font-size: .88em; white-space: nowrap; }
+.banner .paren, .note .paren { color: inherit; opacity: .7; }
+#banner-name, .note .nmx { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conv .tm { font-size: 15px; color: var(--text2); flex: none; display: flex; align-items: center; gap: 6px; }
 .conv .pv { font-size: 15px; color: var(--text2); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
 .conv .pv.typing { color: var(--blue); }
@@ -203,6 +206,9 @@ button.cell:active { background: var(--fill); }
 #chat .navbar { padding: 50px 10px 6px; min-height: 0; grid-template-columns: 90px 1fr 90px; }
 .chat-head { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .chat-head .n { font-size: 12px; display: flex; align-items: center; gap: 3px; color: var(--text); }
+.chat-head .n .stack { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.chat-head .n .pr { font-size: 10.5px; color: var(--text2); }
+.live-status { font-size: 11px; color: var(--text2); margin: 3px 4px 0; }
 .chat-head .n svg { width: 6px; height: 10px; fill: none; stroke: var(--text3); stroke-width: 2; }
 .unread-back { font-size: 14px; background: var(--blue); color: #fff; border-radius: 11px; padding: 1px 7px; margin-left: 1px; min-width: 22px; text-align: center; }
 .unread-back[hidden] { display: none; }
@@ -536,7 +542,7 @@ button.fx:active { background: var(--fill); }
     <section class="view hidden-right" id="chat" hidden>
       <div class="navbar blur">
         <button class="navbtn" id="chat-back"><svg viewBox="0 0 12 20"><path d="M10 2 2 10l8 8"/></svg><span class="unread-back" id="back-unread" hidden></span></button>
-        <button class="chat-head" id="chat-head"><span id="chat-avatar"></span><span class="n"><span id="chat-name"></span><svg viewBox="0 0 6 10"><path d="m1 1 4 4-4 4"/></svg></span></button>
+        <button class="chat-head" id="chat-head"><span id="chat-avatar"></span><span class="n"><span class="stack"><span id="chat-name"></span><span class="pr" id="chat-role"></span></span><svg viewBox="0 0 6 10"><path d="m1 1 4 4-4 4"/></svg></span></button>
         <span></span>
       </div>
       <div class="scroll" id="thread-scroll"><div id="thread"></div></div>
@@ -600,7 +606,7 @@ button.fx:active { background: var(--fill); }
       <div class="lk-hint">Balayez vers le haut ou touchez pour déverrouiller</div>
     </section>
 
-    <button class="banner" id="banner"><span id="banner-avatar" style="position:relative"></span><span class="bt"><span class="bh"><b id="banner-name"></b><span>maintenant</span></span><span class="bb" id="banner-text"></span><span class="more" id="banner-more" hidden></span></span></button>
+    <button class="banner" id="banner"><span id="banner-avatar" style="position:relative"></span><span class="bt"><span class="bh"><span id="banner-name"></span><span>maintenant</span></span><span class="bb" id="banner-text"></span><span class="more" id="banner-more" hidden></span></span></button>
     <div class="tapbar" id="tapbar"></div>
     <div class="sheet-bg" id="sheet-bg"></div>
     <div class="sheet" id="sheet"><div class="grab"></div><div class="sh"><button class="navbtn" id="sheet-cancel">Fermer</button><span id="sheet-title"></span><span></span></div><div class="scroll" id="sheet-body"></div></div>
@@ -673,6 +679,17 @@ function isoDay(s) { if (!s) return null; const [y, m, d] = s.slice(0, 10).split
 function gameLong(s) { const d = isoDay(s); return d ? d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : ""; }
 function gameShort(s) { const d = isoDay(s); return d ? `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}` : ""; }
 function initials(name) { return String(name || "?").split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase(); }
+// Nom d'un contact suivi de son poste entre parenthèses (« Francis Cagigao (Directeur sportif) »).
+function staffName(c) {
+  if (!c) return "";
+  const name = c.name || c.label;
+  return name && c.label && name !== c.label ? `${name} (${c.label})` : name || "";
+}
+function staffNameHtml(c) {
+  if (!c) return "";
+  const name = c.name || c.label;
+  return name && c.label && name !== c.label ? `<b>${esc(name)}</b> <span class="paren">(${esc(c.label)})</span>` : `<b>${esc(name || "")}</b>`;
+}
 function shortName(c) { return (c && c.person && c.person.first_name) || String((c && (c.name || c.label)) || "").split(" ")[0]; }
 function toast(text) { const t = $("toast"); t.textContent = text; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 3000); }
 function store(key, value) { try { if (value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); } catch (e) { return null; } return null; }
@@ -792,7 +809,7 @@ $("statusbar").addEventListener("mousedown", (e) => { if (e.button === 0) hostSe
 async function refreshAll() {
   try {
     const [status, contacts] = await Promise.all([api("/api/status"), api("/api/contacts")]);
-    const before = Object.fromEntries(S.contacts.map((c) => [c.role, c.unread || 0]));
+    const before = Object.fromEntries(S.contacts.map((c) => [c.role, (c.last && c.last.id) || 0]));
     S.noCareer = false; S.status = status; S.contacts = contacts;
     if (S.started) arrivals(contacts, before);
     S.started = true;
@@ -814,7 +831,7 @@ async function refreshAll() {
 // Messages arrivés hors d'une réponse en cours (le staff écrit de lui-même après une sauvegarde).
 async function arrivals(contacts, before) {
   for (const c of contacts) {
-    if ((c.unread || 0) <= (before[c.role] ?? 0) || !c.last || c.last.from !== "them" || S.live[c.role]) continue;
+    if (!c.last || c.last.from !== "them" || S.live[c.role] || !(c.last.id > (before[c.role] ?? 0))) continue;
     sound("receive");
     if (S.view === "chat" && S.role === c.role && !S.locked) {
       try { S.threads[c.role] = await api(`/api/contacts/${c.role}/messages`); } catch (e) { /* hors ligne */ }
@@ -878,7 +895,7 @@ function renderConversations() {
     b.appendChild(dc); b.appendChild(contactAvatar(c, 52));
     const typing = !!S.live[c.role];
     const preview = typing ? `${esc(shortName(c))} est en train d'écrire…` : c.last ? `${c.last.from === "me" ? "Vous : " : ""}${esc(c.last.text.replace(/\s+/g, " "))}` : `${esc(c.label)} · appuyez pour écrire`;
-    b.insertAdjacentHTML("beforeend", `<span class="cbody"><span class="top"><span class="nm">${esc(c.name || c.label)}</span><span class="tm">${c.last ? relTime(c.last.at) : ""}${CHEV}</span></span>
+    b.insertAdjacentHTML("beforeend", `<span class="cbody"><span class="top"><span class="nm">${staffNameHtml(c)}</span><span class="tm">${c.last ? relTime(c.last.at) : ""}${CHEV}</span></span>
       <span class="pv${typing ? " typing" : ""}">${preview}</span></span>`);
     b.onclick = () => openChat(c.role, "messages");
     box.appendChild(b);
@@ -892,7 +909,7 @@ function openSheetCompose() {
   const body = $("sheet-body"); body.innerHTML = `<div class="section-h">À</div><div class="group" id="compose-list"></div>`;
   for (const c of ROLE_ORDER.map(contact).filter((x) => x && x.can_chat)) {
     const b = document.createElement("button"); b.className = "cand"; b.appendChild(contactAvatar(c, 36));
-    b.insertAdjacentHTML("beforeend", `<span class="cb"><span><div>${esc(c.name)}</div><div class="s">${esc(c.label)}</div></span>${CHEV}</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="cb"><span><div>${staffNameHtml(c)}</div></span>${CHEV}</span>`);
     b.onclick = () => { closeSheet(); openChat(c.role, "messages"); };
     $("compose-list").appendChild(b);
   }
@@ -916,8 +933,8 @@ function renderContacts() {
     const b = document.createElement("button"); b.className = "row-contact";
     b.appendChild(contactAvatar(c.name ? c : null, 42));
     const parts = name.split(" "); const last = parts.length > 1 ? parts.pop() : ""; const first = parts.join(" ");
-    b.insertAdjacentHTML("beforeend", `<span class="meta"><span class="txt"><div class="name">${esc(first)} <b>${esc(last)}</b></div>
-      <div class="role">${esc(c.label)}${c.can_chat ? "" : " · poste vacant"}</div></span>${c.unread ? `<span class="pill">${c.unread}</span>` : ""}</span>`);
+    b.insertAdjacentHTML("beforeend", `<span class="meta"><span class="txt"><div class="name">${esc(first)} <b>${esc(last)}</b>${c.name && c.label !== name ? ` <span class="paren">(${esc(c.label)})</span>` : ""}</div>
+      ${c.can_chat ? "" : `<div class="role">Poste vacant</div>`}</span>${c.unread ? `<span class="pill">${c.unread}</span>` : ""}</span>`);
     // Toucher un contact ouvre directement la discussion ; la fiche s'ouvre depuis l'en-tête du fil.
     b.onclick = () => (c.can_chat ? openChat(role, "contacts") : openCard(role, "contacts"));
     list.appendChild(b);
@@ -941,7 +958,7 @@ function renderCard(role) {
   }
   poster.appendChild(contactAvatar(c.name ? c : null, 128));
   const club = S.home && (S.home.club_short || S.home.club) || "";
-  poster.insertAdjacentHTML("beforeend", `<div class="pname">${esc(c.name || "Poste vacant")}</div><div class="prole">${esc(c.label)}${club ? " · " + esc(club) : ""}</div>`);
+  poster.insertAdjacentHTML("beforeend", `<div class="pname">${esc(c.name || "Poste vacant")}</div><div class="prole">${c.name && c.name !== c.label ? `(${esc(c.label)})` : esc(c.label)}${club ? " · " + esc(club) : ""}</div>`);
   body.appendChild(poster);
   const icMsg = '<svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.6 2 11.1c0 2.6 1.5 4.9 3.8 6.4-.2 1.3-.9 2.6-2 3.5 2.2 0 4.1-.8 5.4-2 .9.2 1.8.3 2.8.3 5.5 0 10-3.6 10-8.1S17.5 3 12 3z"/></svg>';
   const icSwap = '<svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4V9h11V7H7V4zm10 8v3H6v2h11v3l4-4-4-4z"/></svg>';
@@ -1016,6 +1033,7 @@ function renderChatHead() {
   const c = contact(S.role); if (!c) return;
   const a = $("chat-avatar"); a.innerHTML = ""; a.appendChild(contactAvatar(c, 50));
   $("chat-name").textContent = c.name || c.label;
+  $("chat-role").textContent = c.name && c.name !== c.label ? `(${c.label})` : "";
   $("chat-head").onclick = () => openCard(S.role, "chat");
   const others = S.contacts.filter((x) => x.role !== S.role).reduce((n, x) => n + (x.unread || 0), 0);
   $("back-unread").hidden = !others; $("back-unread").textContent = others;
@@ -1107,6 +1125,7 @@ function renderThread(role, jump = false) {
     if (m.live && m.typing) {
       const tb = document.createElement("div"); tb.className = "bubble typing tail"; tb.innerHTML = "<i></i><i></i><i></i>";
       wrap.appendChild(tb);
+      if (m.status) wrap.insertAdjacentHTML("beforeend", `<div class="live-status">${esc(m.status)}</div>`);
     }
     if (m.from === "me" && m.failed) {
       const r = document.createElement("div"); r.className = "receipt failed"; r.textContent = "Non distribué · toucher pour réessayer";
@@ -1173,6 +1192,8 @@ function startLive(role) {
         }
       } else if (ev.type === "break") {
         const part = live.buf.trim(); live.buf = ""; if (part) { live.parts.push(part); renderThread(role); }
+      } else if (ev.type === "status") {
+        live.status = ev.text; renderThread(role);  // ex. relance automatique de l'IA locale figée
       } else if (ev.type === "tool") {
         live.read = true; renderThread(role);  // le contact travaille : les trois points restent affichés
       } else if (ev.type === "done") { live.final = ev.message; }
@@ -1249,9 +1270,9 @@ function notify(role, text) {
     a.appendChild(contactAvatar(c, 40));
     a.insertAdjacentHTML("beforeend", `<span class="appmini ic-messages" style="display:grid;place-items:center">${MSG_GLYPH}</span>`);
   } else a.insertAdjacentHTML("beforeend", `<span class="icon ic-messages" style="width:40px;height:40px;border-radius:10px;box-shadow:none">${MSG_GLYPH.replace(/12/g, "26")}</span>`);
-  $("banner-name").textContent = single ? c.name || c.label : "Messages";
+  $("banner-name").innerHTML = single ? staffNameHtml(c) : "<b>Messages</b>";
   $("banner-text").textContent = single ? (previewOn() ? splitBubbles(text)[0] || text : "Nouveau message")
-    : roles.map((r) => (contact(r) || {}).name || r).join(", ");
+    : roles.map((r) => staffName(contact(r)) || r).join(", ");
   const more = $("banner-more"); more.hidden = S.notes.length < 2;
   more.textContent = single ? `${S.notes.length} messages` : `${S.notes.length} nouveaux messages`;
   b.classList.toggle("stack", S.notes.length > 1);
@@ -1308,7 +1329,7 @@ function renderLock() {
     const av = document.createElement("span"); av.style.position = "relative"; av.appendChild(contactAvatar(c, 40));
     av.insertAdjacentHTML("beforeend", `<span class="appmini ic-messages" style="display:grid;place-items:center;border-color:rgba(44,44,48,.9)">${MSG_GLYPH}</span>`);
     b.appendChild(av);
-    b.insertAdjacentHTML("beforeend", `<span class="bt"><span class="bh"><b>${esc(c.name || c.label)}</b><span>${esc(relTime(c.last.at))}</span></span>
+    b.insertAdjacentHTML("beforeend", `<span class="bt"><span class="bh"><span class="nmx">${staffNameHtml(c)}</span><span>${esc(relTime(c.last.at))}</span></span>
       <span class="bb">${esc(previewOn() ? c.last.text.replace(/\s+/g, " ") : "Nouveau message")}</span>${c.unread > 1 ? `<span class="more">${c.unread} messages</span>` : ""}</span>`);
     b.onclick = (e) => { e.stopPropagation(); unlock(() => openChat(c.role, "messages")); };
     box.appendChild(b);
