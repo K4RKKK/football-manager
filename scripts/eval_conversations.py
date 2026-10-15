@@ -66,11 +66,13 @@ JARGON_RE = re.compile(
 TOOL_NARRATION_RE = re.compile(r"\b(je consulte|en consultant|consulté les données|je vérifie dans la base)\b", re.IGNORECASE)
 TU_RE = re.compile(r"(?<![\w'])(tu|toi|ton|ta|tes|t'(?=[aeiouyhéèê]))(?![\w'])", re.IGNORECASE)
 VOUS_RE = re.compile(r"(?<![\w'])(vous|votre|vos)(?![\w'])", re.IGNORECASE)
-ENGLISH = {"the", "and", "with", "your", "you", "player", "players", "team", "season", "match", "goals", "should", "would",
+ENGLISH = {"the", "and", "with", "your", "you", "player", "players", "team", "season", "goals", "should", "would",
            "this", "that", "here", "there", "what", "which", "will", "can", "best"}
 NEGATION = ["n'est pas", "ne fait pas partie", "n'est plus", "pas chez nous", "pas dans", "aucun", "inconnu", "introuvable",
             "ne figure", "n'a jamais", "pas de", "ne connais", "n'existe", "pas à nous", "pas de chez nous", "n'appartient",
-            "pas un joueur", "n'est pas dans", "ne joue pas", "ailleurs", "pas notre"]
+            "pas un joueur", "n'est pas dans", "ne joue pas", "ailleurs", "pas notre", "ne fait plus", "plus partie",
+            "ne vois pas", "ne trouve pas", "ne trouve aucun", "sous contrat au", "sous contrat à", "joue au", "joue à",
+            "appartient à", "pas sous contrat", "plus sous contrat", "a quitté", "parti"]
 BUDGET_WORDS = ["budget", "moyens", "hors de portée", "irréaliste", "impossible", "trop cher", "dépasse", "pas les fonds",
                 "pas possible", "inaccessible", "irraisonnable", "folie", "pas réaliste"]
 STAT_RE = re.compile(r"\d+\s*(?:buts?|minutes?|passes?|pd\b|matchs?)|note (?:moyenne )?(?:de )?\d", re.IGNORECASE)

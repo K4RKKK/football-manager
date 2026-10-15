@@ -152,7 +152,7 @@ def message_kind(text: str, previous: str | None = None) -> str:
 # modèle, qui le présente et le commente. Il ne le devine jamais.
 LINEUP_RE = re.compile(
     r"\b(onze|11 de d[ée]part|compo(sition)?s?|[ée]quipe[- ]type|aligne(r|rais|rait|s|z)?|titulaires?|line-?up|"
-    r"qui (je )?(fais|mets|met) jouer|qui (doit|va|devrait) jouer|qui tu (mets|ferais jouer))\b",
+    r"qui (je )?(fais|mets|met) jouer|qui (doit|va|devrait) jouer|qui tu (mets|ferais jouer)|qui joue(nt)?)\b",
     re.IGNORECASE,
 )
 SYSTEM_RE = re.compile(r"\b([345])[- ]?([1-5])[- ]?([1-5])(?:[- ]?([1-3]))?\b")
@@ -160,9 +160,17 @@ ROTATION_RE = re.compile(r"\b(rotation|tourner|tourne|m[ée]nager|m[ée]nage|rep
 ABSENT_RE = re.compile(r"\bsans\s+([^.?!;:\n]+)", re.IGNORECASE)
 
 
-def lineup_request(text: str) -> dict | None:
-    """Arguments de `propose_lineup` si le message demande une composition, sinon None."""
-    if not LINEUP_RE.search(text) and not SYSTEM_RE.search(text):  # « et en 4-3-3 ? » : un système suffit
+FOLLOW_UP_RE = re.compile(r"^\W*(et )?(sans|avec|en|si)\b", re.IGNORECASE)
+LINEUP_SHOWN_RE = re.compile(r"\b[345]-[1-5]-[1-5](-[1-3])?\b|\bonze\b", re.IGNORECASE)
+
+
+def lineup_request(text: str, previous: str | None = None) -> dict | None:
+    """Arguments de `propose_lineup` si le message demande une composition, sinon None.
+
+    `previous` : dernier message du contact ; « Et sans Dybala ? » juste après un onze est une
+    nouvelle demande de composition."""
+    follow_up = bool(previous and LINEUP_SHOWN_RE.search(previous) and FOLLOW_UP_RE.search(text))
+    if not LINEUP_RE.search(text) and not SYSTEM_RE.search(text) and not follow_up:  # « et en 4-3-3 ? » : un système suffit
         return None
     from clubdirector.tools.lineup import SYSTEMS
 
@@ -514,7 +522,8 @@ class Orchestrator:
                 on_event({"type": "delta", "text": text})
             return ChatAnswer(text, "indisponible", conv, trace)
         system, messages = self._prompt(tctx, role, member, history, question, taking_office)
-        lineup_args = (lineup_request(question) if role == "entraineur_adjoint"  # la composition, c'est l'adjoint
+        last_said = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
+        lineup_args = (lineup_request(question, last_said) if role == "entraineur_adjoint"  # la composition, c'est l'adjoint
                        and not question.startswith("[Message automatique") else None)
         if lineup_args is not None and self.registry.get("propose_lineup") is not None:
             if on_event:

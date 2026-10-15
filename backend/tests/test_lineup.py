@@ -103,3 +103,12 @@ def test_injured_and_suspended_players_are_left_out(engine, registry, tctx):
     r = registry.execute("propose_lineup", {}, tctx)
     assert r.ok and all(x["joueur"] != hurt["name"] for x in r.data["onze"])
     assert any(x["joueur"] == hurt["name"] and "blessé" in x["raison"] for x in r.data["exclus"])
+
+
+def test_lineup_follow_ups_are_recomputed():
+    from clubdirector.ai.orchestrator import lineup_request
+
+    shown = "Je partirais sur ce 4-2-3-1 :\n\nSvilar\nWesley, Mancini, Gadou, Angeliño"
+    assert lineup_request("Et sans Dybala ?", shown) == {"absents": ["Dybala"]}
+    assert lineup_request("Et sans Dybala ?") is None  # sans onze juste avant : pas une composition
+    assert lineup_request("On fait tourner dimanche, qui joue ?") == {"rotation": True}
