@@ -47,6 +47,8 @@ class Preferences(BaseModel):
     office_by_career: dict[str, int] = Field(default_factory=dict)
     # Forcer l'identité du directeur sportif (uid du staff) si la détection automatique se trompe.
     director_staff_uid: int | None = None
+    # Contacts du téléphone corrigés par l'entraîneur : rôle -> uid du staff.
+    staff_overrides: dict[str, int] = Field(default_factory=dict)
 
 
 class PreferenceStore:

@@ -33,3 +33,41 @@ public class OverlayTests
         Assert.Equal(0.6, normalized.Opacity);
     }
 }
+
+public class PhoneLayoutTests
+{
+    private static readonly Rectangle Screen1080 = new(0, 0, 1920, 1040);
+
+    [Fact]
+    public void Phone_is_placed_on_the_right_and_vertically_centered()
+    {
+        var r = PhoneLayout.Compute(Screen1080, 860, 1.0, null);
+        Assert.Equal(860, r.Height);
+        Assert.Equal((int)Math.Round(860 * PhoneLayout.Ratio), r.Width);
+        Assert.Equal(1920 - r.Width - 24, r.X);
+        Assert.Equal((1040 - 860) / 2, r.Y);
+    }
+
+    [Fact]
+    public void Phone_never_exceeds_the_screen_and_follows_the_dpi()
+    {
+        Assert.Equal(1040 - 16, PhoneLayout.Compute(Screen1080, 1400, 1.0, null).Height);
+        Assert.Equal(1024, PhoneLayout.Compute(new Rectangle(0, 0, 2560, 1400), 860, 1.25, null).Height - 51);
+    }
+
+    [Fact]
+    public void A_saved_position_is_kept_only_if_still_on_screen()
+    {
+        Assert.Equal(new Point(300, 100), PhoneLayout.Compute(Screen1080, 860, 1.0, new Point(300, 100)).Location);
+        var lost = PhoneLayout.Compute(Screen1080, 860, 1.0, new Point(5000, 100));
+        Assert.Equal(1920 - lost.Width - 24, lost.X);
+    }
+
+    [Fact]
+    public void Phone_mode_is_the_default()
+    {
+        var s = JsonSerializer.Deserialize<OverlaySettings>("{}")!;
+        Assert.True(s.IsPhone);
+        Assert.False(JsonSerializer.Deserialize<OverlaySettings>("{\"Mode\":\"panneau\"}")!.IsPhone);
+    }
+}

@@ -49,8 +49,19 @@
     dernière sauvegarde. La synchronisation automatique la relit 20 s après chaque enregistrement
     (≈ 2 à 3 min de lecture sur une grosse base). Régler la sauvegarde automatique de FM26 sur une
     fréquence élevée pour suivre la partie au plus près.
-16. **Fonction du staff** : seul le code « directeur sportif » (10, hors départements) est établi ;
-    les autres fonctions (adjoint, chef recruteur…) restent non décodées. Forçage possible :
-    `director_staff_uid` dans `preferences.json`.
+16. **Fonction du staff** : établies : directeur sportif (10, hors départements), directeur technique
+    (88), entraîneur principal (16) ; entraîneur adjoint = code 20 de la liste « entraînement », celui de
+    l'équipe première le mieux payé (heuristique : 5 clubs sur 6 vérifiés, un ex aequo au Bayern).
+    Les autres fonctions (chef recruteur, kinés…) restent non décodées. Correction depuis la fiche du
+    contact dans le téléphone (« Ce n'est pas la bonne personne ? »).
 17. **Fenêtre externe** : visible au-dessus de FM26 en mode « fenêtré sans bordure » ; un plein écran
     exclusif passe devant toute fenêtre.
+18. **Photos** : elles viennent du pack de visages installé par l'utilisateur
+    (`Documents\Sports Interactive\Football Manager 26\graphics\faces`, fichiers `<unique_id>.png`).
+    Sans pack, le téléphone affiche les initiales.
+19. **IA locale à un seul fil** : llama-server traite une demande à la fois ; un message attend la
+    réponse précédente (ou le préchauffage d'un contact, 10-15 s après une nouvelle sauvegarde).
+    Le 15/10/2026, le serveur s'est bloqué une fois (aucune activité, requêtes sans réponse) ; il a été
+    relancé avec un journal (`%LOCALAPPDATA%\ClubDirectorAI\llm.log`) pour en trouver la cause.
+20. **Messages** : appels, vidéo et e-mail du téléphone sont décoratifs ; le directeur ne travaille pas
+    entre deux messages (pas de tâche de fond) et n'agit pas dans le jeu (voir 12 et 14).

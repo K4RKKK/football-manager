@@ -1,21 +1,29 @@
 using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace ClubDirector.Overlay;
 
 /// <summary>
-/// Panneau ClubDirector au-dessus de FM26 (le jeu doit être en « fenêtré sans bordure » ; un plein
+/// Téléphone ClubDirector au-dessus de FM26 (le jeu doit être en « fenêtré sans bordure » ; un plein
 /// écran exclusif passe devant toute fenêtre). Aucun lien avec le processus du jeu.
+/// Mode « telephone » (défaut) : fenêtre aux coins arrondis, déplaçable par la barre d'état de la page.
+/// Mode « panneau » : ancien panneau latéral redimensionnable.
 /// </summary>
 public sealed class OverlayForm : Form
 {
     private const int HotkeyId = 0xCD01;
     private const int ResizeGrip = 6;
     private static readonly Color Bg = Color.FromArgb(0x0B, 0x14, 0x1B);
+    private static readonly Color Frame = Color.FromArgb(0x0B, 0x0B, 0x0D);
+    private const int WM_NCLBUTTONDOWN = 0xA1, HTCAPTION = 2;
+
+    [DllImport("user32.dll")] private static extern bool ReleaseCapture();
+    [DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
     private readonly OverlaySettings _settings;
-    private readonly WebView2 _web = new() { Dock = DockStyle.Fill, DefaultBackgroundColor = Bg };
+    private readonly WebView2 _web = new() { Dock = DockStyle.Fill };
     private readonly NotifyIcon _tray;
     private readonly System.Windows.Forms.Timer _retry = new() { Interval = 5000 };
     private readonly Uri _home;
@@ -32,15 +40,28 @@ public sealed class OverlayForm : Form
         TopMost = true;
         ShowInTaskbar = false;
         StartPosition = FormStartPosition.Manual;
-        BackColor = Bg;
+        BackColor = settings.IsPhone ? Frame : Bg;
+        _web.DefaultBackgroundColor = BackColor;
         Opacity = settings.Opacity;
-        Padding = new Padding(settings.Side == "left" ? 0 : ResizeGrip, 0, settings.Side == "left" ? ResizeGrip : 0, 0);
+        if (!settings.IsPhone)
+            Padding = new Padding(settings.Side == "left" ? 0 : ResizeGrip, 0, settings.Side == "left" ? ResizeGrip : 0, 0);
         Controls.Add(_web);
         Icon = MakeIcon();
 
         var menu = new ContextMenuStrip();
         menu.Items.Add($"Afficher / masquer ({settings.Hotkey})", null, (_, _) => Toggle());
         menu.Items.Add("Recharger", null, (_, _) => GoHome());
+        if (settings.IsPhone)
+        {
+            var size = new ToolStripMenuItem("Taille du téléphone");
+            foreach (var (label, height) in new[] { ("Petit", 700), ("Normal", 860), ("Grand", 1000) })
+                size.DropDownItems.Add(label, null, (_, _) => { _settings.PhoneHeight = height; _settings.Save(); PlaceOnScreen(Screen.FromControl(this)); });
+            menu.Items.Add(size);
+            menu.Items.Add("Replacer à droite de l'écran", null, (_, _) =>
+            {
+                _settings.PhoneX = _settings.PhoneY = null; _settings.Save(); PlaceOnScreen(Screen.FromControl(this));
+            });
+        }
         menu.Items.Add("Ouvrir les réglages (overlay.json)", null, (_, _) => OpenSettings());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Quitter", null, (_, _) => { _tray!.Visible = false; Application.Exit(); });
@@ -74,7 +95,7 @@ public sealed class OverlayForm : Form
     {
         const int WM_NCHITTEST = 0x84, HTLEFT = 10, HTRIGHT = 11;
         if (m.Msg == GlobalHotkey.WM_HOTKEY && m.WParam.ToInt32() == HotkeyId) { Toggle(); return; }
-        if (m.Msg == WM_NCHITTEST)
+        if (m.Msg == WM_NCHITTEST && !_settings.IsPhone)
         {
             // Bord intérieur de la fenêtre sans bordure : redimensionnement de la largeur.
             var p = PointToClient(new Point(unchecked((short)(long)m.LParam), unchecked((short)((long)m.LParam >> 16))));
@@ -87,13 +108,55 @@ public sealed class OverlayForm : Form
     protected override void OnResizeEnd(EventArgs e)
     {
         base.OnResizeEnd(e);
+        if (_settings.IsPhone) return;
         _settings.Width = Width;
+        _settings.Save();
+    }
+
+    protected override void OnSizeChanged(EventArgs e)
+    {
+        base.OnSizeChanged(e);
+        if (_settings.IsPhone) ShapeAsPhone();
+    }
+
+    /// <summary>Coins arrondis du téléphone (le cadre est dessiné par la page, au même rayon).</summary>
+    private void ShapeAsPhone()
+    {
+        if (Width <= 0 || Height <= 0) return;
+        var r = (int)Math.Round(PhoneLayout.CornerRadius * DeviceDpi / 96.0) * 2;
+        using var path = new GraphicsPath();
+        path.AddArc(0, 0, r, r, 180, 90);
+        path.AddArc(Width - r, 0, r, r, 270, 90);
+        path.AddArc(Width - r, Height - r, r, r, 0, 90);
+        path.AddArc(0, Height - r, r, r, 90, 90);
+        path.CloseFigure();
+        var old = Region;
+        Region = new Region(path);
+        old?.Dispose();
+    }
+
+    /// <summary>Déplacement du téléphone : la page demande « drag » quand on saisit sa barre d'état.</summary>
+    private void DragPhone()
+    {
+        if (!_settings.IsPhone) return;
+        ReleaseCapture();
+        SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTCAPTION, IntPtr.Zero); // rend la main une fois relâché
+        _settings.PhoneX = Left;
+        _settings.PhoneY = Top;
         _settings.Save();
     }
 
     // ------------------------------------------------------------------ affichage
     private void PlaceOnScreen(Screen screen)
     {
+        if (_settings.IsPhone)
+        {
+            Point? saved = _settings.PhoneX is int x && _settings.PhoneY is int y ? new Point(x, y) : null;
+            var target = saved is { } p ? Screen.FromPoint(p) : screen;
+            Bounds = PhoneLayout.Compute(target.WorkingArea, _settings.PhoneHeight, DeviceDpi / 96.0, saved);
+            ShapeAsPhone();
+            return;
+        }
         var wa = screen.WorkingArea;
         var w = Math.Min(_settings.Width, wa.Width);
         Bounds = _settings.Side == "left"
@@ -143,6 +206,7 @@ public sealed class OverlayForm : Form
         {
             var msg = e.TryGetWebMessageAsString();
             if (msg == "hide") BeginInvoke(HideOverlay);
+            else if (msg == "drag") BeginInvoke(DragPhone);
         };
         // Seul le service local est affiché : toute autre navigation est refusée.
         core.NavigationStarting += (_, e) =>
@@ -192,7 +256,7 @@ public sealed class OverlayForm : Form
 
     private string OfflinePage() => $$"""
         <!doctype html><html lang="fr"><meta charset="utf-8"><body style="margin:0;height:100vh;display:grid;place-items:center;
-        background:#0B141B;color:#F2F6F8;font:14px/1.5 'Segoe UI',sans-serif;text-align:center">
+        background:#000;color:#F2F6F8;font:14px/1.5 'Segoe UI',sans-serif;text-align:center">
         <div style="max-width:320px;padding:24px"><div style="font-size:15px;font-weight:600;margin-bottom:8px">Service ClubDirector non démarré</div>
         <div style="color:#9BAEB8">Lancez « Lancer ClubDirector.cmd ». Cette fenêtre se reconnecte toute seule
         à {{_home.GetLeftPart(UriPartial.Authority)}}.</div>

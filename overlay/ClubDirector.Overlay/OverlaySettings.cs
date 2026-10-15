@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace ClubDirector.Overlay;
@@ -15,6 +15,15 @@ public sealed class OverlaySettings
     /// <summary>Seuls 127.0.0.1 et localhost sont acceptés (service local).</summary>
     public string Url { get; set; } = "http://127.0.0.1:8765/overlay";
     public bool StartHidden { get; set; }
+    /// <summary>« telephone » (fenêtre en forme de téléphone, par défaut) ou « panneau » (ancien panneau latéral).</summary>
+    public string Mode { get; set; } = "telephone";
+    /// <summary>Hauteur du téléphone en pixels logiques (la largeur suit les proportions d'un iPhone).</summary>
+    public int PhoneHeight { get; set; } = 860;
+    /// <summary>Position du téléphone (pixels écran) ; vide : à droite, centré verticalement.</summary>
+    public int? PhoneX { get; set; }
+    public int? PhoneY { get; set; }
+
+    [JsonIgnore] public bool IsPhone => Mode != "panneau";
 
     [JsonIgnore] public static string DataDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClubDirectorAI");
@@ -56,6 +65,8 @@ public sealed class OverlaySettings
     {
         s.Width = Math.Clamp(s.Width, 320, 1200);
         s.Opacity = Math.Clamp(s.Opacity, 0.6, 1.0);
+        s.PhoneHeight = Math.Clamp(s.PhoneHeight, 560, 1400);
+        if (s.Mode is not ("telephone" or "panneau")) s.Mode = "telephone";
         if (!Uri.TryCreate(s.Url, UriKind.Absolute, out var u) || !(u.Host is "127.0.0.1" or "localhost"))
             s.Url = new OverlaySettings().Url;
         return s;

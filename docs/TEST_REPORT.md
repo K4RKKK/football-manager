@@ -104,3 +104,19 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Présentation du directeur (vrai modèle) | **OK** | 63 s : identité, âge, arrivée, contrat, méthode issue de son profil, état des lieux conforme, 3 priorités |
 | Réponse à la bienvenue | **OK** | 35 s : remerciement bref, prêt à travailler, première étape concrète |
 | `pytest` backend | **112 / 112** | tests fenêtre (C#) 6/6, cœur du plugin 9/9 |
+
+### Session 3 — téléphone, trois contacts, rapidité
+| Test | Résultat | Détail |
+|---|---|---|
+| Détection DT / adjoint (vraie carrière) | ✅ | Paolo Maldini (DT, code 88), Antonio Gagliardi (adjoint) ; photos trouvées pour les trois |
+| Bonne photo | ✅ | le pack est indexé par `unique_id` (Dybala 14044150, Maldini 45 vérifiés à l'image) |
+| Cause des 105 s sur « Comment ça va Francis ? » | corrigé | prise de poste forcée sur la question + 8 consultations + réflexion du modèle |
+| Réflexion du modèle (mesure) | — | 1 200-1 500 tokens, 40-54 s ; coupée par défaut |
+| Cache du prompt par contact | ✅ | changement de contact : 0,5 s au lieu de 13 s (cache mémoire de llama-server) |
+| « Salut Francis, ça va ? » (téléphone, copie de test) | ✅ **1,7 s** | premiers mots 1,2 s ; une bulle |
+| « Combien il nous reste sur la marge salariale ? » | ✅ **1,9 s** | 50 k€/semaine, juste |
+| « Prépare-moi la prolongation de Dybala » | ✅ 20 s | 3 consultations (fiche, contrat, stats) ; plan chiffré + gestes à faire dans FM26 |
+| Types de messages | ✅ | 19/19 exemples (politesse, discussion, question, demande, réponse) |
+| Fenêtre téléphone (C#) | ✅ | 10/10 tests ; rendu vérifié par capture d'écran |
+| `pytest` backend | ✅ | 122 / 122 |
+| Défaut constaté | ouvert | llama-server bloqué une fois (relancé avec journal) ; préchauffage limité aux prompts modifiés |

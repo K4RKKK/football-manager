@@ -92,8 +92,42 @@ def test_plugin_heartbeat_updates_live_status(client):
 
 def test_overlay_page_injects_token_and_loads_offline(client):
     html = client.get("/overlay").text
-    assert client.app.state.cd.token in html and "Directeur sportif IA" in html
+    assert client.app.state.cd.token in html and "Téléphone du coach" in html
     assert "<script src=" not in html and "https://" not in html  # autonome, hors ligne
+    old = client.get("/overlay/panneau").text
+    assert client.app.state.cd.token in old and "Directeur sportif IA" in old
+
+
+def test_phone_contacts_threads_and_streamed_replies(client, game_dir):
+    import json as _json
+
+    from clubdirector.ai.providers.base import StepResult
+
+    from .test_ai import ScriptedProvider
+
+    client.post("/api/sync", json={"path": str(game_dir / SCORED.name)})
+    contacts = client.get("/api/contacts").json()
+    assert [c["role"] for c in contacts] == ["directeur_sportif", "directeur_technique", "entraineur_adjoint"]
+    ds = contacts[0]
+    assert ds["can_chat"] and ds["intro_pending"] and ds["unread"] == 0
+    for c in contacts[1:]:  # poste vacant dans la sauvegarde : personne à qui écrire
+        assert c["can_chat"] == (c["person"] is not None)
+        if not c["can_chat"]:
+            assert client.post(f"/api/contacts/{c['role']}/messages", json={"text": "Salut"}).status_code == 409
+    client.app.state.cd.orchestrator.providers = [
+        ScriptedProvider([StepResult("Bonjour Coach.\n\nJe prends mes fonctions."), StepResult("Ça va bien, Coach.")])]
+    r = client.post("/api/contacts/directeur_sportif/intro")
+    events = [_json.loads(line[5:]) for line in r.text.splitlines() if line.startswith("data:")]
+    assert [e["type"] for e in events] == ["delta", "done"] and events[-1]["message"]["from"] == "them"
+    assert client.get("/api/contacts").json()[0]["unread"] == 1
+    client.post("/api/contacts/directeur_sportif/read")
+    assert client.get("/api/contacts").json()[0]["unread"] == 0
+    r = client.post("/api/contacts/directeur_sportif/messages", json={"text": "Comment ça va ?"})
+    assert "Ça va bien" in r.text
+    thread = client.get("/api/contacts/directeur_sportif/messages").json()
+    assert [m["from"] for m in thread] == ["them", "me", "them"] and thread[1]["text"] == "Comment ça va ?"
+    assert client.get("/api/staff/123/photo").status_code == 404
+    assert client.get("/api/phone/home").json()["club"] == "Northbridge FC"
 
 
 def test_status_reports_director_and_office(client, game_dir):

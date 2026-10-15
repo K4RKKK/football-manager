@@ -21,26 +21,44 @@ def test_role_prompt_carries_identity_dossier_and_rules(engine, registry, tctx):
     Orchestrator(engine, registry, [p]).ask(tctx, "Que penses-tu de notre saison ?")
     assert "directeur sportif de **Northbridge FC**" in p.system and "TON RÔLE EXACT" in p.system
     assert "TES LIMITES" in p.system and "c'est l'entraîneur qui clique" in p.system
-    assert "DOSSIER DU CLUB" in p.system and "Northbridge FC" in p.system.split("DOSSIER DU CLUB")[1]
-    assert "N'invente jamais" in p.system
-    assert "PRISE DE POSTE" not in p.system
+    assert "N'invente jamais" in p.system and "FORMAT : MESSAGES" in p.system
+    # Le dossier change à chaque sauvegarde : premier message, après le prompt système et les outils.
+    dossier = p.history[0]["content"]
+    assert dossier.startswith("DOSSIER") and "Northbridge FC" in dossier and "dernière sauvegarde :" not in p.system
+    assert "prendre tes fonctions" not in p.prompt
 
 
-def test_first_llm_conversation_is_the_taking_of_office(engine, registry, tctx, tmp_path):
+def test_the_taking_of_office_is_the_directors_first_message_not_a_hijacked_question(engine, registry, tctx, tmp_path):
     store = PreferenceStore(tmp_path / "preferences.json")
-    p = ScriptedProvider([StepResult("Bonjour Coach, je prends mes fonctions."), StepResult("Réponse suivante.")])
+    p = ScriptedProvider([StepResult("Bonjour Coach, je prends mes fonctions."), StepResult("Ça va bien, Coach.")])
     orch = Orchestrator(engine, registry, [p], prefs_store=store)
-    orch.ask(tctx, "Que penses-tu de notre saison ?")
-    assert "PRISE DE POSTE" in p.system
+    assert orch.intro_pending(tctx, "directeur_sportif")
+    first = orch.introduce(tctx, "directeur_sportif")
+    assert first.route == "niveau1" and "prendre tes fonctions" in p.history[-1]["content"]
     assert tctx.ctx.career_id in store.load().office_taken
-    orch.ask(tctx, "Et maintenant ?")
-    assert "PRISE DE POSTE" not in p.system  # une seule prise de poste par carrière
+    thread = orch.thread(tctx, "directeur_sportif")
+    # La consigne automatique n'est pas enregistrée : le fil commence par le message du directeur.
+    assert [m["role"] for m in orch.conversations.messages(thread)] == ["assistant"]
+    assert orch.introduce(tctx, "directeur_sportif") is None  # une seule présentation
+    orch.send(tctx, "directeur_sportif", "Comment ça va ?")
+    last = p.history[-1]["content"]
+    assert "prendre tes fonctions" not in p.prompt and last.startswith("Comment ça va ?")
+    assert "UNE seule bulle" in last  # politesse : réponse courte et immédiate
+    assert [m["role"] for m in orch.conversations.messages(thread)] == ["assistant", "user", "assistant"]
+
+
+def test_a_simple_question_is_never_turned_into_the_taking_of_office(engine, registry, tctx, tmp_path):
+    p = ScriptedProvider([StepResult("Ça va, Coach !")])
+    orch = Orchestrator(engine, registry, [p], prefs_store=PreferenceStore(tmp_path / "p.json"))
+    assert orch.office_pending(tctx)
+    orch.ask(tctx, "Comment ça va Francis ?")
+    assert "prendre tes fonctions" not in p.prompt
 
 
 def test_take_office_command(engine, registry, tctx):
     p = ScriptedProvider([StepResult("Je prends mes fonctions.")])
     a = Orchestrator(engine, registry, [p]).take_office(tctx)
-    assert a.route == "niveau1" and "PRISE DE POSTE" in p.system
+    assert a.route == "niveau1" and "prendre tes fonctions" in p.history[-1]["content"]
 
 
 def test_no_taking_of_office_without_a_model(engine, registry, tctx):
@@ -88,10 +106,111 @@ def test_the_ai_takes_the_director_identity_and_a_new_one_introduces_himself(eng
     store = PreferenceStore(tmp_path / "preferences.json")
     p = ScriptedProvider([StepResult("Bonjour Coach."), StepResult("Merci."), StepResult("Bonjour Coach, je suis le nouveau.")])
     orch = Orchestrator(engine, registry, [p], prefs_store=store)
-    orch.ask(tctx, "Que penses-tu de la saison ?")
-    assert "Tu es **Jordan Example**" in p.system and "PRISE DE POSTE" in p.system
-    orch.ask(tctx, "Bienvenue au club !")
-    assert "PRISE DE POSTE" not in p.system
+    orch.introduce(tctx, "directeur_sportif")
+    assert "Tu es **Jordan Example**" in p.system and "prendre tes fonctions" in p.prompt
+    orch.send(tctx, "directeur_sportif", "Bienvenue au club !")
+    assert "prendre tes fonctions" not in p.prompt
     _staff(engine, tctx.ctx.career_id, club, [(15, "Robin Nouveau", 0, 10, "2026-01-02")])  # nouveau directeur recruté
-    orch.ask(tctx, "Bonjour")
-    assert "Tu es **Robin Nouveau**" in p.system and "PRISE DE POSTE" in p.system
+    assert orch.intro_pending(tctx, "directeur_sportif")  # nouveau titulaire : nouveau fil
+    orch.introduce(tctx, "directeur_sportif")
+    assert "Tu es **Robin Nouveau**" in p.system and "prendre tes fonctions" in p.prompt
+
+
+# ------------------------------------------------------------------ les deux autres contacts du téléphone
+from clubdirector.ai.director_identity import find_staff  # noqa: E402
+from clubdirector.ai.orchestrator import _alternate  # noqa: E402
+from clubdirector.ai.providers.base import ToolCall  # noqa: E402
+
+TEAM_COLS = ["uid", "unique_id", "name", "first_name", "last_name", "age", "nation_id", "club_uid", "team_slot",
+             "is_human_manager", "in_club_lists", "list_indexes", "unknown_r4", "wage", "contract_start", "contract_end"]
+
+
+def _team(engine, career_id, club_uid, rows):
+    with engine.begin() as c:
+        write_mirror(c, career_id, 1, [MirrorTable("staff", TEAM_COLS, [
+            (uid, uid + 1, name, name.split()[0], name.split()[-1], 45, 1, club_uid, slot, 0, 1 if lists != "[]" else 0,
+             lists, code, wage, "2025-07-01", "2029-06-30")
+            for uid, name, slot, lists, code, wage in rows])])
+
+
+def test_technical_director_and_assistant_are_found_in_the_save(engine, tctx):
+    club = tctx.ctx.club_uid
+    _team(engine, tctx.ctx.career_id, club, [
+        (21, "Paola Technique", 0, "[2]", 88, 14000),   # directrice technique (équipe première, mieux payée)
+        (22, "Elsa Feminine", 0, "[2]", 88, 1000),
+        (23, "Tony Adjoint", 0, "[1]", 20, 7200),        # adjoint principal
+        (24, "Marc Second", 0, "[1]", 20, 3000),
+        (25, "Jean Reserve", 1, "[1]", 20, 9000),        # adjoint de la réserve
+        (26, "Kevin Scout", 0, "[2]", 20, 9900),         # même code hors liste entraînement
+    ])
+    k = tctx.ctx.career_id
+    assert find_staff(engine, k, club, "directeur_technique").name == "Paola Technique"
+    adj = find_staff(engine, k, club, "entraineur_adjoint")
+    assert adj.name == "Tony Adjoint" and adj.unique_id == 24 and adj.role == "entraineur_adjoint"
+    assert find_staff(engine, k, club, "entraineur_adjoint", override_uid=24).name == "Marc Second"
+
+
+def test_each_contact_has_its_own_script_thread_and_colleagues(engine, registry, tctx):
+    club = tctx.ctx.club_uid
+    _team(engine, tctx.ctx.career_id, club, [(21, "Paola Technique", 0, "[2]", 88, 14000),
+                                             (23, "Tony Adjoint", 0, "[1]", 20, 7200)])
+    p = ScriptedProvider([StepResult("Salut Coach !"), StepResult("Bonjour Coach.")])
+    orch = Orchestrator(engine, registry, [p])
+    orch.introduce(tctx, "entraineur_adjoint")
+    assert "ENTRAÎNEUR ADJOINT" in p.system and "Tu es **Tony Adjoint**" in p.system and "tutoies" in p.system
+    assert "Directeur technique : Paola Technique" in p.system
+    orch.send(tctx, "directeur_technique", "Où en est l'académie ?")
+    assert "DIRECTEUR TECHNIQUE" in p.system and "Entraîneur adjoint : Tony Adjoint" in p.system
+    assert orch.thread(tctx, "entraineur_adjoint") != orch.thread(tctx, "directeur_technique")
+    assert orch.conversations.unread(orch.thread(tctx, "entraineur_adjoint")) == 1
+
+
+def test_replies_are_streamed_and_split_around_data_lookups(engine, registry, tctx):
+    p = ScriptedProvider([StepResult("Je regarde ça.", [ToolCall("1", "get_club_squad", {})]),
+                          StepResult("On a un seul joueur, Sam Sample.")])
+    events = []
+    a = Orchestrator(engine, registry, [p]).send(tctx, "directeur_sportif", "Fais-moi un point sur l'effectif", events.append)
+    kinds = [e["type"] for e in events]
+    assert kinds == ["delta", "break", "tool", "delta"] and events[2]["label"] == "effectif"
+    assert a.text == "Je regarde ça.\n\nOn a un seul joueur, Sam Sample."
+
+
+def test_thinking_only_for_real_analyses(engine, registry):
+    orch = Orchestrator(engine, registry, [])
+    assert not orch._wants_thinking("Comment ça va Francis ?")
+    assert orch._wants_thinking("Fais-moi une analyse détaillée de l'effectif")
+    assert Orchestrator(engine, registry, [], thinking="off")._wants_thinking("analyse approfondie") is False
+
+
+def test_messages_alternate_for_the_model():
+    out = _alternate([{"role": "user", "content": "DOSSIER"}, {"role": "user", "content": "Salut"},
+                      {"role": "assistant", "content": "Salut Coach"}, {"role": "user", "content": "Ça va ?"}])
+    assert [m["role"] for m in out] == ["user", "assistant", "user"] and out[0]["content"] == "DOSSIER\n\nSalut"
+
+
+def test_messages_are_told_apart_question_request_reply_discussion():
+    from clubdirector.ai.orchestrator import message_kind
+
+    asked = "Pellegrini et Dybala finissent en 2026.\n\nVous voulez que je vous chiffre les deux prolongations ?"
+    assert message_kind("Comment ça va Francis ?") == "politesse"
+    assert message_kind("Merci, bonne journée") == "politesse"
+    assert message_kind("Combien il reste sur la marge salariale ?") == "question"
+    assert message_kind("Qui sont nos meilleurs buteurs") == "question"
+    assert message_kind("Prépare-moi une offre pour un ailier droit") == "demande"
+    assert message_kind("Je veux que tu prolonges Dybala") == "demande"
+    assert message_kind("Vends Shomurodov") == "demande"
+    assert message_kind("Oui vas-y", asked) == "reponse"
+    assert message_kind("Seulement Dybala, Pellegrini on le laisse partir", asked) == "reponse"
+    assert message_kind("Trouve-moi plutôt un défenseur central", asked) == "demande"
+    assert message_kind("Le groupe a bien répondu ce week-end, je suis content") == "discussion"
+
+
+def test_the_detected_message_type_guides_the_reply(engine, registry, tctx):
+    p = ScriptedProvider([StepResult("50 k€ par semaine."), StepResult("Je m'en occupe.")])
+    orch = Orchestrator(engine, registry, [p])
+    orch.send(tctx, "directeur_sportif", "Combien il reste sur la marge salariale ?")
+    assert "type de message : QUESTION" in p.history[-1]["content"]
+    orch.send(tctx, "directeur_sportif", "Prépare-moi une offre pour un ailier droit")
+    assert "type de message : DEMANDE" in p.history[-1]["content"]
+    stored = [m["content"] for m in orch.conversations.messages(orch.thread(tctx, "directeur_sportif"))]
+    assert "Consigne automatique" not in " ".join(stored)  # la consigne n'est jamais enregistrée

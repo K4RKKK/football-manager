@@ -51,7 +51,8 @@ class AIProviderConfig(BaseModel):
     # Coûts en USD par million de tokens (0 pour un modèle local).
     input_cost_per_mtok: float = 0.0
     output_cost_per_mtok: float = 0.0
-    timeout_s: float = 120.0
+    # Le modèle local traite une requête à la fois : une réponse peut attendre la précédente.
+    timeout_s: float = 300.0
 
 
 class AIConfig(BaseModel):
@@ -61,6 +62,8 @@ class AIConfig(BaseModel):
     )
     monthly_budget_usd: float = 0.0
     max_tool_rounds: int = 6
+    # Réflexion préalable du modèle : "auto" (seulement pour les analyses demandées), "on", "off".
+    thinking: Literal["auto", "on", "off"] = "auto"
     max_context_tokens: int = 8000
 
 
@@ -90,6 +93,14 @@ class Settings(BaseModel):
     @property
     def token_path(self) -> Path:
         return self.home / "plugin.token"
+
+    @property
+    def faces_dirs(self) -> list[Path]:
+        """Photos (pack de visages installé par l'utilisateur) : graphics/faces à côté du dossier games."""
+        out = []
+        for d in self.save_dirs:
+            out += [Path(d).parent / "graphics" / "faces", Path(d).parent / "graphics" / "iconfaces"]
+        return out
 
     def ensure_dirs(self) -> None:
         self.home.mkdir(parents=True, exist_ok=True)

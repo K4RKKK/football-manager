@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Engine, desc, insert, select, update
+from sqlalchemy import Engine, desc, func, insert, select, update
 
 from clubdirector.database import schema as s
 
@@ -55,6 +55,41 @@ class ConversationStore:
         with self.engine.begin() as c:
             return c.execute(insert(s.conversations).values(
                 career_id=career_id, title=title, created_at=datetime.now(UTC))).inserted_primary_key[0]
+
+    def find_thread(self, career_id: int, contact_role: str, staff_uid: int) -> int | None:
+        """Fil de messages d'un contact (rôle + personne) dans une carrière, s'il existe."""
+        c_ = s.conversations.c
+        with self.engine.connect() as c:
+            return c.execute(select(c_.id).where(c_.career_id == career_id, c_.contact_role == contact_role,
+                                                 c_.staff_uid == staff_uid).order_by(desc(c_.id)).limit(1)).scalar()
+
+    def thread(self, career_id: int, contact_role: str, staff_uid: int, title: str | None = None) -> int:
+        """Fil de messages d'un contact, créé au premier besoin. Un nouveau titulaire du poste a son propre fil."""
+        found = self.find_thread(career_id, contact_role, staff_uid)
+        if found is not None:
+            return found
+        with self.engine.begin() as c:
+            return c.execute(insert(s.conversations).values(
+                career_id=career_id, title=title, created_at=datetime.now(UTC), contact_role=contact_role,
+                staff_uid=staff_uid, last_read_id=0)).inserted_primary_key[0]
+
+    def count(self, conversation_id: int) -> int:
+        with self.engine.connect() as c:
+            return c.execute(select(func.count()).select_from(s.messages)
+                             .where(s.messages.c.conversation_id == conversation_id)).scalar_one()
+
+    def unread(self, conversation_id: int) -> int:
+        """Messages du contact pas encore lus par l'entraîneur."""
+        with self.engine.connect() as c:
+            last = c.execute(select(s.conversations.c.last_read_id).where(s.conversations.c.id == conversation_id)).scalar()
+            return c.execute(select(func.count()).select_from(s.messages).where(
+                s.messages.c.conversation_id == conversation_id, s.messages.c.role == "assistant",
+                s.messages.c.id > (last or 0))).scalar_one()
+
+    def mark_read(self, conversation_id: int) -> None:
+        with self.engine.begin() as c:
+            last = c.execute(select(func.max(s.messages.c.id)).where(s.messages.c.conversation_id == conversation_id)).scalar()
+            c.execute(update(s.conversations).where(s.conversations.c.id == conversation_id).values(last_read_id=last or 0))
 
     def add_message(self, conversation_id: int, role: str, content: str, *, game_date: date | None = None,
                     route: str | None = None, tool_trace: list | None = None) -> int:

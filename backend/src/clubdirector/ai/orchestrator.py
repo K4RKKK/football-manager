@@ -1,9 +1,18 @@
-"""Orchestrateur de conversation : routage → (niveau 0 | boucle d'outils LLM) → réponse tracée."""
+"""Orchestrateur de conversation : routage → (niveau 0 | boucle d'outils LLM) → réponse tracée.
+
+Trois contacts (directeur sportif, directeur technique, entraîneur adjoint) : chacun a son script de
+rôle, l'identité de la personne en poste dans la sauvegarde et son fil de messages par carrière.
+Les réponses peuvent être diffusées au fil de l'écriture (`on_event`).
+"""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import re
+import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -11,8 +20,14 @@ from typing import Any
 from sqlalchemy import Engine, func, insert, select
 
 from clubdirector.ai.club_brief import build_club_dossier
-from clubdirector.ai.director_identity import find_director
-from clubdirector.ai.persona import TAKE_OFFICE_REQUEST, build_system_prompt
+from clubdirector.ai.director_identity import STAFF_ROLES, find_staff
+from clubdirector.ai.persona import (
+    ROLE_LABELS,
+    TAKE_OFFICE_REQUEST,
+    build_context_message,
+    build_system_prompt,
+    first_contact_request,
+)
 from clubdirector.ai.providers.base import IAIProvider, ProviderError
 from clubdirector.ai.router import answer_intent, classify, wants_premium
 from clubdirector.database import schema as s
@@ -22,6 +37,114 @@ from clubdirector.tools.registry import ToolContext, ToolRegistry
 
 log = logging.getLogger(__name__)
 MAX_TOOL_RESULT_CHARS = 12000
+CONTACT_ROLES: tuple[str, ...] = tuple(STAFF_ROLES)
+DIRECTOR = "directeur_sportif"
+# Réflexion préalable du modèle : seulement quand l'entraîneur demande une vraie analyse.
+DEEP_RE = re.compile(
+    r"r[ée]fl[ée]chi|en profondeur|analyse (approfondie|d[ée]taill[ée]e|compl[èe]te)|plan complet|"
+    r"rapport complet|point complet|[ée]tude compl[èe]te|plan de mercato|strat[ée]gie (compl[èe]te|globale)",
+    re.IGNORECASE,
+)
+# Message de conversation courante (salut, ça va, merci…) : une seule bulle, tout de suite.
+# Reconnu quand presque tous ses mots sont des mots de politesse (au plus deux autres : un prénom…).
+SMALL_TALK_WORDS = frozenset("""
+salut bonjour bonsoir coucou hello hey yo wesh re ça ca va vas allez comment et toi vous tu bien merci beaucoup
+mille bonne bon journée journee soirée soiree nuit week-end weekend chance à a plus demain bientôt bientot au revoir
+ciao ok okay d'accord dac reçu recu bien parfait top super génial genial bravo bienvenue coach chef boss mister
+le la les mon ma cher chère ami oui non
+""".split())
+def _words(text: str) -> list[str]:
+    return re.findall(r"[\w'-]+", text.lower().replace("’", "'"))
+
+
+def is_small_talk(text: str) -> bool:
+    words = _words(text)
+    if not words or len(words) > 8:
+        return False
+    known = sum(1 for w in words if w in SMALL_TALK_WORDS)
+    return known >= 1 and len(words) - known <= 2 and known >= len(words) / 2
+
+
+# Types de messages de l'entraîneur : chacun appelle une façon de répondre différente.
+REQUEST_RE = re.compile(
+    r"^\W*(?:(?:est-ce que )?(?:tu peux|tu pourrais|peux-tu|pourrais-tu|vous pouvez|vous pourriez|pouvez-vous|"
+    r"pourriez-vous|j'aimerais(?: que)?|je voudrais(?: que)?|je veux(?: que)?|il (?:me )?faut|il faudrait|merci de|"
+    r"n'oublie pas de|essaie de|essaye de)\s+)?(?:tu |vous )?(?:me |nous |m'|lui |leur |le |la |les |l')?"
+    r"(?:pr[ée]pare|trouve|cherche|fais|faites|fait|analyse|compare|liste|propose|donne|montre|envoie|"
+    r"vends|vend|ach[èe]te|recrute|prolonge|n[ée]gocie|regarde|v[ée]rifie|calcule|chiffre|estime|[ée]tudie|"
+    r"identifie|rep[èe]re|sors|r[ée]dige|organise|planifie|garde|retiens|note|m[ée]morise|oublie|pr[ée]vois|"
+    r"construis|classe|r[ée]sume|explique|d[ée]taille|[ée]value|[ée]tablis|dresse|sugg[èe]re|conseille|"
+    r"aide|occupe|pr[ée]pare|lance|bloque|vire|lib[èe]re|pr[êe]te|mets|place|ajoute|enl[èe]ve|retire)",
+    re.IGNORECASE,
+)
+QUESTION_RE = re.compile(
+    r"^\W*(qui|que|qu'|quoi|quel|quelle|quels|quelles|combien|comment|pourquoi|quand|o[ùu]|est-ce|lequel|"
+    r"laquelle|lesquels|on en est|t'en penses|tu en penses|vous en pensez|c'est quoi|y a-t-il|il y a)\b",
+    re.IGNORECASE,
+)
+REPLY_START = frozenset("""oui non ouais ok okay d'accord dac vas-y allez-y go fonce on banco carrément carrement
+plutôt plutot pas jamais surtout laisse laissez attends attendez je j' évidemment evidemment bien sûr sur exactement
+voilà voila parfait top nickel ça ca les le la lui eux aucun aucune tous toutes""".split())
+KIND_HINTS = {
+    "politesse": ("[Consigne automatique — type de message : DISCUSSION (politesse). Réponds en UNE seule bulle d'une "
+                  "ou deux phrases, tout de suite, sans consulter de données et sans proposer d'action.]"),
+    "discussion": ("[Consigne automatique — type de message : DISCUSSION. L'entraîneur partage un avis ou une "
+                   "information : réagis naturellement en une ou deux bulles, comme un collègue (accord, nuance, "
+                   "conséquence pour ton domaine). Pas de rapport, pas de liste.]"),
+    "question": ("[Consigne automatique — type de message : QUESTION. Donne la réponse d'abord, directement, en une "
+                 "ou deux bulles avec les chiffres utiles. Consulte les données seulement si le dossier ne suffit "
+                 "pas. Pas de développement non demandé.]"),
+    "demande": ("[Consigne automatique — type de message : DEMANDE. Fais le travail maintenant : consulte les données "
+                "nécessaires puis livre un résultat concret (noms, chiffres, recommandation) en bulles aérées. Si "
+                "une action dans FM26 est nécessaire, prépare-la et dis précisément ce que l'entraîneur doit faire "
+                "dans le jeu.]"),
+    "reponse": ("[Consigne automatique — type de message : RÉPONSE de l'entraîneur à ta dernière question. Prends-la "
+                "en compte : si c'est un accord sur ce que tu proposais, fais-le maintenant ; si c'est une décision "
+                "durable, retiens-la ; sinon accuse réception en une bulle et enchaîne sur la suite logique.]"),
+}
+
+
+def message_kind(text: str, previous: str | None = None) -> str:
+    """politesse | discussion | question | demande | reponse — `previous` : dernier message du contact.
+
+    - réponse : le contact venait de poser une question et l'entraîneur y répond (sans en poser une) ;
+    - politesse : salut, ça va, merci… ;
+    - demande : un travail à faire (prépare, trouve, vends, analyse…) ;
+    - question : une information à donner ;
+    - discussion : un avis, une information partagée."""
+    words = _words(text)
+    if not words:
+        return "politesse"
+    last_bubble = (previous or "").strip().split("\n\n")[-1]
+    request = bool(REQUEST_RE.search(text))
+    if "?" in last_bubble and "?" not in text and len(words) <= 25 and (words[0] in REPLY_START or not request):
+        return "reponse"
+    if is_small_talk(text):
+        return "politesse"
+    if request:
+        return "demande"
+    if "?" in text or QUESTION_RE.search(text):
+        return "question"
+    return "discussion"
+
+
+TOOL_LABELS = {
+    "get_club_squad": "effectif", "get_player_profile": "fiche joueur", "get_player_contract": "contrat",
+    "get_player_attributes": "attributs", "get_player_statistics": "statistiques", "get_player_season_history": "historique",
+    "get_recent_matches": "derniers matchs", "get_match_details": "détails du match", "get_upcoming_matches": "calendrier",
+    "get_league_table": "classement", "get_club_finances": "finances", "get_transfer_budget": "budget transferts",
+    "get_wage_budget": "masse salariale", "get_active_tactics": "tactique", "get_injured_players": "blessés",
+    "get_transfer_history": "transferts", "search_players": "recherche de joueurs", "compare_players": "comparaison",
+    "search_expiring_contracts": "fins de contrat", "get_top_players_stat": "classement statistique",
+    "get_alerts": "alertes", "analyze_squad": "analyse d'effectif", "identify_weak_positions": "postes faibles",
+    "analyze_tactical_fit": "adéquation tactique", "find_recruitment_targets": "cibles de recrutement",
+    "estimate_wage_affordability": "marge salariale", "analyze_contract_risks": "risques contractuels",
+    "evaluate_youth_prospects": "jeunes", "remember": "mémoire", "list_memories": "mémoire", "forget": "mémoire",
+    "describe_game_tables": "données du jeu", "query_game_table": "données du jeu",
+    "get_club_league_history": "palmarès", "get_club_staff": "staff", "get_current_save": "sauvegarde",
+    "get_managed_club": "club",
+}
+Event = Callable[[dict], None]
 
 
 @dataclass
@@ -33,6 +156,7 @@ class ChatAnswer:
     limitations: list[str] = field(default_factory=list)
     provider: str | None = None
     cost_usd: float = 0.0
+    message_id: int | None = None
 
     def as_dict(self) -> dict:
         return self.__dict__.copy()
@@ -44,10 +168,25 @@ def _compact(data: str) -> str:
     return data[:MAX_TOOL_RESULT_CHARS] + '…"[tronqué : affinez la requête (filtres, limit)]"'
 
 
+def _alternate(messages: list[dict]) -> list[dict]:
+    """Fusionne les messages consécutifs d'un même rôle (le modèle attend une alternance stricte)."""
+    out: list[dict] = []
+    for m in messages:
+        if out and out[-1]["role"] == m["role"]:
+            out[-1] = {"role": m["role"], "content": out[-1]["content"] + "\n\n" + m["content"]}
+        else:
+            out.append({"role": m["role"], "content": m["content"]})
+    return out
+
+
+def tool_label(name: str) -> str:
+    return TOOL_LABELS.get(name, "données du jeu")
+
+
 class Orchestrator:
     def __init__(self, engine: Engine, registry: ToolRegistry, providers: list[IAIProvider], *,
                  mode: str = "local", monthly_budget_usd: float = 0.0, max_tool_rounds: int = 6,
-                 history_messages: int = 8, prefs_store: Any = None) -> None:
+                 history_messages: int = 12, prefs_store: Any = None, thinking: str = "auto") -> None:
         self.engine = engine
         self.prefs_store = prefs_store
         self.registry = registry
@@ -56,7 +195,13 @@ class Orchestrator:
         self.monthly_budget_usd = monthly_budget_usd
         self.max_tool_rounds = max_tool_rounds
         self.history_messages = history_messages
+        self.thinking = thinking  # auto | on | off
         self.conversations = ConversationStore(engine)
+        self._active = 0
+        self._active_lock = threading.Lock()
+        self._intro_lock = threading.Lock()
+        self._intros: set[int] = set()
+        self._warmed: dict[str, str] = {}  # rôle -> empreinte du prompt déjà calculé par le serveur local
 
     # ------------------------------------------------------------------ budget
     def month_spend(self) -> float:
@@ -95,15 +240,38 @@ class Orchestrator:
             return free[0] if free else None
         return p
 
-    # ------------------------------------------------------------------ conversation
-    def take_office(self, tctx: ToolContext) -> ChatAnswer:
-        """Prise de poste explicite du directeur sportif dans la carrière active."""
-        conv = self.conversations.create(tctx.ctx.career_id, "Prise de poste")
-        return self.ask(tctx, TAKE_OFFICE_REQUEST, conversation_id=conv, force_tier=1, taking_office=True)
+    def _wants_thinking(self, question: str) -> bool:
+        if self.thinking == "on":
+            return True
+        if self.thinking == "off":
+            return False
+        return bool(DEEP_RE.search(question))
+
+    # ------------------------------------------------------------------ staff (contacts)
+    def staff(self, tctx: ToolContext, role: str):
+        """La personne en poste pour `role` dans la carrière (sauvegarde), ou None (poste vacant)."""
+        override = tctx.prefs.staff_overrides.get(role)
+        if role == DIRECTOR and override is None:
+            override = tctx.prefs.director_staff_uid
+        return find_staff(self.engine, tctx.ctx.career_id, tctx.ctx.club_uid, role, override)
+
+    def team(self, tctx: ToolContext) -> dict[str, Any]:
+        return {role: self.staff(tctx, role) for role in CONTACT_ROLES}
 
     def director(self, tctx: ToolContext):
         """Directeur sportif en poste dans la carrière (sauvegarde), ou None."""
-        return find_director(self.engine, tctx.ctx.career_id, tctx.ctx.club_uid, tctx.prefs.director_staff_uid)
+        return self.staff(tctx, DIRECTOR)
+
+    def thread(self, tctx: ToolContext, role: str, member=None) -> int:
+        member = member if member is not None else self.staff(tctx, role)
+        title = f"{ROLE_LABELS[role]} — {member.name if member else 'poste vacant'}"
+        return self.conversations.thread(tctx.ctx.career_id, role, member.uid if member else 0, title)
+
+    def intro_pending(self, tctx: ToolContext, role: str, member=None) -> bool:
+        """Vrai si ce contact n'a encore jamais écrit à l'entraîneur (nouveau titulaire compris)."""
+        member = member if member is not None else self.staff(tctx, role)
+        conv = self.conversations.find_thread(tctx.ctx.career_id, role, member.uid if member else 0)
+        return conv is None or self.conversations.count(conv) == 0
 
     def office_pending(self, tctx: ToolContext, director=None) -> bool:
         """Vrai si le directeur en poste n'a pas encore fait sa prise de poste (nouvelle carrière ou nouveau directeur)."""
@@ -124,15 +292,48 @@ class Orchestrator:
                 prefs.office_taken.append(tctx.ctx.career_id)
             self.prefs_store.save(prefs)
 
+    # ------------------------------------------------------------------ conversation
+    def take_office(self, tctx: ToolContext) -> ChatAnswer:
+        """Prise de poste explicite du directeur sportif dans la carrière active."""
+        conv = self.conversations.create(tctx.ctx.career_id, "Prise de poste")
+        return self.ask(tctx, TAKE_OFFICE_REQUEST, conversation_id=conv, force_tier=1, taking_office=True)
+
+    def send(self, tctx: ToolContext, role: str, text: str, on_event: Event | None = None) -> ChatAnswer:
+        """Message de l'entraîneur à un contact du téléphone."""
+        member = self.staff(tctx, role)
+        conv = self.thread(tctx, role, member)
+        return self.ask(tctx, text, conversation_id=conv, role=role, member=member, on_event=on_event)
+
+    def introduce(self, tctx: ToolContext, role: str, on_event: Event | None = None) -> ChatAnswer | None:
+        """Premier message du contact (prise de poste pour un nouveau directeur sportif).
+
+        None si le contact a déjà écrit, ou si son premier message est déjà en cours d'écriture."""
+        member = self.staff(tctx, role)
+        conv = self.thread(tctx, role, member)
+        with self._intro_lock:
+            if conv in self._intros or self.conversations.count(conv) > 0:
+                return None
+            self._intros.add(conv)
+        try:
+            taking_office = role == DIRECTOR and self.office_pending(tctx, member)
+            return self.ask(tctx, first_contact_request(role, taking_office=taking_office), conversation_id=conv,
+                            role=role, member=member, on_event=on_event, taking_office=taking_office,
+                            hidden_question=True, force_tier=1)
+        finally:
+            with self._intro_lock:
+                self._intros.discard(conv)
+
     def ask(self, tctx: ToolContext, question: str, *, conversation_id: int | None = None,
-            force_tier: int | None = None, taking_office: bool | None = None) -> ChatAnswer:
+            force_tier: int | None = None, taking_office: bool | None = None, role: str = DIRECTOR,
+            member: Any = None, on_event: Event | None = None, hidden_question: bool = False) -> ChatAnswer:
         conv = conversation_id or self.conversations.create(tctx.ctx.career_id, question[:80])
         history = [
             {"role": m["role"], "content": m["content"]}
             for m in self.conversations.messages(conv, limit=self.history_messages)
             if m["role"] in ("user", "assistant")
         ]
-        self.conversations.add_message(conv, "user", question, game_date=tctx.ctx.game_date)
+        if not hidden_question:
+            self.conversations.add_message(conv, "user", question, game_date=tctx.ctx.game_date)
         trace: list[dict] = []
 
         def run(tool: str, args: dict):
@@ -141,64 +342,136 @@ class Orchestrator:
             return r
 
         answer: ChatAnswer
-        intent = classify(question) if force_tier is None else None
+        intent = classify(question) if force_tier is None and not hidden_question else None
         if intent is not None:
             try:
                 text, lim = answer_intent(intent, run)
                 answer = ChatAnswer(text, "niveau0", conv, trace, sorted(set(lim)))
             except LookupError as exc:
                 answer = ChatAnswer(f"Donnée non disponible : {exc}", "niveau0", conv, trace)
+            if on_event:
+                on_event({"type": "delta", "text": answer.text})
         else:
-            director = self.director(tctx)
-            office = self.office_pending(tctx, director) if taking_office is None else taking_office
-            answer = self._llm(tctx, question, history, conv, trace, force_tier, office, director)
-            if office and answer.route.startswith("niveau"):
-                self._mark_office_taken(tctx, director)
-        self.conversations.add_message(conv, "assistant", answer.text, game_date=tctx.ctx.game_date,
-                                       route=answer.route, tool_trace=trace)
+            if member is None:
+                member = self.staff(tctx, role)
+            # La prise de poste est le premier message du directeur (`introduce`, ou `take_office`) :
+            # elle ne détourne jamais une question de l'entraîneur.
+            office = bool(taking_office) and role == DIRECTOR
+            answer = self._llm(tctx, question, history, conv, trace, force_tier, office, member, role, on_event)
+            if role == DIRECTOR and answer.route.startswith("niveau") and (office or self.office_pending(tctx, member)):
+                self._mark_office_taken(tctx, member)
+        if answer.route != "indisponible" or not hidden_question:
+            answer.message_id = self.conversations.add_message(
+                conv, "assistant", answer.text, game_date=tctx.ctx.game_date, route=answer.route, tool_trace=trace)
         return answer
 
-    def _llm(self, tctx: ToolContext, question: str, history: list[dict], conv: int, trace: list[dict],
-             force_tier: int | None, taking_office: bool = False, director=None) -> ChatAnswer:
-        provider = self.choose_provider(question, force_tier)
-        if provider is None:
-            return ChatAnswer(
-                "Cette question demande une analyse par le modèle IA, mais aucun moteur n'est disponible "
-                "(non configuré, mode local sans serveur, ou budget mensuel atteint). Les questions factuelles "
-                "(scores, buteurs, classement, budgets, effectif par poste) restent disponibles sans IA.",
-                "indisponible", conv, trace)
+    def _prompt(self, tctx: ToolContext, role: str, member: Any, history: list[dict], question: str,
+                taking_office: bool = False) -> tuple[str, list[dict]]:
         ctx = tctx.ctx
+        team = self.team(tctx)
+        team[role] = member
         system = build_system_prompt(
             director_name=tctx.prefs.director_name, club=ctx.club_name, persona=tctx.prefs.persona,
-            game_date=ctx.game_date.isoformat() if ctx.game_date else None,
-            season=season_label(ctx.season_start_year), knowledge=tctx.prefs.knowledge_mode,
-            memories=MemoryStore(self.engine).list(ctx.career_id),
-            manager=ctx.manager_name, dossier=build_club_dossier(self.registry, tctx),
-            taking_office=taking_office, identity=director,
-        )
+            knowledge=tctx.prefs.knowledge_mode, manager=ctx.manager_name, identity=member, role=role, team=team)
+        context = build_context_message(
+            club=ctx.club_name, game_date=ctx.game_date.isoformat() if ctx.game_date else None,
+            season=season_label(ctx.season_start_year), dossier=build_club_dossier(self.registry, tctx),
+            memories=MemoryStore(self.engine).list(ctx.career_id))
+        if taking_office and role == DIRECTOR and not question.startswith("[Message automatique"):
+            question = first_contact_request(role, taking_office=True) + "\n\nDemande de l'entraîneur : " + question
+        if not question.startswith("[Message automatique"):
+            previous = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
+            question += "\n\n" + KIND_HINTS[message_kind(question, previous)]
+        messages = _alternate([{"role": "user", "content": context}, *history, {"role": "user", "content": question}])
+        return system, messages
+
+    def _llm(self, tctx: ToolContext, question: str, history: list[dict], conv: int, trace: list[dict],
+             force_tier: int | None, taking_office: bool = False, member=None, role: str = DIRECTOR,
+             on_event: Event | None = None) -> ChatAnswer:
+        provider = self.choose_provider(question, force_tier)
+        if provider is None:
+            text = ("Cette question demande une analyse par le modèle IA, mais aucun moteur n'est disponible "
+                    "(non configuré, mode local sans serveur, ou budget mensuel atteint). Les questions factuelles "
+                    "(scores, buteurs, classement, budgets, effectif par poste) restent disponibles sans IA.")
+            if on_event:
+                on_event({"type": "delta", "text": text})
+            return ChatAnswer(text, "indisponible", conv, trace)
+        system, messages = self._prompt(tctx, role, member, history, question, taking_office)
         tools = [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
                  for t in self.registry.for_llm()]
         cost = 0.0
         limitations: list[str] = []
+        said: list[str] = []
+        with self._active_lock:
+            self._active += 1
         try:
-            session = provider.start(system, [*history, {"role": "user", "content": question}], tools)
+            session = provider.start(system, messages, tools)
+            if hasattr(session, "thinking"):
+                session.thinking = self._wants_thinking(question)
+            stream = getattr(session, "step_stream", None) if on_event else None
             for _ in range(self.max_tool_rounds + 1):
-                step = session.step()
+                if stream is not None:
+                    step = stream(lambda d: on_event({"type": "delta", "text": d}))
+                else:
+                    step = session.step()
+                    if on_event and step.text:
+                        on_event({"type": "delta", "text": step.text})
                 cost += self._record_usage(provider, step.model, step.input_tokens, step.output_tokens)
+                if step.text.strip():
+                    said.append(step.text.strip())
                 if not step.tool_calls:
-                    return ChatAnswer(step.text.strip() or "(réponse vide du modèle)", f"niveau{provider.tier}", conv,
+                    return ChatAnswer("\n\n".join(said) or "(réponse vide du modèle)", f"niveau{provider.tier}", conv,
                                       trace, sorted(set(limitations)), provider.name, cost)
+                if on_event:
+                    on_event({"type": "break"})
                 results = []
                 for call in step.tool_calls:
+                    if on_event:
+                        on_event({"type": "tool", "name": call.name, "label": tool_label(call.name)})
                     r = self.registry.execute(call.name, call.arguments, tctx)
                     trace.append({"tool": call.name, "args": call.arguments, "ok": r.ok, "error": r.error})
                     limitations.extend(r.limitations)
                     payload = json.dumps(r.as_dict(), ensure_ascii=False, default=str)
                     results.append((call, _compact(payload), not r.ok))
                 session.add_tool_results(results)
-            return ChatAnswer("J'ai atteint la limite d'appels d'outils sans conclure ; reformulez ou précisez la demande.",
-                              f"niveau{provider.tier}", conv, trace, sorted(set(limitations)), provider.name, cost)
+            said.append("J'ai atteint la limite d'appels d'outils sans conclure ; reformulez ou précisez la demande.")
+            return ChatAnswer("\n\n".join(said), f"niveau{provider.tier}", conv, trace, sorted(set(limitations)),
+                              provider.name, cost)
         except ProviderError as exc:
             log.warning("Fournisseur IA en échec : %s", exc)
-            return ChatAnswer(f"Le moteur IA « {provider.name} » est indisponible : {exc}", "indisponible", conv,
-                              trace, sorted(set(limitations)), provider.name, cost)
+            text = f"Le moteur IA « {provider.name} » est indisponible : {exc}"
+            if on_event:
+                on_event({"type": "delta", "text": text})
+            return ChatAnswer(text, "indisponible", conv, trace, sorted(set(limitations)), provider.name, cost)
+        finally:
+            with self._active_lock:
+                self._active -= 1
+
+    # ------------------------------------------------------------------ rapidité
+    def warm(self, tctx: ToolContext, roles: tuple[str, ...] = CONTACT_ROLES) -> list[str]:
+        """Pré-calcule le prompt de chaque contact (après une synchronisation) sur le modèle local.
+
+        S'interrompt dès qu'une vraie conversation est en cours. Renvoie les rôles préparés."""
+        provider = self.choose_provider("", 1)
+        if provider is None or not hasattr(provider, "warm") or provider.input_cost_per_mtok > 0:
+            return []
+        tools = [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
+                 for t in self.registry.for_llm()]
+        done = []
+        for role in roles:
+            if self._active:
+                break
+            member = self.staff(tctx, role)
+            system, messages = self._prompt(tctx, role, member, [], ".")
+            key = hashlib.sha256(json.dumps([system, messages, tools], ensure_ascii=False, default=str)
+                                 .encode("utf-8")).hexdigest()
+            if self._warmed.get(role) == key:
+                continue  # prompt inchangé depuis le dernier calcul : rien à refaire
+            try:
+                provider.warm(system, messages, tools)
+            except ProviderError as exc:
+                log.info("Préchauffage interrompu : %s", exc)
+                break
+            self._warmed[role] = key
+            done.append(role)
+        return done

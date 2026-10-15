@@ -64,9 +64,15 @@ class ScriptedProvider:
         self.received_results = []
         self.system = None
         self.tools = None
+        self.history = []
+
+    @property
+    def prompt(self) -> str:
+        """Tout ce que le modèle a reçu : prompt système + messages (dont le DOSSIER)."""
+        return (self.system or "") + "\n" + "\n".join(m["content"] for m in self.history)
 
     def start(self, system, history, tools):
-        self.system, self.tools = system, tools
+        self.system, self.tools, self.history = system, tools, list(history)
         outer = self
 
         class S:
@@ -91,7 +97,7 @@ def test_llm_tool_loop_uses_real_data(engine, registry, tctx):
     assert a.route == "niveau1" and [t["tool"] for t in a.tools] == ["get_club_squad"]
     payload = json.loads(p.received_results[0][1])
     assert payload["ok"] and payload["data"][0]["nom"] == "Sam Sample"
-    assert "N'invente jamais" in p.system and "2031-03-01" in p.system
+    assert "N'invente jamais" in p.system and "01/03/2031" in p.history[0]["content"]
     assert all(t["name"] != "submit_transfer_offer" for t in p.tools)
 
 

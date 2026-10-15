@@ -284,6 +284,10 @@ conversations = T(
     Column("title", String(200)),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("summary", Text),
+    # Fil de messages d'un contact du téléphone (rôle du staff + personne) ; None = ancienne conversation.
+    Column("contact_role", String(40)),
+    Column("staff_uid", Integer),
+    Column("last_read_id", Integer),
 )
 
 messages = T(

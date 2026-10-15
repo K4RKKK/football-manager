@@ -28,6 +28,12 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 3 | Fenêtre ClubDirector externe au-dessus de FM26 | ✅ | `overlay/ClubDirector.Overlay` (WebView2, Ctrl+Alt+D, zone de notification) + page `/overlay` ; testée au-dessus de FM26 |
 | Phase 4 | Identité du directeur sportif en poste (sauvegarde) | ✅ | code de fonction 10 hors départements ; vérifié sur 11 directeurs réels + confirmé par l'utilisateur (Francis Cagigao) |
 | Phase 4 | Script de rôle complet (`ai/role_directeur_sportif.md`) | ✅ | rôle exact FM26, limites, méthode, style ; présentation + bienvenue testées |
+| Phase 3 | Téléphone (iPhone) : accueil, Contacts, fiche, Messages | ✅ | `web/phone.html` sur `/overlay` ; fenêtre en forme de téléphone (coins arrondis, déplaçable, 3 tailles) ; testé sur la vraie carrière |
+| Phase 4 | Trois contacts : directeur sportif, directeur technique, entraîneur adjoint | ✅ / 🟡 adjoint | DT = code 88 (Freund, Lange, Moncada, Maldini) ; adjoint = code 20 liste entraînement, équipe première, mieux payé (heuristique 5/6, corrigeable) |
+| Phase 4 | Scripts de rôle DT et adjoint + format messages commun | ✅ | `role_directeur_technique.md`, `role_entraineur_adjoint.md`, `style_messagerie.md` |
+| Phase 4 | Types de messages (politesse, discussion, question, demande, réponse) | ✅ | 19/19 exemples classés ; consigne adaptée à chaque type |
+| Phase 4 | Réponses rapides | ✅ | réflexion coupée sauf analyse demandée, dossier après les outils (cache), préchauffage, affichage au fil de l'écriture : « ça va » 1,7 s, question 1,9 s, demande avec données 20 s |
+| Phase 4 | Photos du staff | ✅ | pack de visages de l'utilisateur (`graphics/faces/<unique_id>.png`), lu en local |
 | Phase 3 | Entrée dans le menu latéral natif | 🧪 | outil de relevé UI prêt (Maj+F10) |
 | Phase 4 | Registre d'outils (33 disponibles / 51) | ✅ | |
 | Phase 4 | Routage niveau 0 (sans IA) | ✅ | 13 formulations testées |

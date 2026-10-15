@@ -11,19 +11,24 @@ Sécurité :
 from __future__ import annotations
 
 import hmac
+import json
 import logging
+import queue
 import threading
 from dataclasses import asdict
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from clubdirector import __version__
+from clubdirector.ai.director_identity import staff_candidates
 from clubdirector.ai.factory import build_providers
-from clubdirector.ai.orchestrator import Orchestrator
+from clubdirector.ai.orchestrator import CONTACT_ROLES, Orchestrator, tool_label
+from clubdirector.ai.persona import ROLE_LABELS
 from clubdirector.api.live import Heartbeat, PluginBridge
 from clubdirector.config import Settings, load_settings
 from clubdirector.database.db import open_database
@@ -59,6 +64,14 @@ class ToolCallRequest(BaseModel):
     args: dict[str, Any] = Field(default_factory=dict)
 
 
+class PhoneMessage(BaseModel):
+    text: str = Field(..., min_length=1, max_length=4000)
+
+
+class StaffAssignment(BaseModel):
+    uid: int | None = None  # None : retour à la détection automatique
+
+
 class CalibrationRequest(BaseModel):
     player_uid: int
     displayed_value: float = Field(..., gt=0)
@@ -85,7 +98,8 @@ class AppState:
         self.orchestrator = Orchestrator(self.engine, self.registry, providers, mode=settings.ai.mode,
                                          monthly_budget_usd=settings.ai.monthly_budget_usd,
                                          max_tool_rounds=settings.ai.max_tool_rounds,
-                                         prefs_store=self.prefs_store)
+                                         prefs_store=self.prefs_store, thinking=settings.ai.thinking)
+        self._warm_lock = threading.Lock()
 
     def sync_and_activate(self, path: Path) -> dict:
         """Synchronise une sauvegarde et en fait la carrière active (copie sûre, verrou commun)."""
@@ -95,7 +109,22 @@ class AppState:
             prefs = self.prefs
             prefs.active_career_id = res.career_id
             self.prefs_store.save(prefs)
+        self.warm_in_background()
         return asdict(res)
+
+    def warm_in_background(self) -> None:
+        """Prépare le prompt des trois contacts sur l'IA locale (réponses rapides après une sauvegarde)."""
+        def run() -> None:
+            if not self._warm_lock.acquire(blocking=False):
+                return
+            try:
+                done = self.orchestrator.warm(self.tool_context())
+                log.info("Contacts préparés sur l'IA locale : %s", ", ".join(done) or "aucun")
+            except Exception as exc:  # noqa: BLE001 — le préchauffage n'est qu'une optimisation
+                log.info("Préchauffage ignoré : %s", exc)
+            finally:
+                self._warm_lock.release()
+        threading.Thread(target=run, name="warm-llm", daemon=True).start()
 
     @property
     def prefs(self) -> Preferences:
@@ -128,6 +157,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.cd = state
     if settings.auto_sync:
         state.watcher.start()  # relit chaque nouvelle sauvegarde FM26 (copie sûre)
+        state.warm_in_background()  # même interrupteur : pas de travail de fond pendant les tests
     allowed_hosts = {f"127.0.0.1:{settings.port}", f"localhost:{settings.port}", "127.0.0.1", "localhost", "testserver"}
 
     @app.middleware("http")
@@ -155,7 +185,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/overlay", response_class=HTMLResponse)
     def overlay() -> str:
-        """Panneau compact de discussion (fenêtre ClubDirector au-dessus de FM26)."""
+        """Téléphone ClubDirector (fenêtre au-dessus de FM26) : Contacts et Messages."""
+        page = WEB_DIR / "phone.html"
+        html = (page if page.exists() else WEB_DIR / "overlay.html").read_text(encoding="utf-8")
+        return html.replace("__CLUBDIRECTOR_TOKEN__", state.token)
+
+    @app.get("/overlay/panneau", response_class=HTMLResponse)
+    def overlay_panel() -> str:
+        """Ancien panneau compact de discussion."""
         html = (WEB_DIR / "overlay.html").read_text(encoding="utf-8")
         return html.replace("__CLUBDIRECTOR_TOKEN__", state.token)
 
@@ -303,6 +340,168 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/api/director/take-office", dependencies=A)
     def take_office():
         return state.orchestrator.take_office(state.tool_context()).as_dict()
+
+    # ----------------------------------------------------------------- téléphone (contacts du staff)
+    def _role(role: str) -> str:
+        if role not in CONTACT_ROLES:
+            raise HTTPException(404, "Contact inconnu.")
+        return role
+
+    def _photo_path(unique_id: int | None) -> Path | None:
+        if not unique_id:
+            return None
+        for d in settings.faces_dirs:
+            for ext in (".png", ".jpg"):
+                f = d / f"{int(unique_id)}{ext}"
+                if f.is_file():
+                    return f
+        return None
+
+    def _message_out(m: dict) -> dict:
+        trace = m.get("tool_trace") or []
+        labels = list(dict.fromkeys(tool_label(t.get("tool", "")) for t in trace if t.get("ok")))
+        at = m.get("created_at")
+        if at is not None and at.tzinfo is None:
+            at = at.replace(tzinfo=UTC)  # SQLite rend les dates sans fuseau : elles sont enregistrées en UTC
+        return {"id": m["id"], "from": "me" if m["role"] == "user" else "them", "text": m["content"],
+                "at": at.isoformat() if at else None,
+                "game_date": m["game_date"].isoformat() if m.get("game_date") else None,
+                "sources": labels, "route": m.get("route")}
+
+    def _contact(t: ToolContext, role: str) -> dict:
+        o = state.orchestrator
+        member = o.staff(t, role)
+        conv = o.conversations.find_thread(t.ctx.career_id, role, member.uid if member else 0)
+        last = o.conversations.messages(conv, limit=1) if conv else []
+        can_chat = member is not None or role == "directeur_sportif"
+        return {
+            "role": role, "label": ROLE_LABELS[role], "person": member.as_dict() if member else None,
+            "name": member.name if member else (t.prefs.director_name if role == "directeur_sportif" else None),
+            "wage": member.wage if member else None, "photo": bool(member and _photo_path(member.unique_id)),
+            "can_chat": can_chat, "corrected": role in t.prefs.staff_overrides,
+            "intro_pending": can_chat and o.intro_pending(t, role, member),
+            "unread": o.conversations.unread(conv) if conv else 0,
+            "last": _message_out(last[-1]) if last else None,
+        }
+
+    def _stream(job) -> StreamingResponse:
+        """Réponse diffusée au fil de l'écriture (Server-Sent Events). La réponse est enregistrée même si
+        la page se ferme avant la fin."""
+        q: queue.Queue = queue.Queue()
+
+        def run() -> None:
+            try:
+                q.put({"type": "done", **(job(q.put) or {})})
+            except Exception as exc:  # noqa: BLE001
+                log.exception("Message en échec")
+                q.put({"type": "error", "message": redact(str(exc))})
+            finally:
+                q.put(None)
+
+        threading.Thread(target=run, name="phone-reply", daemon=True).start()
+
+        def events():
+            yield ": ok\n\n"
+            while (ev := q.get()) is not None:
+                yield f"data: {json.dumps(ev, ensure_ascii=False, default=str)}\n\n"
+
+        return StreamingResponse(events(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    def _answer_out(a) -> dict:
+        if a is None or a.message_id is None:
+            return {"message": None}
+        msgs = state.orchestrator.conversations.messages(a.conversation_id, limit=1)
+        return {"message": _message_out(msgs[-1]) if msgs else None, "route": a.route, "limitations": a.limitations}
+
+    @app.post("/api/ai/warm", dependencies=A)
+    def ai_warm():
+        """Prépare les trois contacts sur l'IA locale (ouverture du téléphone)."""
+        state.warm_in_background()
+        return {"ok": True}
+
+    @app.get("/api/contacts", dependencies=A)
+    def contacts():
+        t = state.tool_context()
+        return [_contact(t, role) for role in CONTACT_ROLES]
+
+    @app.get("/api/contacts/{role}/messages", dependencies=A)
+    def contact_messages(role: str, limit: int = 200):
+        t = state.tool_context()
+        o = state.orchestrator
+        member = o.staff(t, _role(role))
+        conv = o.conversations.find_thread(t.ctx.career_id, role, member.uid if member else 0)
+        return [_message_out(m) for m in o.conversations.messages(conv, limit=min(limit, 500))] if conv else []
+
+    @app.post("/api/contacts/{role}/messages", dependencies=A)
+    def contact_send(role: str, req: PhoneMessage):
+        t = state.tool_context()
+        if not _contact(t, _role(role))["can_chat"]:
+            raise HTTPException(409, "Poste vacant dans la sauvegarde : aucun interlocuteur.")
+        return _stream(lambda emit: _answer_out(state.orchestrator.send(t, role, req.text, emit)))
+
+    @app.post("/api/contacts/{role}/intro", dependencies=A)
+    def contact_intro(role: str):
+        t = state.tool_context()
+        if not _contact(t, _role(role))["can_chat"]:
+            raise HTTPException(409, "Poste vacant dans la sauvegarde : aucun interlocuteur.")
+        return _stream(lambda emit: _answer_out(state.orchestrator.introduce(t, role, emit)))
+
+    @app.post("/api/contacts/{role}/read", dependencies=A)
+    def contact_read(role: str):
+        t = state.tool_context()
+        o = state.orchestrator
+        member = o.staff(t, _role(role))
+        conv = o.conversations.find_thread(t.ctx.career_id, role, member.uid if member else 0)
+        if conv:
+            o.conversations.mark_read(conv)
+        return {"ok": True}
+
+    @app.get("/api/contacts/{role}/candidates", dependencies=A)
+    def contact_candidates(role: str):
+        t = state.tool_context()
+        return staff_candidates(state.engine, t.ctx.career_id, t.ctx.club_uid, _role(role))
+
+    @app.put("/api/contacts/{role}/person", dependencies=A)
+    def contact_assign(role: str, req: StaffAssignment):
+        _role(role)
+        prefs = state.prefs
+        if req.uid is None:
+            prefs.staff_overrides.pop(role, None)
+        else:
+            t = state.tool_context()
+            if not any(c["uid"] == req.uid for c in staff_candidates(state.engine, t.ctx.career_id, t.ctx.club_uid, role)):
+                raise HTTPException(400, "Cette personne ne fait pas partie du staff du club.")
+            prefs.staff_overrides[role] = req.uid
+        state.prefs_store.save(prefs)
+        state.warm_in_background()
+        return _contact(state.tool_context(), role)
+
+    @app.get("/api/staff/{unique_id}/photo", dependencies=A)
+    def staff_photo(unique_id: int):
+        f = _photo_path(unique_id)
+        if f is None:
+            raise HTTPException(404, "Pas de photo pour cette personne (pack de visages).")
+        return FileResponse(f, headers={"Cache-Control": "private, max-age=86400"})
+
+    @app.get("/api/phone/home", dependencies=A)
+    def phone_home():
+        t = state.tool_context()
+
+        def data(name, args=None):
+            r = state.registry.execute(name, args or {}, t)
+            return r.data if r.ok else None
+        nxt = data("get_upcoming_matches", {"limit": 1}) or []
+        last = data("get_recent_matches", {"limit": 1}) or []
+        table = data("get_league_table") or []
+        ours = next((row for row in table if isinstance(row, dict) and row.get("est_notre_club")), None)
+        short = state.repo.club_short_name(t.ctx, t.ctx.club_uid)
+        names = {m[k] for m in (nxt[:1] + last[:1]) for k in ("domicile", "exterieur") if m.get(k)}
+        return {"club": t.ctx.club_name, "club_short": short or t.ctx.club_name, "manager": t.ctx.manager_name,
+                "short_names": state.repo.club_short_names(t.ctx, names),
+                "game_date": t.ctx.game_date.isoformat() if t.ctx.game_date else None,
+                "next_match": nxt[0] if nxt else None, "last_match": last[0] if last else None,
+                "league": ours, "sync": state.watcher.as_dict()}
 
     @app.get("/api/conversations", dependencies=A)
     def conversations():

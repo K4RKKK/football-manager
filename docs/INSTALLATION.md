@@ -47,6 +47,13 @@ Le directeur sportif fait sa **prise de poste** à la première conversation IA 
 - Réglages : `%LOCALAPPDATA%\ClubDirectorAI\overlay.json` (raccourci, largeur, côté, opacité).
 - La synchronisation est automatique à chaque sauvegarde du jeu ; bouton ⟳ pour forcer la lecture de la dernière sauvegarde.
 
+### Le téléphone
+La fenêtre ClubDirector est un téléphone (mode par défaut). Saisir la barre d'état (l'heure en haut)
+pour le déplacer ; la position est retenue. Taille : clic droit sur l'icône de la zone de notification
+→ « Taille du téléphone » (Petit, Normal, Grand). Réglages dans `overlay.json` : `Mode`
+(`telephone` ou `panneau` pour l'ancien panneau latéral), `PhoneHeight`, `PhoneX`, `PhoneY`.
+Les photos du staff viennent du pack de visages FM26 s'il est installé.
+
 ## 4. Plugin FM26 (expérimental — bloqué par la protection du jeu, voir KNOWN_LIMITATIONS 14)
 1. Fermer FM26. Installer BepInEx 6 Bleeding Edge IL2CPP ≥ build 738 (pack Thunderstore FM26 conseillé).
 2. Dans `doorstop_config.ini` : `ignore_disable_switch = true`.

@@ -38,7 +38,16 @@ def _m3_dedupe_snapshot_rows(engine: Engine) -> None:
         )
 
 
-MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot, _m3_dedupe_snapshot_rows]
+def _m4_contact_threads(engine: Engine) -> None:
+    """Fils de messages par contact du téléphone (session 3)."""
+    with engine.begin() as conn:
+        cols = {r[1] for r in conn.exec_driver_sql("PRAGMA table_info(conversations)")}
+        for name, sql_type in (("contact_role", "VARCHAR(40)"), ("staff_uid", "INTEGER"), ("last_read_id", "INTEGER")):
+            if name not in cols:
+                conn.exec_driver_sql(f"ALTER TABLE conversations ADD COLUMN {name} {sql_type}")
+
+
+MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot, _m3_dedupe_snapshot_rows, _m4_contact_threads]
 CURRENT_VERSION = len(MIGRATIONS)
 
 

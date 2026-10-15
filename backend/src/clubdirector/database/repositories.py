@@ -168,6 +168,30 @@ class Repository:
             )
             return {r[0]: r[1] for r in rows}
 
+    def club_short_name(self, ctx: CareerContext, club_uid: int | None) -> str | None:
+        """Nom court du club (miroir `fm_clubs`), ex. « AS Roma »."""
+        if club_uid is None:
+            return None
+        try:
+            with self.engine.connect() as c:
+                return c.execute(text("SELECT short_name FROM fm_clubs WHERE career_id = :k AND uid = :u LIMIT 1"),
+                                 {"k": ctx.career_id, "u": club_uid}).scalar()
+        except Exception:  # noqa: BLE001 — miroir absent
+            return None
+
+    def club_short_names(self, ctx: CareerContext, names: set[str]) -> dict[str, str]:
+        """Noms courts des clubs (miroir `fm_clubs`) à partir de leurs noms complets."""
+        if not names:
+            return {}
+        params = {f"n{i}": n for i, n in enumerate(sorted(names))}
+        try:
+            with self.engine.connect() as c:
+                rows = c.execute(text(f"SELECT name, short_name FROM fm_clubs WHERE career_id = :k AND name IN "
+                                      f"({', '.join(':' + k for k in params)})"), {"k": ctx.career_id, **params})
+                return {r.name: r.short_name for r in rows if r.short_name}
+        except Exception:  # noqa: BLE001 — miroir absent
+            return {}
+
     def currency(self, ctx: CareerContext, name: str) -> dict | None:
         """Devise de la table du jeu (miroir `fm_currencies`) : nom, symbole, taux par unité stockée."""
         try:
