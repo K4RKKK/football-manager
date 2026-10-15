@@ -301,13 +301,42 @@ def run(copy: Path, roles: list[str], ids: set[str] | None, label: str) -> Path:
                     xi = [x["joueur"] for x in data.get("onze", [])]
                 fails = check(role, question, ans.text, tools, turn.get("expect", {}), v, team_names, xi, kind)
                 results.append({"id": f"{conv['id']}#{i + 1}", "role": role, "question": question, "kind": kind,
-                                "route": ans.route, "seconds": round(dt, 1), "tools": tools, "fails": fails, "reply": ans.text})
+                                "route": ans.route, "seconds": round(dt, 1), "tools": tools, "fails": fails, "reply": ans.text,
+                                "xi": xi})
                 status = "OK " if not fails else "ÉCHEC"
                 print(f"[{status}] {conv['id']}#{i + 1} ({dt:.1f} s, {ans.route}, {tools or '-'}) {question}")
                 for f in fails:
                     print(f"        - {f}")
                 previous = ans.text
     return write_report(copy, label, results)
+
+
+def rescore(copy: Path, path: Path) -> Path:
+    """Recalcule les contrôles d'un passage enregistré avec les contrôles actuels (comparaison équitable)."""
+    os.environ["CLUBDIRECTOR_HOME"] = str(copy)
+    os.environ["CLUBDIRECTOR_CONFIG"] = str(copy / "config.toml")
+    sys.path.insert(0, str(ROOT / "backend" / "src"))
+    from clubdirector.api.app import AppState
+    from clubdirector.config import load_settings
+
+    state = AppState(load_settings())
+    tctx = state.tool_context()
+    v = career_vars(state, tctx)
+    team_names = {r: (state.orchestrator.staff(tctx, r).name if state.orchestrator.staff(tctx, r) else "") for r in ROLES.values()}
+    scenarios = json.loads(SCENARIOS.read_text(encoding="utf-8"))
+    expects = {f"{c['id']}#{i + 1}": t.get("expect", {}) for role in scenarios if not role.startswith("_")
+               for c in scenarios[role] for i, t in enumerate(c["turns"])}
+    results = json.loads(path.read_text(encoding="utf-8"))
+    for r in results:
+        xi = None
+        if "propose_lineup" in r["tools"]:
+            xi = r.get("xi") or [x["joueur"] for x in (state.registry.execute("propose_lineup", {}, tctx).data or {}).get("onze", [])]
+        r["fails"] = check(r["role"], r["question"], r["reply"], r["tools"], expects.get(r["id"], {}), v, team_names, xi, r["kind"])
+    out = path.with_name(path.stem + "-rescore.json")
+    out.write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(summary(results) + f"
+Recalculé : {out}")
+    return out
 
 
 def write_report(copy: Path, label: str, results: list[dict]) -> Path:
@@ -366,9 +395,13 @@ def main() -> int:
     ap.add_argument("--ids", default="")
     ap.add_argument("--label", default="passage")
     ap.add_argument("--compare", nargs=2, type=Path)
+    ap.add_argument("--rescore", type=Path, help="recalculer les contrôles d'un passage enregistré (.json)")
     args = ap.parse_args()
     if args.compare:
         compare(*args.compare)
+        return 0
+    if args.rescore:
+        rescore(args.copy, args.rescore)
         return 0
     if not args.copy:
         ap.error("--copy est obligatoire")
