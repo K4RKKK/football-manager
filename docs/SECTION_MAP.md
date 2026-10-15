@@ -73,3 +73,13 @@ sont marqués *(dense)* : leur signal doit être confirmé par la structure.
 | dispute | 12 | — | 0 | — |
 | virtual_manager | 12 | — | 0 | — |
 | financial_fair_play_manager | 10 | — | 0 | — |
+
+## Notes de décodage (session 2) — établi / ouvert
+
+| Section | Établi (vérifié) | Ouvert |
+|---|---|---|
+| `tc_league_history_dt` + `_ls` | Enregistrements de 24 o (année de fin de saison, compétition, position, V/N/D, buts, points) — vérifié sur la réalité ; l'index liste les clubs ayant un historique **triés par uid** (0 nation contradictoire / 514). Lecteur `league_history` + rattachement (894 clubs). | Clubs sans historique non identifiables directement : ~10 600 séries non rattachées. |
+| `tc_cup_history_dt` + `_ls` | En-tête 8 o puis enregistrements de 18 o : u32 clé de compétition historique (plage dense 3–4712, aucun espace d'id connu), u16 année début, u16 année fin, u8 drapeau, u8 code (tour atteint ?), 2 × u32. L'index a la même forme que celui des championnats : 618 groupes = séries (tailles identiques). | Sens du code et des 2 u32 ; table de la clé de compétition ; ordre des groupes (clubs ou sélections ?). |
+| `player_stats_hist_dt` | 9 383 enregistrements de 152 o (en-tête 8 o) : u8 0, u32 équipe (79 %), u16 compétition (ex. 22 = Serie A), u32 X (0 / −1 dans 87 %), u16 année (2025 partout), puis compteurs (92 % de zéros). 30 enregistrements pour l'équipe première de la Roma en Serie A. | Les compteurs ne recoupent pas les stats de saison connues des joueurs : sens non établi (stats d'équipe par match ? par joueur sans clé ?). |
+| `edit_session_man` | Séance du prochain match : compétition (noms long/court + `database_id`), stade, arbitre, couleurs des maillots. | Format complet. |
+| `news` / `edit_session_man` | Noms des compétitions citées (39). | — |
