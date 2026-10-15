@@ -23,6 +23,7 @@ from fmsave.models.injuries import (
     InjuryType,
 )
 from fmsave.models.jobs import JobVacancy
+from fmsave.models.league_history import LeagueHistoryRow
 from fmsave.models.league_tables import (
     LeagueTable,
     LeagueTableMatch,
@@ -93,6 +94,7 @@ __all__ = [
     "InjurySeverity",
     "InjuryType",
     "JobVacancy",
+    "LeagueHistoryRow",
     "LeagueTable",
     "LeagueTableMatch",
     "LeagueTableRow",

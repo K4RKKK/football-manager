@@ -69,4 +69,6 @@ def find_competition_names(
             if short_name is None:
                 continue
             seen[database_id][(long_name, short_name)] += 1
-    return {database_id: next(iter(pairs)) for database_id, pairs in seen.items() if len(pairs) == 1}
+    return {
+        database_id: next(iter(pairs)) for database_id, pairs in seen.items() if len(pairs) == 1
+    }

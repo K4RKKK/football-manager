@@ -56,14 +56,16 @@ MIRRORED_READERS: dict[str, type] = {
     "tactics": fmsave.Tactic,
     "set_pieces": fmsave.SetPieceRoutine,
     "facilities": fmsave.ClubFacilities,
+    "league_history": fmsave.LeagueHistoryRow,  # fork ClubDirector
 }
 # Tables produites par ClubDirector à partir de la sauvegarde, hors lecteurs fmsave d'origine.
 EXTRA_TABLES: dict[str, str] = {
     "competition_names": "noms (long, court) des compétitions stockés dans la sauvegarde (actualités, séance de match)",
+    "league_history_links": "séries d'historique de championnat rattachées à un club (preuve par recoupement unique)",
 }
 ALL_TABLES: tuple[str, ...] = (*MIRRORED_READERS, *EXTRA_TABLES)
 # Colonnes indexées quand elles existent (recherches courantes des outils).
-INDEXED_COLUMNS = ("uid", "id", "database_id", "player_uid", "club_uid", "competition_id", "team_id", "date")
+INDEXED_COLUMNS = ("uid", "id", "database_id", "run", "player_uid", "club_uid", "competition_id", "team_id", "date")
 
 
 @dataclass

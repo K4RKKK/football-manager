@@ -32,6 +32,7 @@ from clubdirector.domain.models import (
     SeasonStatLine,
     TacticRecord,
 )
+from clubdirector.game.history_links import link_runs_to_clubs
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def _status(model: str, field: str) -> Confidence:
 
 # À incrémenter quand l'adaptateur lit de nouveaux champs : une sauvegarde déjà importée par une
 # révision antérieure est alors relue (sinon les nouveaux champs resteraient vides).
-READER_REVISION = 5  # 3 : statuts des clubs ; 4 : miroir intégral ; 5 : noms de compétitions
+READER_REVISION = 6  # 3 : statuts des clubs ; 4 : miroir ; 5 : noms de compétitions ; 6 : historique
 
 
 class FmsaveSaveReader:
@@ -324,6 +325,11 @@ class FmsaveSaveReader:
             except Exception as exc:  # noqa: BLE001 — un lecteur en échec n'arrête pas le miroir
                 if name not in already_reported:
                     errors.append(f"{name}: {type(exc).__name__}: {exc}")
+        try:
+            links = link_runs_to_clubs(save.league_history(), save.clubs(), save.league_tables())
+            tables.append(MirrorTable("league_history_links", ["run", "club_uid", "method"], links))
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"league_history_links: {type(exc).__name__}: {exc}")
         return tables
 
     @staticmethod

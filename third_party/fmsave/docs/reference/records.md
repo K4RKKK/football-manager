@@ -55,6 +55,12 @@ their own pages: see {doc}`table` and {doc}`enums`.
 .. autoclass:: fmsave.LeagueTableSplit
 .. autoclass:: fmsave.LeagueTableMatch
 .. autoclass:: fmsave.LeagueTableRow
+.. autoclass:: fmsave.LeagueHistoryRow
+.. autoclass:: fmsave.CompetitionRules
+.. autoclass:: fmsave.RulesRound
+.. autoclass:: fmsave.PlayerMatchStats
+```
+
 .. autoclass:: fmsave.TransferWindow
 .. autoclass:: fmsave.CompetitionRules
 .. autoclass:: fmsave.RulesRound

@@ -10,8 +10,10 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Données | Fork fmsave (`third_party/fmsave`) | ✅ | statuts des clubs et coups de pied arrêtés réparés sur 26.3.0 ; tactiques 26.3.0 ❌ (signature) |
 | Données | Inventaire des sections (`clubdirector inventory`) | ✅ | `docs/DATA_INVENTORY.md` : 77 sections, 35 % du volume non décodé |
 | Données | Atelier de décodage (`tools/decode/workbench.py`) | ✅ outil | `docs/SECTION_MAP.md` : 65 sections cartographiées (liens, pas d'enregistrement) |
-| Données | Lecteurs fmsave non importés (16) | ⬜ | staff, compétitions, stades, sponsors, installations, stats par match… |
-| Données | Sections non décodées (≈ 60) | ⬜ | historiques, transferts, liste de recrutement, palmarès… |
+| Données | Miroir intégral des tables fmsave (`fm_*`, 28 tables) | ✅ | toutes colonnes ; outils `describe_game_tables` / `query_game_table` |
+| Données | Noms de compétitions stockés dans la sauvegarde | ✅ | 39 compétitions (actualités, séance de match) ; catalogue complet = base du jeu installé ⬜ |
+| Données | Historique des championnats (`tc_league_history_dt`) | ✅ format / 🟡 rattachement | 174 525 saisons ; vérifié sur la réalité (Roma 2018-2025) ; 274 clubs rattachés par preuve, reste non attribué |
+| Données | Sections non décodées (≈ 58) | ⬜ | coupes, stats joueurs passées, transferts, liste de recrutement, palmarès… (`docs/SECTION_MAP.md`) |
 | Phase 1 | Plugin minimal BepInEx + détection du jeu | 🟡 | `plugin/src/ClubDirector.Plugin` |
 | Phase 1 | Outil de diagnostic | ✅ | interface web + CLI `clubdirector tool …` |
 | Phase 2 | Adaptateur fmsave, normalisation, SQLite, migrations | ✅ | |

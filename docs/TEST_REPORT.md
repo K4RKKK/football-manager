@@ -47,3 +47,13 @@ Ces temps concernent le service, **hors du processus FM26**. L'impact sur les FP
 | fmsave (fork) `uv run pytest` | **2 950 réussis**, 1 échec d'environnement | `test_guard` : liens symboliques non autorisés sous Windows (sans rapport avec la lecture) |
 | `dotnet test` (cœur du plugin) | **9 / 9** | — |
 | Synchronisation réelle | 108–118 s | 73 658 joueurs, 41 220 matchs, 210 376 lignes de stats : **à optimiser** |
+
+### Session 2 (suite) — lecture intégrale
+| Test | Résultat | Détail |
+|---|---|---|
+| Miroir des tables fmsave | **OK** | 28 tables `fm_*` remplies sur la vraie carrière ; +18 s de synchronisation ; base ≈ 800 Mo |
+| Accès IA (`query_game_table`) | **OK** | staff de la Roma, xG/passes progressives/distance par joueur ; colonnes cachées refusées en mode réaliste ; injection refusée |
+| Noms de compétitions | **OK** | 39 noms (dont « Italian Serie A ») ; matchs et classements nommés |
+| Historique des championnats | **OK** | Roma 2018/19 → 2024/25 identique à la réalité (positions, V/N/D, buts, points) |
+| Doublons à la relecture | **corrigé** | classements dupliqués à chaque relecture d'un relevé → migration 3 + test |
+| `pytest` backend | **91 / 91** | fmsave (fork) : **2 961** réussis, 1 échec d'environnement (liens symboliques) |

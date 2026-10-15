@@ -35,6 +35,7 @@ from fmsave.models.finances import FinanceMonth, Sponsorship
 from fmsave.models.fixtures import Fixture
 from fmsave.models.injuries import InjuryRecord, InjuryType
 from fmsave.models.jobs import JobVacancy
+from fmsave.models.league_history import LeagueHistoryRow
 from fmsave.models.league_tables import LeagueTable
 from fmsave.models.managed import ManagedClub
 from fmsave.models.matches import PlayerMatchStats
@@ -78,6 +79,7 @@ from fmsave.readers.injuries import (
     walk_injury_manager,
 )
 from fmsave.readers.jobs import find_job_centre_layout, read_job_vacancies
+from fmsave.readers.league_history import LEAGUE_HISTORY_SECTION, read_league_history
 from fmsave.readers.league_tables import build_league_tables
 from fmsave.readers.managed import (
     find_managed_club_layouts,
@@ -155,6 +157,7 @@ STAGES_TABLE_CACHE_KEY = "table:stages"
 COMPETITIONS_TABLE_CACHE_KEY = "table:competitions"
 FIXTURES_TABLE_CACHE_KEY = "table:fixtures"
 TRANSFER_WINDOWS_TABLE_CACHE_KEY = "table:transfer_windows"
+LEAGUE_HISTORY_TABLE_CACHE_KEY = "table:league_history"
 LEAGUE_TABLES_TABLE_CACHE_KEY = "table:league_tables"
 COMPETITION_RULES_TABLE_CACHE_KEY = "table:competition_rules"
 PLAYER_MATCH_STATS_TABLE_CACHE_KEY = "table:player_match_stats"
@@ -791,6 +794,27 @@ class Save:
         """
         context = self._context
         return context.cached(TRANSFER_WINDOWS_TABLE_CACHE_KEY, self._read_transfer_windows)
+
+    def league_history(self) -> Table[LeagueHistoryRow]:
+        """Every club's final league record for every season the save keeps (ClubDirector).
+
+        Read from `tc_league_history_dt`; see `LeagueHistoryRow` for what a row does and does
+        not say (a run is not linked to a club inside the section). Empty when the save has no
+        such section.
+
+        Raises:
+            SaveClosedError: The save is closed.
+            ReaderCheckError: The section does not have the measured layout.
+        """
+        context = self._context
+        return context.cached(LEAGUE_HISTORY_TABLE_CACHE_KEY, self._read_league_history)
+
+    def _read_league_history(self) -> Table[LeagueHistoryRow]:
+        if LEAGUE_HISTORY_SECTION not in self._require_open().sections:
+            return Table((), LeagueHistoryRow)
+        with self._context.section(LEAGUE_HISTORY_SECTION) as section:
+            rows = read_league_history(section, self._context.info.file_name)
+        return Table(rows, LeagueHistoryRow)
 
     def injury_types(self) -> Table[InjuryType]:
         """Every injury the game can hand out that the save names, in stored order.

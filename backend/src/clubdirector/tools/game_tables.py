@@ -56,6 +56,7 @@ TABLE_HELP = {
     "facilities": "installations des clubs",
     "managed_clubs": "club(s) géré(s) par l'utilisateur",
     "transfer_windows": "fenêtres de transfert",
+    "league_history": "historique des championnats : une série (run) par club, saisons passées (année de fin, compétition, position, V/N/D, buts, points)",
     **EXTRA_TABLES,
 }
 
@@ -73,6 +74,11 @@ class TableQueryArgs(ToolArgs):
     offset: int = Field(0, ge=0)
 
 
+class ClubHistoryArgs(ToolArgs):
+    club_uid: int | None = Field(None, description="Club ; par défaut le club géré.")
+    since_year: int | None = Field(None, description="Première année de fin de saison à inclure (ex. 2015 pour 2014/15).")
+
+
 class DescribeArgs(ToolArgs):
     table: GameTable | None = Field(None, description="Une table précise ; sinon la liste de toutes.")
 
@@ -85,6 +91,17 @@ def _columns(t: ToolContext, table: str) -> list[str]:
     with t.engine.connect() as c:
         cols = [r[1] for r in c.exec_driver_sql(f'PRAGMA table_info("{table_name(table)}")')]
     return [c for c in cols if c not in ("career_id", "snapshot_id")]
+
+
+def _competition_names(conn, career_id: int) -> dict[int, str]:
+    """Nom long par identifiant de compétition (noms stockés dans la sauvegarde)."""
+    try:
+        rows = conn.execute(text(
+            "SELECT c.id, n.long_name FROM fm_competitions c JOIN fm_competition_names n "
+            "ON n.career_id = c.career_id AND n.database_id = c.database_id WHERE c.career_id = :k"), {"k": career_id})
+        return {r[0]: r[1] for r in rows}
+    except Exception:  # noqa: BLE001 — tables absentes avant la première synchronisation
+        return {}
 
 
 def _decode(value):
@@ -118,6 +135,36 @@ def register_game_table_tools(reg: ToolRegistry) -> None:
                 out.append(item)
         lim = [] if adv else ["Colonnes cachées (capacités, personnalité, attributs cachés) masquées en mode réaliste/analyste."]
         return ToolResult("", True, data=out, limitations=lim)
+
+    @T("get_club_league_history", "Historique des championnats d'un club, saison par saison (position, V/N/D, buts, points), lu dans la sauvegarde.", "lecture", ClubHistoryArgs)
+    def get_club_league_history(t: ToolContext, a: ClubHistoryArgs):
+        club = a.club_uid if a.club_uid is not None else t.ctx.club_uid
+        if club is None:
+            raise LookupError("Aucun club géré dans cette carrière.")
+        if not _columns(t, "league_history_links"):
+            raise LookupError("Historique non synchronisé : resynchronisez la sauvegarde.")
+        with t.engine.connect() as c:
+            link = c.execute(text("SELECT run, method FROM fm_league_history_links WHERE career_id = :k AND club_uid = :u"),
+                             {"k": t.ctx.career_id, "u": club}).first()
+            if link is None:
+                return ToolResult("", True, data={"club_uid": club, "saisons": []}, limitations=[
+                    "Historique de championnat non rattaché à ce club de façon certaine : la sauvegarde ne "
+                    "stocke pas le club de chaque série, et le recoupement (championnat actuel + dernière "
+                    "position) n'est pas unique pour lui. Aucune saison n'est attribuée par supposition."])
+            names = _competition_names(c, t.ctx.career_id)
+            rows = c.execute(text(
+                "SELECT season_end_year, competition_id, position, team_count, played, won, drawn, lost, "
+                "goals_for, goals_against, points FROM fm_league_history WHERE career_id = :k AND run = :r "
+                "AND (:y IS NULL OR season_end_year >= :y) ORDER BY season_end_year DESC"),
+                {"k": t.ctx.career_id, "r": link.run, "y": a.since_year}).mappings().all()
+        seasons = [{**dict(r), "saison": f"{r['season_end_year'] - 1}/{str(r['season_end_year'])[-2:]}",
+                    "competition": names.get(r["competition_id"])} for r in rows]
+        lim = []
+        if any(s["competition"] is None for s in seasons):
+            lim.append("Certaines compétitions n'ont pas de nom stocké dans la sauvegarde (identifiant seulement).")
+        if any(s["points"] is None or s["won"] is None for s in seasons):
+            lim.append("Certaines saisons anciennes ont des valeurs inconnues dans la sauvegarde (laissées vides).")
+        return ToolResult("", True, data={"club_uid": club, "rattachement": link.method, "saisons": seasons}, limitations=lim)
 
     @T("query_game_table", "Lit n'importe quelle table complète de la sauvegarde (filtres, tri, colonnes). Lecture seule, carrière active.", "lecture", TableQueryArgs)
     def query_game_table(t: ToolContext, a: TableQueryArgs):

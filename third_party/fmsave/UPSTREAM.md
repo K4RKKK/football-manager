@@ -36,3 +36,12 @@ le layout 26.3.2, valeur de repli). Tests : `test_a_flagged_tactic_count_skips_i
 `find_competition_names` lit dans `news` et `edit_session_man` les paires (nom long, nom court)
 précédées de l'identifiant d'éditeur (`database_id` 17 octets avant le nom, mot nul juste avant).
 39 compétitions nommées sur 26.3.0, aucune contradiction. Tests : `tests/test_competition_names.py`.
+
+### 4. Historique des championnats (`readers/league_history.py`, `Save.league_history()`)
+`tc_league_history_dt` : en-tête de 8 octets puis enregistrements de 24 octets (année de fin de
+saison, compétition, position 0-based, nombre d'équipes, matchs, V/N/D, buts pour/contre, points ;
+valeurs tout-à-un = inconnu). Vérifié sur la réalité (AS Roma 2018/19 → 2024/25, AC Milan 2023/24
+et 2024/25 : positions, V/N/D, buts, points identiques) et arithmétiquement sur toutes les lignes
+connues. **Ouvert** : la section ne stocke pas le club d'une série et `tc_league_history_ls` n'est
+qu'une pagination ; ClubDirector rattache une série à un club seulement par recoupement unique.
+Tests : `tests/test_league_history.py`.
