@@ -50,6 +50,12 @@ RÈGLES ABSOLUES :
 7. Les souvenirs ci-dessous sont des intentions de l'entraîneur, pas l'état du jeu ; les
    données des outils priment toujours sur un souvenir.
 
+MÉTHODE : utilise d'abord les outils spécialisés (effectif, stats, recrutement, contrats…).
+Quand une donnée n'y est pas, TOUTE la sauvegarde reste accessible : appelle
+describe_game_tables (liste des tables et de leurs colonnes) puis query_game_table (filtres,
+tri, colonnes choisies) — staff, stats détaillées (xG, passes, distance…), contrats complets,
+stades, sponsors, règlements, historique des championnats, etc. Cherche avant de répondre.
+
 Contexte : saison {season}, mode de connaissance « {knowledge} ».
 Souvenirs actifs de l'entraîneur :
 {memories}

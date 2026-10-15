@@ -348,9 +348,17 @@ def build_registry() -> ToolRegistry:
             raise LookupError("Date de jeu inconnue.")
         target = a.game_date or (t.ctx.game_date - timedelta(days=a.days_ago or 0))
         rows = t.repo.match_near(t.ctx, target, a.window_days)
-        lim = [] if rows else [f"Aucun match du club trouvé entre le {(target - timedelta(days=a.window_days)).isoformat()} et le {(target + timedelta(days=a.window_days)).isoformat()} (date du jeu)."]
-        return ToolResult("", True, data={"date_cible": target.isoformat(), "date_jeu": t.ctx.game_date.isoformat(),
-                                          "matchs": [_match_view(r, club) for r in rows]}, limitations=lim)
+        data = {"date_cible": target.isoformat(), "date_jeu": t.ctx.game_date.isoformat(),
+                "matchs": [_match_view(r, club) for r in rows]}
+        lim = []
+        if not rows:
+            lim.append(f"Aucun match du club trouvé entre le {(target - timedelta(days=a.window_days)).isoformat()} et le {(target + timedelta(days=a.window_days)).isoformat()} (date du jeu).")
+            # Les matchs réels les plus proches, pour répondre utilement (ex. trêve internationale).
+            before = t.repo.fixtures(t.ctx, date_to=target, limit=1)
+            after = t.repo.fixtures(t.ctx, date_from=target, date_to=t.ctx.game_date, limit=1, newest_first=False)
+            data["match_precedent"] = _match_view(before[0], club) if before else None
+            data["match_suivant"] = _match_view(after[0], club) if after else None
+        return ToolResult("", True, data=data, limitations=lim)
 
     @T("get_upcoming_matches", "Prochains matchs du club géré.", "lecture", MatchesArgs)
     def get_upcoming_matches(t: ToolContext, a: MatchesArgs):

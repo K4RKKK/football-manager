@@ -174,7 +174,12 @@ def answer_intent(intent: Intent, run) -> tuple[str, list[str]]:
     if n == "match_days_ago":
         d = call("get_match_details", {"days_ago": a["days_ago"]})
         if not d["matchs"]:
-            return (f"Aucun match du club autour du {fr_date(d['date_cible'])} (date du jeu).", lim)
+            txt = f"Aucun match de l'équipe première autour du {fr_date(d['date_cible'])} (date du jeu)."
+            if d.get("match_precedent"):
+                txt += f" Match précédent : {_fmt_match(d['match_precedent'])}."
+            if d.get("match_suivant"):
+                txt += f" Match suivant : {_fmt_match(d['match_suivant'])}."
+            return (txt, lim)
         m = d["matchs"][0]
         return (f"Autour du {fr_date(d['date_cible'])} (date du jeu) : {_fmt_match(m)}.", lim)
     if n == "recent_matches":
