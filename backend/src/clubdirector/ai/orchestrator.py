@@ -30,7 +30,16 @@ from clubdirector.ai.persona import (
 )
 from clubdirector.ai.providers.base import IAIProvider, ProviderError
 from clubdirector.ai.router import answer_intent, classify, intent_allowed, wants_premium
-from clubdirector.ai.topics import redirect_hint, topic_owner, unknown_hint, unknown_people
+from clubdirector.ai.topics import (
+    OFF_TOPIC_HINT,
+    OFF_TOPIC_RE,
+    facts_hint,
+    people_facts,
+    redirect_hint,
+    topic_owner,
+    unknown_hint,
+    unknown_people,
+)
 from clubdirector.database import schema as s
 from clubdirector.memory.store import ConversationStore, MemoryStore
 from clubdirector.sync.season import season_label
@@ -478,6 +487,11 @@ class Orchestrator:
             unknown = unknown_people(self.engine, tctx.ctx.career_id, original)
             if unknown:
                 question += "\n\n" + unknown_hint(unknown)
+            facts = people_facts(self.engine, tctx.ctx.career_id, tctx.ctx.club_uid, original, tctx.prefs.currency.format)
+            if facts:
+                question += "\n\n" + facts_hint(facts)
+            if OFF_TOPIC_RE.search(original) and not owner:
+                question += "\n\n" + OFF_TOPIC_HINT
             if role == "directeur_technique" and self._mentions_player(tctx, question):
                 adj, ds = team.get("entraineur_adjoint"), team.get(DIRECTOR)
                 question += ("\n\n[Consigne automatique : la question porte sur un joueur, ce n'est pas ton métier. "

@@ -99,3 +99,46 @@ def unknown_hint(names: list[str]) -> str:
     listed = ", ".join(f"« {n} »" for n in names)
     return (f"[Consigne automatique : {listed} ne correspond à aucun joueur, membre du staff ni club de la carrière. "
             "Dis-le simplement à l'entraîneur, sans inventer qui c'est, et demande-lui de préciser.]")
+
+
+def people_facts(engine, career_id: int, club_uid: int | None, message: str, money=None) -> list[str]:
+    """Faits de la carrière sur les personnes citées qui ne sont pas au club (club, âge, poste, valeur ;
+    fonction pour le staff). Évite de traiter « Recrutez Pep Guardiola comme adjoint » comme une piste
+    ordinaire ou d'ignorer qu'un joueur appartient à un autre club."""
+    from clubdirector.ai.director_identity import staff_function
+
+    facts = []
+    for name in _candidates(message):
+        key = f"%{fold(name)}%"
+        try:
+            with engine.connect() as c:
+                p = c.execute(text(
+                    "SELECT name, club_name, club_uid, age, positions, transfer_value FROM players_current "
+                    "WHERE career_id = :k AND name_search LIKE :n ORDER BY transfer_value DESC LIMIT 1"),
+                    {"k": career_id, "n": key}).mappings().first()
+                s = None if p else c.execute(text(
+                    "SELECT name, club_name, club_uid, age, unknown_r4 AS code, list_indexes FROM fm_staff "
+                    "WHERE career_id = :k AND lower(name) LIKE lower(:raw) LIMIT 1"),
+                    {"k": career_id, "raw": f"%{name}%"}).mappings().first()
+        except Exception:  # noqa: BLE001
+            continue
+        if p and p["club_uid"] != club_uid:
+            pos = "/".join(x for x in (p["positions"] or "").split(",") if x)
+            value = f", valeur {money(p['transfer_value'])}" if money and p["transfer_value"] else ""
+            facts.append(f"{p['name']} : joueur de {p['club_name'] or 'aucun club'}, {p['age']} ans, {pos}{value}")
+        elif s and s["club_uid"] != club_uid:
+            role = staff_function(s["code"], s["list_indexes"]) or "membre du staff"
+            facts.append(f"{s['name']} : {role.lower()} de {s['club_name'] or 'aucun club'}, {s['age']} ans")
+    return facts
+
+
+def facts_hint(facts: list[str]) -> str:
+    return ("[Faits de la carrière sur les personnes citées (pas chez nous) : " + " ; ".join(facts)
+            + ". Tiens-en compte (club actuel, fonction, prix) et reste réaliste.]")
+
+
+OFF_TOPIC_RE = re.compile(
+    r"\b(films?|s[ée]ries?|netflix|marvel|m[ée]t[ée]o|il fait (beau|chaud|froid)|basket|tennis|rugby|formule ?1|"
+    r"politique|musique|concert|jeux? vid[ée]o|vacances|restaurant|resto|cuisine|recette|voiture)\b", re.IGNORECASE)
+OFF_TOPIC_HINT = ("[Consigne automatique : message hors sujet. Réponds en UNE bulle courte, en restant dans ton "
+                  "personnage, puis reviens au club par une question ; pas de rapport ni de point non demandé.]")

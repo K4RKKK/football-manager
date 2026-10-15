@@ -61,3 +61,17 @@ def test_politeness_hint_asks_to_answer_the_exact_message(engine, registry, tctx
     p = ScriptedProvider([StepResult("Avec plaisir, Coach.")])
     Orchestrator(engine, registry, [p]).send(tctx, "directeur_technique", "Merci Paolo")
     assert "un merci appelle" in p.history[-1]["content"]
+
+
+def test_people_from_other_clubs_come_with_their_facts(engine, tctx):
+    from sqlalchemy import text
+
+    from clubdirector.ai.topics import OFF_TOPIC_RE, people_facts
+
+    with engine.connect() as c:
+        other = c.execute(text("SELECT name FROM players_current WHERE career_id = :k AND coalesce(club_uid, 0) != :u "
+                               "AND name LIKE '% %' LIMIT 1"), {"k": tctx.ctx.career_id, "u": tctx.ctx.club_uid}).scalar()
+    if other:
+        facts = people_facts(engine, tctx.ctx.career_id, tctx.ctx.club_uid, f"Recrute {other}")
+        assert facts and facts[0].startswith(other) and "joueur de" in facts[0]
+    assert OFF_TOPIC_RE.search("Vous avez vu le dernier film Marvel ?") and not OFF_TOPIC_RE.search("Quel onze ?")
