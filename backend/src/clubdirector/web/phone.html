@@ -315,7 +315,7 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
 .banner .bh b { font-weight: 600; }
 .banner .bh span { font-size: 13px; opacity: .55; }
 .banner .bb { font-size: 15px; opacity: .92; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; }
-.banner .appmini { width: 20px; height: 20px; border-radius: 5px; position: absolute; left: 34px; top: 34px; border: 2px solid rgba(44, 44, 48, .9); }
+.banner .appmini, .note .appmini { width: 20px; height: 20px; border-radius: 5px; position: absolute; left: 26px; top: 26px; border: 2px solid rgba(44, 44, 48, .9); }
 .sheet-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .42); z-index: 80; opacity: 0; transition: opacity .3s; pointer-events: none; }
 .sheet-bg.show { opacity: 1; pointer-events: auto; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 64px; z-index: 81; background: var(--bg-grouped); border-radius: 14px 14px 40px 40px;
@@ -344,6 +344,130 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
 .kv div { background: var(--bg-elev); border-radius: 12px; padding: 10px 12px; }
 .kv .k2 { font-size: 12px; color: var(--text2); }
 .kv .v2 { font: 600 17px var(--font-display); margin-top: 3px; }
+.kv .v2 small { font: 400 12px var(--font); color: var(--text2); display: block; margin-top: 1px; }
+
+/* ------------------------------------------------------------------ Mercato */
+.ic-mercato { background: linear-gradient(180deg, #ffb340 0%, #f2760a 100%); }
+.state { display: inline-block; font: 600 11.5px/1 var(--font); padding: 4px 7px; border-radius: 6px; margin-top: 4px; white-space: nowrap; }
+.state.ok { background: rgba(48, 209, 88, .18); color: var(--green); }
+.state.ko { background: rgba(255, 69, 58, .16); color: var(--red); }
+.state.wip { background: rgba(255, 159, 10, .18); color: var(--orange); }
+.state.later { background: rgba(10, 132, 255, .16); color: var(--blue); }
+.state.none { background: var(--fill); color: var(--text2); }
+.buyer { padding: 10px 16px; border-bottom: .5px solid var(--sep); }
+.buyer:last-child { border-bottom: 0; }
+.buyer .bn { display: flex; justify-content: space-between; font-size: 16px; }
+.buyer .bn b { font-weight: 600; }
+.buyer .br { font-size: 13px; color: var(--text2); margin-top: 2px; line-height: 1.35; }
+.loading { color: var(--text2); font-size: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 8px; }
+.loading::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--text3); border-top-color: var(--text2); animation: spin .8s linear infinite; }
+
+/* ------------------------------------------------------------------ Calendrier (mois) */
+.month { margin: 0 16px 6px; background: var(--bg-elev); border-radius: 12px; padding: 8px 8px 10px; }
+.month .mh { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 8px; font: 600 16px var(--font-display); }
+.month .mh button { color: var(--blue); width: 30px; height: 30px; display: grid; place-items: center; border-radius: 15px; }
+.month .mh button:active { background: var(--fill); }
+.month .mh button[disabled] { opacity: .3; }
+.month .mh svg { width: 10px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; text-align: center; }
+.mgrid .wd { font: 600 11px var(--font); color: var(--text2); padding-bottom: 4px; text-transform: uppercase; }
+.mgrid .dc { position: relative; height: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; border-radius: 19px; }
+.mgrid .dc.out { visibility: hidden; }
+.mgrid .dc.today span { background: var(--red); color: #fff; font-weight: 600; }
+.mgrid .dc span { width: 30px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+.mgrid .dc i { position: absolute; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; background: var(--text3); }
+.mgrid .dc i.up { background: var(--blue); } .mgrid .dc i.v { background: var(--green); } .mgrid .dc i.d { background: var(--red); } .mgrid .dc i.n { background: var(--gray); }
+button.dc:active span { background: var(--fill); }
+button.fx { text-align: left; }
+button.fx:active { background: var(--fill); }
+.fx.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: var(--ours); } to { background: transparent; } }
+.match-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 8px 16px 18px; text-align: center; }
+.match-head .club { font: 600 17px var(--font-display); }
+.match-head .club.ours { color: var(--blue); }
+.match-head .sc { font: 700 34px var(--font-display); }
+.match-head .sc.vs { font-size: 18px; color: var(--text2); font-weight: 500; }
+
+/* ------------------------------------------------------------------ Effectif : onze type et notes de poste */
+.systems { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 12px; scrollbar-width: none; }
+.systems::-webkit-scrollbar { display: none; }
+.systems button { flex: none; padding: 6px 12px; border-radius: 15px; background: var(--fill); font-size: 14px; font-variant-numeric: tabular-nums; }
+.systems button.on { background: var(--blue); color: #fff; font-weight: 600; }
+.pitch { position: relative; margin: 0 16px 8px; aspect-ratio: 68 / 96; border-radius: 14px; overflow: hidden;
+  background: repeating-linear-gradient(180deg, #2e874a 0 8.333%, #297b42 8.333% 16.666%); }
+.pitch .ln { position: absolute; border: 1.5px solid rgba(255, 255, 255, .42); pointer-events: none; }
+.pitch .ln.frame { inset: 3.5%; border-radius: 2px; }
+.pitch .ln.half { left: 3.5%; right: 3.5%; top: 50%; height: 0; border-width: 1.5px 0 0; }
+.pitch .ln.circle { left: 50%; top: 50%; width: 24%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); }
+.pitch .ln.box-t { left: 24%; right: 24%; top: 3.5%; height: 13%; border-top: 0; }
+.pitch .ln.box-b { left: 24%; right: 24%; bottom: 3.5%; height: 13%; border-bottom: 0; }
+.tok { position: absolute; transform: translate(-50%, -50%); width: 76px; display: flex; flex-direction: column; align-items: center; gap: 3px; z-index: 2; }
+.tok .avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 2px 6px rgba(0, 0, 0, .35); }
+.tok .nm { font: 600 11px/1.2 var(--font); color: #fff; background: rgba(0, 0, 0, .42); padding: 2px 6px; border-radius: 6px; max-width: 78px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt { min-width: 19px; height: 19px; border-radius: 10px; padding: 0 4px; font: 700 11px/19px var(--font); color: #fff; text-align: center; background: var(--green); }
+.rt.mid { background: #c99a06; } .rt.low { background: var(--orange); } .rt.bad { background: var(--red); }
+.tok .rt { position: absolute; top: -4px; right: 13px; box-shadow: 0 1px 3px rgba(0, 0, 0, .45); }
+.rpitch { position: relative; margin: 0 16px 8px; aspect-ratio: 68 / 88; border-radius: 14px; overflow: hidden;
+  background: repeating-linear-gradient(180deg, #2e874a 0 10%, #297b42 10% 20%); }
+.rdot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rdot .rt { min-width: 30px; height: 30px; border-radius: 15px; font-size: 14px; line-height: 30px; box-shadow: 0 1px 4px rgba(0, 0, 0, .35); }
+.rdot .rt.no { background: rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .55); font-weight: 500; box-shadow: none; }
+.rdot .cd { font: 600 10px var(--font); color: rgba(255, 255, 255, .85); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 16px 6px; font-size: 12px; color: var(--text2); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 5px; display: inline-block; }
+
+/* ------------------------------------------------------------------ écran verrouillé */
+#lock { position: absolute; inset: 0; z-index: 45; color: #fff; display: flex; flex-direction: column; align-items: center; padding: 58px 12px 0;
+  background:
+    radial-gradient(120% 70% at 85% 8%, #b3261e 0%, rgba(179, 38, 30, 0) 55%),
+    radial-gradient(110% 70% at 10% 95%, #f2a900 0%, rgba(242, 169, 0, 0) 55%),
+    radial-gradient(80% 60% at 20% 30%, #5b0f1a 0%, rgba(91, 15, 26, 0) 70%),
+    linear-gradient(160deg, #3a0a12 0%, #1a0508 55%, #2a1205 100%);
+  transition: transform .5s cubic-bezier(.32, .72, 0, 1), opacity .4s; touch-action: none; }
+#lock.unlocked { transform: translateY(-104%); opacity: 0; pointer-events: none; }
+#lock[hidden] { display: none; }
+#lock .lk-pad { width: 22px; height: 22px; opacity: .9; margin-top: 2px; }
+#lock .lk-date { font: 600 19px var(--font-display); margin-top: 6px; opacity: .92; }
+#lock .lk-time { font: 700 88px/1 var(--font-display); letter-spacing: -1px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+#lock .lk-widget { margin-top: 14px; width: 100%; border-radius: 20px; padding: 11px 14px; background: rgba(255, 255, 255, .14);
+  backdrop-filter: blur(24px) saturate(160%); box-shadow: inset 0 0 0 .5px rgba(255, 255, 255, .2); text-align: left; }
+#lock .lk-widget .wh { font: 700 11.5px var(--font); letter-spacing: .3px; text-transform: uppercase; opacity: .75; }
+#lock .lk-widget .mt { font: 600 17px var(--font-display); margin-top: 3px; }
+#lock .lk-widget .ms { font-size: 13px; opacity: .8; margin-top: 2px; }
+#lock .lk-notes { width: 100%; margin-top: auto; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; scrollbar-width: none; padding: 8px 0 10px; }
+#lock .lk-notes::-webkit-scrollbar { display: none; }
+#lock .lk-count { align-self: center; font-size: 13px; opacity: .8; }
+.note { position: relative; width: 100%; display: flex; gap: 10px; padding: 11px 12px; border-radius: 22px; text-align: left; color: #fff;
+  background: rgba(44, 44, 48, .62); backdrop-filter: blur(30px) saturate(180%); }
+.note.stack { box-shadow: 0 8px 0 -4px rgba(44, 44, 48, .5); margin-bottom: 4px; }
+.note .bt { flex: 1; min-width: 0; }
+.note .bh { display: flex; justify-content: space-between; font-size: 15px; gap: 8px; }
+.note .bh b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note .bh span { font-size: 13px; opacity: .55; flex: none; }
+.note .bb { font-size: 15px; opacity: .92; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; }
+.note .more { font-size: 13px; opacity: .6; margin-top: 2px; }
+#lock .lk-hint { font-size: 13px; opacity: .75; padding: 8px 0 34px; flex: none; }
+
+/* ------------------------------------------------------------------ réactions (tapbacks) et réponses rapides */
+.tapbar { position: absolute; z-index: 86; display: none; gap: 2px; padding: 5px 6px; border-radius: 26px; background: rgba(44, 44, 48, .96);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .42); backdrop-filter: blur(30px); }
+:root[data-theme="light"] .tapbar { background: rgba(250, 250, 252, .98); }
+.tapbar.show { display: flex; animation: pop .22s ease-out; }
+.tapbar button { width: 38px; height: 38px; border-radius: 50%; font-size: 21px; display: grid; place-items: center; transition: transform .12s; }
+.tapbar button:hover { transform: scale(1.15); }
+.tapbar button.on { background: var(--blue); }
+.bubble.reacted { margin-top: 16px; }
+.react { position: absolute; top: -17px; min-width: 30px; height: 28px; padding: 0 5px; border-radius: 14px; background: var(--blue); font-size: 15px;
+  display: grid; place-items: center; border: 2px solid var(--bg); line-height: 1; cursor: pointer; z-index: 1; user-select: none; }
+.react.new { animation: pop .3s cubic-bezier(.2, 1.4, .4, 1); }
+.them .react { right: -14px; } .me .react { left: -14px; background: var(--bg-elev2); }
+.chip.quick { background: var(--received); color: var(--received-text); border-color: transparent; font-weight: 500; }
+.banner.stack { box-shadow: 0 10px 30px rgba(0, 0, 0, .35), 0 8px 0 -4px rgba(44, 44, 48, .7); }
+:root[data-theme="light"] .banner.stack { box-shadow: 0 10px 30px rgba(0, 0, 0, .2), 0 8px 0 -4px rgba(225, 225, 230, .95); }
+.banner .more { font-size: 13px; opacity: .55; margin-top: 2px; }
+.screen.big-text .scroll { zoom: 1.12; }
 </style>
 </head>
 <body>
@@ -366,6 +490,7 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
         <button class="app" data-open="calendar"><span class="icon ic-calendar"><span class="d" id="ic-cal-d">—</span><span class="n" id="ic-cal-n">—</span></span><span class="label">Calendrier</span></button>
         <button class="app" data-open="table"><span class="icon ic-table"><svg viewBox="0 0 40 40" fill="#fff"><path d="M12 9h16v3h5v4a7 7 0 0 1-6.6 7 9 9 0 0 1-4.9 4.3V31h4v3H14.5v-3h4v-3.7A9 9 0 0 1 13.6 23 7 7 0 0 1 7 16v-4h5V9zm-2.5 5.5V16a4.5 4.5 0 0 0 3.2 4.3A9 9 0 0 1 12 17v-2.5H9.5zm21 0H28V17a9 9 0 0 1-.7 3.3 4.5 4.5 0 0 0 3.2-4.3v-1.5z"/></svg></span><span class="label">Classement</span></button>
         <button class="app" data-open="squad"><span class="icon ic-squad"><svg viewBox="0 0 40 40" fill="#fff"><path d="M14.5 7 8 10.5l-3.5 7 5 2.5L11 17v16h18V17l1.5 3 5-2.5-3.5-7L25.5 7c-.6 2.4-2.8 4-5.5 4s-4.9-1.6-5.5-4z"/></svg></span><span class="label">Effectif</span></button>
+        <button class="app" data-open="mercato"><span class="icon ic-mercato"><svg viewBox="0 0 40 40" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14h20l-5-5M31 26H11l5 5"/></svg><span class="badge" id="badge-mercato" hidden>0</span></span><span class="label">Mercato</span></button>
         <button class="app" data-open="settings"><span class="icon ic-settings"><svg viewBox="0 0 40 40" fill="#fff"><path d="M17.6 5h4.8l.7 3.6a12 12 0 0 1 3.2 1.9l3.5-1.2 2.4 4.1-2.8 2.4a12 12 0 0 1 0 3.7l2.8 2.4-2.4 4.1-3.5-1.2a12 12 0 0 1-3.2 1.9l-.7 3.6h-4.8l-.7-3.6a12 12 0 0 1-3.2-1.9l-3.5 1.2-2.4-4.1 2.8-2.4a12 12 0 0 1 0-3.7L8 13.4l2.4-4.1 3.5 1.2a12 12 0 0 1 3.2-1.9L17.6 5zM20 14.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"/></svg></span><span class="label">Réglages</span></button>
       </div>
       <div class="pager"><span id="home-search" role="button" style="cursor:pointer"><svg viewBox="0 0 12 12"><path d="M5.2 1a4.2 4.2 0 0 1 3.4 6.7l2.4 2.4-.9.9-2.4-2.4A4.2 4.2 0 1 1 5.2 1zm0 1.3a2.9 2.9 0 1 0 0 5.8 2.9 2.9 0 0 0 0-5.8z"/></svg>Recherche</span></div>
@@ -443,8 +568,19 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
       <div class="navbar"><span></span><span></span><span></span></div>
       <div class="scroll">
         <div class="big-title">Effectif</div><div class="big-sub" id="sq-sub"></div>
-        <div class="seg" id="sq-seg"><button data-sort="poste" class="on">Postes</button><button data-sort="buts">Buts</button><button data-sort="note">Note</button><button data-sort="valeur">Valeur</button></div>
+        <div class="seg" id="sq-seg"><button data-sort="onze">Onze type</button><button data-sort="poste" class="on">Postes</button><button data-sort="buts">Buts</button><button data-sort="note">Note</button><button data-sort="valeur">Valeur</button></div>
         <div id="sq-body"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================ MERCATO -->
+    <section class="view grouped app-closed" id="mercato" hidden>
+      <div class="navbar"><span></span><span></span><span></span></div>
+      <div class="scroll">
+        <div class="big-title">Mercato</div><div class="big-sub" id="mk-sub"></div>
+        <div id="mk-budget"></div>
+        <div class="seg" id="mk-seg"><button data-side="recues" class="on">Reçues</button><button data-side="faites">Faites</button></div>
+        <div id="mk-body"></div>
       </div>
     </section>
 
@@ -454,7 +590,18 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
       <div class="scroll"><div class="big-title">Réglages</div><div id="set-body"></div></div>
     </section>
 
-    <button class="banner" id="banner"><span id="banner-avatar" style="position:relative"></span><span class="bt"><span class="bh"><b id="banner-name"></b><span>maintenant</span></span><span class="bb" id="banner-text"></span></span></button>
+    <!-- ================================================================ ÉCRAN VERROUILLÉ -->
+    <section id="lock" class="unlocked" hidden aria-label="Écran verrouillé">
+      <svg class="lk-pad" viewBox="0 0 24 24" fill="#fff"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg>
+      <div class="lk-date" id="lk-date"></div>
+      <div class="lk-time" id="lk-time">--:--</div>
+      <div class="lk-widget" id="lk-widget" hidden></div>
+      <div class="lk-notes" id="lk-notes"></div>
+      <div class="lk-hint">Balayez vers le haut ou touchez pour déverrouiller</div>
+    </section>
+
+    <button class="banner" id="banner"><span id="banner-avatar" style="position:relative"></span><span class="bt"><span class="bh"><b id="banner-name"></b><span>maintenant</span></span><span class="bb" id="banner-text"></span><span class="more" id="banner-more" hidden></span></span></button>
+    <div class="tapbar" id="tapbar"></div>
     <div class="sheet-bg" id="sheet-bg"></div>
     <div class="sheet" id="sheet"><div class="grab"></div><div class="sh"><button class="navbtn" id="sheet-cancel">Fermer</button><span id="sheet-title"></span><span></span></div><div class="scroll" id="sheet-body"></div></div>
     <div class="menu" id="menu"><button id="menu-copy">Copier<svg viewBox="0 0 18 18"><rect x="6" y="6" width="9" height="10" rx="2"/><path d="M12 6V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h1"/></svg></button></div>
@@ -468,7 +615,11 @@ table.tb { width: 100%; border-collapse: collapse; font-size: 14px; }
 const TOKEN = "__CLUBDIRECTOR_TOKEN__";
 const $ = (id) => document.getElementById(id);
 const S = { view: "home", contacts: [], home: null, status: null, role: null, threads: {}, live: {}, rendered: {},
-  photos: new Map(), noCareer: false, lastGameDate: null, cameFrom: "messages", squadSort: "poste", data: {} };
+  photos: new Map(), noCareer: false, lastGameDate: null, cameFrom: "messages", squadSort: "poste", data: {},
+  mkSide: "recues", calMonth: null, locked: false, notes: [], lastActive: Date.now(), hiddenAt: null,
+  inHost: !!(window.chrome && window.chrome.webview), phoneSize: null, hotkey: "Ctrl+Alt+D" };
+const QUICK_REPLIES = ["Oui, vas-y", "Non", "Dis-m'en plus"];
+const TAPBACKS = [["love", "❤️"], ["like", "👍"], ["dislike", "👎"], ["laugh", "😂"], ["emphasize", "‼️"], ["question", "❓"]];
 const ROLE_ORDER = ["directeur_sportif", "directeur_technique", "entraineur_adjoint"];
 const SUGGESTIONS = {
   directeur_sportif: [["Point mercato", "Fais-moi un point mercato rapide."], ["Contrats à risque", "Quels contrats doit-on régler en priorité ?"],
@@ -483,7 +634,10 @@ const SUGGESTIONS = {
 function hostSend(msg) { try { window.chrome && window.chrome.webview && window.chrome.webview.postMessage(msg); } catch (e) { /* hors fenêtre */ } }
 try {
   window.chrome && window.chrome.webview && window.chrome.webview.addEventListener("message", (e) => {
-    if (String(e.data || "") === "focus") { if (S.view === "chat") $("input").focus({ preventScroll: true }); refreshAll(); }
+    const m = String(e.data || "");
+    if (m === "focus") { lockIfIdle(); if (S.view === "chat" && !S.locked) $("input").focus({ preventScroll: true }); refreshAll(); }
+    else if (m.startsWith("size:")) { S.phoneSize = Number(m.slice(5)) || null; if (S.view === "settings") renderSettings(); }
+    else if (m.startsWith("hotkey:")) S.hotkey = m.slice(7) || S.hotkey;
   });
 } catch (e) { /* hors fenêtre */ }
 
@@ -570,19 +724,22 @@ function avatar(name, uid, hasPhoto, size, bg) {
 const contactAvatar = (c, size) => avatar(c ? c.name || c.label : "?", c && c.person && c.person.unique_id, c && c.photo, size);
 
 // ------------------------------------------------------------------ horloge
-function tick() { $("sb-time").textContent = hhmm(new Date()); }
+function tick() { const t = hhmm(new Date()); $("sb-time").textContent = t; $("lk-time").textContent = t; }
 setInterval(tick, 10000); tick();
 
 // ------------------------------------------------------------------ navigation
-const APP_VIEWS = ["messages", "contacts", "card", "chat", "calendar", "table", "squad", "settings"];
+const APP_VIEWS = ["messages", "contacts", "card", "chat", "calendar", "table", "squad", "mercato", "settings"];
 const LIGHT_BAR = new Set(["home"]);
 const raf2 = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
 function setPos(el, cls) { el.classList.remove("app-closed", "hidden-right", "hidden-left"); if (cls) el.classList.add(cls); }
+function syncBars() {
+  const light = S.locked || LIGHT_BAR.has(S.view);
+  $("statusbar").classList.toggle("light", light); $("home-indicator").classList.toggle("light", light);
+}
 function show(view, dir = "push") {
   const prev = S.view; if (prev === view) return; S.view = view;
   $("screen").scrollLeft = 0; $("screen").scrollTop = 0;
-  $("statusbar").classList.toggle("light", LIGHT_BAR.has(view));
-  $("home-indicator").classList.toggle("light", LIGHT_BAR.has(view));
+  syncBars();
   closeMenu();
   if (view === "home") {
     $("home").classList.remove("behind"); setPos($(prev), "app-closed");
@@ -602,7 +759,8 @@ function show(view, dir = "push") {
   setTimeout(() => { if (S.view !== prev) from.hidden = true; }, 440);
 }
 function back() {
-  if ($("menu").classList.contains("show")) return closeMenu();
+  if (S.locked) return hostSend("hide");
+  if ($("menu").classList.contains("show") || $("tapbar").classList.contains("show")) return closeMenu();
   if ($("sheet").classList.contains("show")) return closeSheet();
   if (S.view === "chat") return show(S.cameFrom, "back");
   if (S.view === "card") return show(S.cardFrom || "contacts", "back");
@@ -615,22 +773,29 @@ function openApp(name) {
   if (name === "calendar") loadCalendar();
   if (name === "table") loadTable();
   if (name === "squad") loadSquad();
+  if (name === "mercato") loadMercato();
   if (name === "settings") renderSettings();
   show(name);
 }
 for (const b of document.querySelectorAll("[data-open]")) b.onclick = () => openApp(b.dataset.open);
 $("home-search").onclick = () => { openApp("contacts"); setTimeout(() => $("search").focus({ preventScroll: true }), 420); };
-$("home-indicator").onclick = () => show("home");
+$("home-indicator").onclick = () => (S.locked ? unlock() : show("home"));
 $("card-back").onclick = back;
 $("chat-back").onclick = back;
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); back(); } });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.preventDefault(); back(); return; }
+  if (S.locked && (e.key === "Enter" || e.key === " " || e.key === "ArrowUp")) { e.preventDefault(); unlock(); }
+});
 $("statusbar").addEventListener("mousedown", (e) => { if (e.button === 0) hostSend("drag"); });
 
 // ------------------------------------------------------------------ données
 async function refreshAll() {
   try {
     const [status, contacts] = await Promise.all([api("/api/status"), api("/api/contacts")]);
+    const before = Object.fromEntries(S.contacts.map((c) => [c.role, c.unread || 0]));
     S.noCareer = false; S.status = status; S.contacts = contacts;
+    if (S.started) arrivals(contacts, before);
+    S.started = true;
     const gd = status.active && status.active.game_date;
     if (S.lastGameDate && gd && gd !== S.lastGameDate) { toast(`Nouvelle sauvegarde lue : ${gameShort(gd)}`); S.data = {}; }
     S.lastGameDate = gd || S.lastGameDate;
@@ -642,11 +807,33 @@ async function refreshAll() {
   if (S.view === "chat" && S.role) renderChatHead();
   try { S.home = await api("/api/phone/home"); } catch (e) { S.home = null; }
   renderHome();
+  if (S.locked) renderLock();
+  if (!S.noCareer && !S.data.mercato) api("/api/phone/mercato").then((d) => { S.data.mercato = d; renderBadges(); }).catch(() => {});
   autoIntroduceDirector();
+}
+// Messages arrivés hors d'une réponse en cours (le staff écrit de lui-même après une sauvegarde).
+async function arrivals(contacts, before) {
+  for (const c of contacts) {
+    if ((c.unread || 0) <= (before[c.role] ?? 0) || !c.last || c.last.from !== "them" || S.live[c.role]) continue;
+    sound("receive");
+    if (S.view === "chat" && S.role === c.role && !S.locked) {
+      try { S.threads[c.role] = await api(`/api/contacts/${c.role}/messages`); } catch (e) { /* hors ligne */ }
+      renderThread(c.role); markRead(c.role);
+    } else {
+      delete S.threads[c.role];  // relu à l'ouverture du fil
+      notify(c.role, c.last.text);
+    }
+  }
 }
 const contact = (role) => S.contacts.find((c) => c.role === role);
 const unreadTotal = () => S.contacts.reduce((a, c) => a + (c.unread || 0), 0);
-function renderBadges() { const n = unreadTotal(); $("badge-messages").hidden = !n; $("badge-messages").textContent = n; }
+const pendingOffers = () => ((S.data.mercato && S.data.mercato.recues) || []).filter((o) => o.etat === "en cours").length;
+function renderBadges() {
+  const on = store("cd-badges") !== "off";
+  const n = on ? unreadTotal() : 0, k = on ? pendingOffers() : 0;
+  $("badge-messages").hidden = !n; $("badge-messages").textContent = n;
+  $("badge-mercato").hidden = !k; $("badge-mercato").textContent = k;
+}
 
 // ------------------------------------------------------------------ accueil
 function renderHome() {
@@ -740,6 +927,7 @@ $("search").addEventListener("input", renderContacts);
 
 // ------------------------------------------------------------------ fiche contact
 function fr(d) { if (!d) return "—"; const [y, m, j] = d.slice(0, 10).split("-"); return `${j}/${m}/${y}`; }
+const frDates = (t) => String(t || "").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3/$2/$1");
 function openCard(role, from) { S.role = role; S.cardFrom = from; $("card-back-label").textContent = from === "chat" ? "" : "Contacts"; renderCard(role); show("card"); }
 function renderCard(role) {
   const c = contact(role); if (!c) return;
@@ -832,17 +1020,28 @@ function renderChatHead() {
   const others = S.contacts.filter((x) => x.role !== S.role).reduce((n, x) => n + (x.unread || 0), 0);
   $("back-unread").hidden = !others; $("back-unread").textContent = others;
 }
+// Réponses rapides : quand le dernier message du contact se termine par une question.
+function pendingQuestion(role) {
+  const msgs = S.threads[role] || [], last = msgs[msgs.length - 1];
+  if (!last || last.from !== "them" || S.live[role]) return false;
+  const parts = splitBubbles(last.text);
+  return /\?\s*\)?\s*$/.test(parts[parts.length - 1] || "");
+}
 function renderChips() {
   const box = $("chips"); box.innerHTML = "";
-  for (const [label, text] of SUGGESTIONS[S.role] || []) {
-    const b = document.createElement("button"); b.className = "chip"; b.textContent = label;
+  const quick = store("cd-quick") !== "off" && pendingQuestion(S.role);
+  const items = quick ? QUICK_REPLIES.map((t) => [t, t, true]) : (SUGGESTIONS[S.role] || []).map(([l, t]) => [l, t, false]);
+  for (const [label, text, q] of items) {
+    const b = document.createElement("button"); b.className = "chip" + (q ? " quick" : ""); b.textContent = label;
     b.onclick = () => { $("input").value = text; autosize(); send(); };
     box.appendChild(b);
   }
+  box.dataset.quick = quick ? "1" : "";
   updateChips();
 }
 function updateChips() {
-  const show = store("cd-chips") !== "off" && !$("input").value.trim() && !S.live[S.role];
+  const quick = $("chips").dataset.quick === "1";
+  const show = (quick || store("cd-chips") !== "off") && !$("input").value.trim() && !S.live[S.role];
   $("chips").hidden = !show; $("plus").classList.toggle("on", show);
 }
 $("plus").onclick = () => { store("cd-chips", store("cd-chips") === "off" ? "on" : "off"); updateChips(); };
@@ -890,7 +1089,19 @@ function renderThread(role, jump = false) {
       const next = all[idx + 1];
       const groupEnds = i === parts.length - 1 && !(m.live && m.typing) && !(next && next.from === m.from && next.at && new Date(next.at) - at < 60 * 1000);
       if (groupEnds) b.classList.add("tail");
-      b.addEventListener("contextmenu", (e) => { e.preventDefault(); openMenu(e, t); });
+      // Réaction (tapback) : double-clic ou clic droit ; une par message, affichée sur sa dernière bulle.
+      const reactable = typeof m.id === "number";
+      if (i === parts.length - 1 && m.reaction) {
+        const g = (TAPBACKS.find(([k]) => k === m.reaction) || [])[1];
+        if (g) {
+          b.classList.add("reacted");
+          const r = document.createElement("span"); r.className = "react" + (S.reactedNow === m.id ? " new" : ""); r.textContent = g;
+          r.title = "Modifier la réaction"; r.onclick = (e) => { e.stopPropagation(); openTapbar(b, role, m); };
+          b.appendChild(r);
+        }
+      }
+      b.addEventListener("contextmenu", (e) => { e.preventDefault(); openMenu(e, t, reactable ? { el: b, role, m } : null); });
+      if (reactable) b.addEventListener("dblclick", (e) => { e.preventDefault(); try { window.getSelection().removeAllRanges(); } catch (err) { /* */ } openTapbar(b, role, m); });
       wrap.appendChild(b);
     });
     if (m.live && m.typing) {
@@ -909,21 +1120,43 @@ function renderThread(role, jump = false) {
   if (nearBottom) sc.scrollTop = sc.scrollHeight;
   updateToBottom();
   const c = contact(role); $("composer").classList.toggle("disabled", !c || !c.can_chat);
-  updateChips();
+  S.reactedNow = null;
+  renderChips();
 }
 function updateToBottom() { const sc = $("thread-scroll"); $("to-bottom").classList.toggle("show", sc.scrollHeight - sc.scrollTop - sc.clientHeight > 300); }
-$("thread-scroll").addEventListener("scroll", updateToBottom);
+$("thread-scroll").addEventListener("scroll", () => {
+  updateToBottom();
+  if ($("tapbar").classList.contains("show") && Math.abs($("thread-scroll").scrollTop - (S.tapScroll ?? 0)) > 12) closeMenu();
+});
 $("to-bottom").onclick = () => { const sc = $("thread-scroll"); sc.scrollTo({ top: sc.scrollHeight, behavior: "smooth" }); };
 
-// Menu contextuel d'une bulle (clic droit) : copier.
-function openMenu(e, text) {
+// Menu contextuel d'une bulle (clic droit) : réactions au-dessus de la bulle, copier sous le pointeur.
+function openMenu(e, text, target) {
   const m = $("menu"), r = $("screen").getBoundingClientRect();
   m.style.left = Math.min(e.clientX - r.left, r.width - 190) + "px"; m.style.top = Math.min(e.clientY - r.top, r.height - 80) + "px";
+  if (target) openTapbar(target.el, target.role, target.m); else $("tapbar").classList.remove("show");
   m.classList.add("show");
   $("menu-copy").onclick = async () => { closeMenu(); try { await navigator.clipboard.writeText(text); toast("Copié"); } catch (err) { toast("Copie impossible"); } };
 }
-function closeMenu() { $("menu").classList.remove("show"); }
-document.addEventListener("click", (e) => { if (!$("menu").contains(e.target)) closeMenu(); });
+const TAPBACK_TITLES = { love: "J'adore", like: "J'aime", dislike: "Je n'aime pas", laugh: "Ha ha", emphasize: "Important", question: "Question" };
+function openTapbar(el, role, m) {
+  const bar = $("tapbar"), r = $("screen").getBoundingClientRect(), br = el.getBoundingClientRect();
+  bar.innerHTML = TAPBACKS.map(([k, g]) => `<button data-k="${k}" class="${m.reaction === k ? "on" : ""}" title="${TAPBACK_TITLES[k]}" aria-label="${TAPBACK_TITLES[k]}">${g}</button>`).join("");
+  bar.classList.add("show"); S.tapScroll = $("thread-scroll").scrollTop;
+  const w = bar.offsetWidth, h = bar.offsetHeight;
+  const left = Math.max(8, Math.min(m.from === "me" ? br.right - r.left - w : br.left - r.left, r.width - w - 8));
+  let top = br.top - r.top - h - 10; if (top < 96) top = br.bottom - r.top + 10;
+  bar.style.left = left + "px"; bar.style.top = top + "px";
+  for (const b of bar.querySelectorAll("button")) b.onclick = (e) => { e.stopPropagation(); closeMenu(); react(role, m, b.dataset.k === m.reaction ? null : b.dataset.k); };
+}
+async function react(role, m, reaction) {
+  const before = m.reaction || null;
+  m.reaction = reaction; S.reactedNow = reaction ? m.id : null; renderThread(role);
+  try { await api(`/api/contacts/${role}/messages/${m.id}/reaction`, { method: "PUT", body: JSON.stringify({ reaction }) }); }
+  catch (e) { m.reaction = before; renderThread(role); toast("Réaction non enregistrée"); }
+}
+function closeMenu() { $("menu").classList.remove("show"); $("tapbar").classList.remove("show"); }
+document.addEventListener("click", (e) => { if (!$("menu").contains(e.target) && !$("tapbar").contains(e.target)) closeMenu(); });
 
 // Réponse en cours d'écriture : chaque paragraphe devient une bulle dès qu'il est complet.
 function startLive(role) {
@@ -971,7 +1204,7 @@ async function runReply(role, path, body) {
   try { S.contacts = await api("/api/contacts"); } catch (e) { /* hors ligne */ }
   if (done.final) {
     sound("receive");
-    if (S.view === "chat" && S.role === role) markRead(role); else notify(role, done.final.text);
+    if (S.view === "chat" && S.role === role && !S.locked) markRead(role); else notify(role, done.final.text);
   }
   renderBadges(); refreshLists();
   if (S.view === "chat") renderChatHead();
@@ -999,23 +1232,108 @@ function autoIntroduceDirector() {
   introStarted = true; introduce("directeur_sportif");
 }
 
-// ------------------------------------------------------------------ notification
+// ------------------------------------------------------------------ notifications (groupées par contact)
+const MSG_GLYPH = '<svg viewBox="0 0 40 40" width="12" height="12"><path fill="#fff" d="M20 7C11.7 7 5 12.6 5 19.5c0 3.9 2.2 7.4 5.6 9.7-.3 2-1.3 3.9-3 5.3 3.3 0 6.2-1.2 8.1-3 1.4.3 2.8.5 4.3.5 8.3 0 15-5.6 15-12.5S28.3 7 20 7z"/></svg>';
+const previewOn = () => store("cd-notif-preview") !== "off";
 function notify(role, text) {
   const c = contact(role); if (!c) return;
-  const a = $("banner-avatar"); a.innerHTML = ""; a.appendChild(contactAvatar(c, 40));
-  a.insertAdjacentHTML("beforeend", '<span class="appmini ic-messages" style="display:grid;place-items:center"><svg viewBox="0 0 40 40" width="12" height="12"><path fill="#fff" d="M20 7C11.7 7 5 12.6 5 19.5c0 3.9 2.2 7.4 5.6 9.7-.3 2-1.3 3.9-3 5.3 3.3 0 6.2-1.2 8.1-3 1.4.3 2.8.5 4.3.5 8.3 0 15-5.6 15-12.5S28.3 7 20 7z"/></svg></span>');
-  $("banner-name").textContent = c.name || c.label;
-  $("banner-text").textContent = splitBubbles(text)[0] || text;
-  const b = $("banner"); b.classList.add("show");
-  b.onclick = () => { b.classList.remove("show"); openChat(role, "messages"); };
+  if (S.locked) { renderLock(); return; }  // l'écran verrouillé affiche les messages non lus
+  if (store("cd-notif-banner") === "off") return;
+  const b = $("banner");
+  if (!b.classList.contains("show")) S.notes = [];
+  S.notes.push({ role, text });
+  const roles = [...new Set(S.notes.map((n) => n.role))];
+  const single = roles.length === 1;
+  const a = $("banner-avatar"); a.innerHTML = "";
+  if (single) {
+    a.appendChild(contactAvatar(c, 40));
+    a.insertAdjacentHTML("beforeend", `<span class="appmini ic-messages" style="display:grid;place-items:center">${MSG_GLYPH}</span>`);
+  } else a.insertAdjacentHTML("beforeend", `<span class="icon ic-messages" style="width:40px;height:40px;border-radius:10px;box-shadow:none">${MSG_GLYPH.replace(/12/g, "26")}</span>`);
+  $("banner-name").textContent = single ? c.name || c.label : "Messages";
+  $("banner-text").textContent = single ? (previewOn() ? splitBubbles(text)[0] || text : "Nouveau message")
+    : roles.map((r) => (contact(r) || {}).name || r).join(", ");
+  const more = $("banner-more"); more.hidden = S.notes.length < 2;
+  more.textContent = single ? `${S.notes.length} messages` : `${S.notes.length} nouveaux messages`;
+  b.classList.toggle("stack", S.notes.length > 1);
+  b.classList.add("show");
+  b.onclick = () => { b.classList.remove("show"); S.notes = []; if (single) openChat(role, "messages"); else openApp("messages"); };
   clearTimeout(notify._t); notify._t = setTimeout(() => b.classList.remove("show"), 6000);
 }
+
+// ------------------------------------------------------------------ écran verrouillé (prochain match + notifications)
+const autolockMin = () => Number(store("cd-autolock") ?? "5");
+function lock() {
+  if (S.locked) return;
+  S.locked = true; closeMenu(); closeSheet(); $("banner").classList.remove("show");
+  if (document.activeElement) document.activeElement.blur();
+  renderLock();
+  // Comme un écran qui se rallume : affichage immédiat, seul le déverrouillage est animé.
+  const el = $("lock"); el.style.transition = "none"; el.hidden = false; el.classList.remove("unlocked");
+  void el.offsetHeight; el.style.transition = "";
+  syncBars();
+}
+function unlock(then) {
+  if (!S.locked) { if (then) then(); return; }
+  S.locked = false; S.lastActive = Date.now();
+  const el = $("lock"); el.classList.add("unlocked");
+  setTimeout(() => { if (!S.locked) el.hidden = true; }, 520);
+  syncBars();
+  if (then) setTimeout(then, 180);
+  else if (S.view === "chat") { markRead(S.role); setTimeout(() => $("input").focus({ preventScroll: true }), 400); }
+}
+function lockIfIdle() {
+  const min = autolockMin();
+  if (min > 0 && S.hiddenAt && Date.now() - S.hiddenAt > min * 60000) lock();
+  S.hiddenAt = null;
+}
+function renderLock() {
+  const h = S.home || {}, gd = h.game_date || S.lastGameDate, d = isoDay(gd);
+  $("lk-date").textContent = d ? cap(d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })) : "";
+  tick();
+  const w = $("lk-widget"), nx = h.next_match;
+  if (nx && d) {
+    const n = (x) => (h.short_names && h.short_names[x]) || x;
+    const days = Math.round((isoDay(nx.date) - d) / 864e5);
+    const when = days <= 0 ? "aujourd'hui" : days === 1 ? "demain" : `dans ${days} jours`;
+    const venue = nx.domicile === h.club ? "domicile" : "extérieur";
+    w.innerHTML = `<div class="wh">Prochain match · ${esc(when)}</div><div class="mt">${esc(n(nx.domicile))} – ${esc(n(nx.exterieur))}</div>
+      <div class="ms">${esc([gameShort(nx.date), nx.competition, venue].filter(Boolean).join(" · "))}</div>`;
+    w.hidden = false;
+  } else w.hidden = true;
+  const box = $("lk-notes"); box.innerHTML = "";
+  const unread = S.contacts.filter((c) => c.unread && c.last && c.last.from === "them")
+    .sort((a, b) => String(b.last.at).localeCompare(String(a.last.at)));
+  for (const c of unread) {
+    const b = document.createElement("button"); b.className = "note" + (c.unread > 1 ? " stack" : "");
+    const av = document.createElement("span"); av.style.position = "relative"; av.appendChild(contactAvatar(c, 40));
+    av.insertAdjacentHTML("beforeend", `<span class="appmini ic-messages" style="display:grid;place-items:center;border-color:rgba(44,44,48,.9)">${MSG_GLYPH}</span>`);
+    b.appendChild(av);
+    b.insertAdjacentHTML("beforeend", `<span class="bt"><span class="bh"><b>${esc(c.name || c.label)}</b><span>${esc(relTime(c.last.at))}</span></span>
+      <span class="bb">${esc(previewOn() ? c.last.text.replace(/\s+/g, " ") : "Nouveau message")}</span>${c.unread > 1 ? `<span class="more">${c.unread} messages</span>` : ""}</span>`);
+    b.onclick = (e) => { e.stopPropagation(); unlock(() => openChat(c.role, "messages")); };
+    box.appendChild(b);
+  }
+  const total = unread.reduce((a, c) => a + c.unread, 0);
+  if (unread.length > 1) box.insertAdjacentHTML("afterbegin", `<div class="lk-count">${total} notifications</div>`);
+}
+(() => {
+  // Déverrouillage : glisser vers le haut, ou toucher l'écran.
+  const el = $("lock"); let y0 = null;
+  el.addEventListener("pointerdown", (e) => { if (!e.target.closest(".note")) y0 = e.clientY; });
+  el.addEventListener("pointerup", (e) => {
+    if (y0 === null) return; const dy = e.clientY - y0; y0 = null;
+    if (dy < -30 || Math.abs(dy) < 8) unlock();
+  });
+})();
+for (const ev of ["pointerdown", "keydown", "wheel"]) document.addEventListener(ev, () => { S.lastActive = Date.now(); }, { passive: true, capture: true });
+setInterval(() => { const min = autolockMin(); if (min > 0 && !S.locked && Date.now() - S.lastActive > min * 60000) lock(); }, 20000);
+document.addEventListener("visibilitychange", () => { if (document.hidden) S.hiddenAt = Date.now(); else lockIfIdle(); });
 
 // ------------------------------------------------------------------ saisie
 const ta = $("input");
 function autosize() { ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; $("send").classList.toggle("on", !!ta.value.trim()); updateChips(); }
 ta.addEventListener("input", autosize);
-ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !S.locked) { e.preventDefault(); send(); } });
 $("send").onclick = send;
 
 // ------------------------------------------------------------------ Calendrier
@@ -1023,19 +1341,71 @@ async function loadCalendar() {
   const body = $("cal-body");
   if (!S.data.fixtures) { body.innerHTML = `<div class="empty">Chargement…</div>`; try { S.data.fixtures = await api("/api/phone/fixtures"); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
   const f = S.data.fixtures, gd = S.lastGameDate;
-  $("cal-title").textContent = gd ? cap(isoDay(gd).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })) : "Calendrier";
+  $("cal-title").textContent = "Calendrier";
   $("cal-sub").textContent = gd ? `Dans le jeu : ${gameLong(gd)}` : "";
-  const row = (m, played) => {
-    const d = isoDay(m.date);
-    const res = played && m.score ? `<span class="res">${esc(m.score)}<i class="${m.resultat === "victoire" ? "v" : m.resultat === "défaite" || m.resultat === "defaite" ? "d" : "n"}">${m.resultat === "victoire" ? "V" : m.resultat === "nul" ? "N" : m.resultat ? "D" : "?"}</i></span>` : played ? '<span class="res" style="color:var(--text2)">–</span>' : `<span class="ha">${m.home ? "DOM" : "EXT"}</span>`;
-    return `<div class="fx"><div class="day"><div class="dd">${d ? DAYS[d.getDay()].replace(".", "") : ""}</div><div class="dn">${d ? d.getDate() : ""}</div></div>
+  const all = [...f.recent.map((m) => ({ ...m, played: true })), ...f.upcoming.map((m) => ({ ...m, played: false }))];
+  const resCls = (m) => (m.resultat === "victoire" ? "v" : m.resultat === "défaite" || m.resultat === "defaite" ? "d" : m.resultat === "nul" ? "n" : "");
+  const row = (m) => {
+    const d = isoDay(m.date), i = all.indexOf(m);
+    const res = m.played && m.score ? `<span class="res">${esc(m.score)}<i class="${resCls(m) || "n"}">${{ v: "V", n: "N", d: "D" }[resCls(m)] || "?"}</i></span>` : m.played ? '<span class="res" style="color:var(--text2)">–</span>' : `<span class="ha">${m.home ? "DOM" : "EXT"}</span>`;
+    return `<button class="fx" data-m="${i}" data-date="${esc(m.date)}"><div class="day"><div class="dd">${d ? DAYS[d.getDay()].replace(".", "") : ""}</div><div class="dn">${d ? d.getDate() : ""}</div></div>
       <div class="fb"><div class="teams"><div class="vs">${m.home ? `<b>${esc(m.short_home)}</b> – ${esc(m.short_away)}` : `${esc(m.short_home)} – <b>${esc(m.short_away)}</b>`}</div>
-      <div class="comp">${esc([m.competition, d ? d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : ""].filter(Boolean).join(" · "))}</div></div>${res}</div></div>`;
+      <div class="comp">${esc([m.competition, d ? d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : ""].filter(Boolean).join(" · "))}</div></div>${res}</div></button>`;
   };
-  body.innerHTML = (f.upcoming.length ? `<div class="section-h">À venir</div><div class="group">${f.upcoming.map((m) => row(m, false)).join("")}</div>` : "")
-    + (f.recent.length ? `<div class="section-h">Résultats</div><div class="group">${f.recent.map((m) => row(m, true)).join("")}</div>` : "")
-    + (!f.upcoming.length && !f.recent.length ? `<div class="empty">Aucun match dans la sauvegarde.</div>` : "")
-    + `<div class="footnote">Matchs lus dans la dernière sauvegarde.</div>`;
+  // Mois affiché : celui de la date du jeu, navigable dans la plage des matchs lus.
+  const months = [...new Set([gd, ...all.map((m) => m.date)].filter(Boolean).map((s) => s.slice(0, 7)))].sort();
+  if (!S.calMonth || !months.includes(S.calMonth)) S.calMonth = (gd || months[0] || "").slice(0, 7);
+  const mi = months.indexOf(S.calMonth);
+  let grid = "";
+  if (S.calMonth) {
+    const [y, mo] = S.calMonth.split("-").map(Number);
+    const first = new Date(y, mo - 1, 1), ndays = new Date(y, mo, 0).getDate(), offset = (first.getDay() + 6) % 7;
+    const byDay = new Map(all.filter((m) => m.date.startsWith(S.calMonth)).map((m) => [Number(m.date.slice(8, 10)), m]));
+    const cells = [];
+    for (let k = 0; k < offset; k++) cells.push(`<span class="dc out"></span>`);
+    for (let day = 1; day <= ndays; day++) {
+      const m = byDay.get(day), today = gd === `${S.calMonth}-${pad(day)}`;
+      const dot = m ? `<i class="${m.played ? resCls(m) || "n" : "up"}"></i>` : "";
+      cells.push(m ? `<button class="dc${today ? " today" : ""}" data-m="${all.indexOf(m)}" title="${esc(m.short_home)} – ${esc(m.short_away)}"><span>${day}</span>${dot}</button>`
+        : `<span class="dc${today ? " today" : ""}"><span>${day}</span></span>`);
+    }
+    grid = `<div class="month"><div class="mh"><button id="cal-prev" aria-label="Mois précédent" ${mi <= 0 ? "disabled" : ""}><svg viewBox="0 0 10 16"><path d="M8 2 2 8l6 6"/></svg></button>
+      <span>${esc(cap(first.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })))}</span>
+      <button id="cal-next" aria-label="Mois suivant" ${mi >= months.length - 1 ? "disabled" : ""}><svg viewBox="0 0 10 16"><path d="m2 2 6 6-6 6"/></svg></button></div>
+      <div class="mgrid">${["lun", "mar", "mer", "jeu", "ven", "sam", "dim"].map((w) => `<span class="wd">${w}</span>`).join("")}${cells.join("")}</div></div>`;
+  }
+  const upcoming = all.filter((m) => !m.played), recent = all.filter((m) => m.played);
+  body.innerHTML = grid
+    + (upcoming.length ? `<div class="section-h">À venir</div><div class="group">${upcoming.map(row).join("")}</div>` : "")
+    + (recent.length ? `<div class="section-h">Résultats</div><div class="group">${recent.map(row).join("")}</div>` : "")
+    + (!all.length ? `<div class="empty">Aucun match dans la sauvegarde.</div>` : "")
+    + `<div class="footnote">Matchs de l'équipe première lus dans la dernière sauvegarde.</div>`;
+  if ($("cal-prev")) $("cal-prev").onclick = () => { S.calMonth = months[mi - 1]; loadCalendar(); };
+  if ($("cal-next")) $("cal-next").onclick = () => { S.calMonth = months[mi + 1]; loadCalendar(); };
+  for (const b of body.querySelectorAll("[data-m]")) b.onclick = () => openMatch(all[Number(b.dataset.m)]);
+}
+function openMatch(m) {
+  const h = S.home || {}, ours = h.club;
+  $("sheet-title").textContent = m.competition || "Match";
+  const body = $("sheet-body");
+  const opp = m.home ? m.short_away : m.short_home;
+  const kv = [["Date", cap(gameLong(m.date))], ["Lieu", m.home ? "À domicile" : "À l'extérieur"], ["Compétition", m.competition || "—"]];
+  if (m.played) kv.push(["Résultat", m.score ? cap(m.resultat || "—") : "Score non lu"]);
+  body.innerHTML = `<div class="match-head"><div class="club${m.domicile === ours ? " ours" : ""}">${esc(m.short_home)}</div>
+      <div class="sc${m.played && m.score ? "" : " vs"}">${esc(m.played && m.score ? m.score.replace("-", " – ") : "contre")}</div>
+      <div class="club${m.exterieur === ours ? " ours" : ""}">${esc(m.short_away)}</div></div>
+    <div class="kv">${kv.map(([k, v]) => `<div><div class="k2">${esc(k)}</div><div class="v2" style="font-size:15px">${esc(v)}</div></div>`).join("")}</div>`;
+  const adj = contact("entraineur_adjoint");
+  if (adj && adj.can_chat) {
+    const g = document.createElement("div"); g.className = "group";
+    g.innerHTML = `<button class="link-cell">${m.played ? `Débriefer avec ${esc(shortName(adj))}` : `Préparer ce match avec ${esc(shortName(adj))}`}</button>`;
+    g.firstChild.onclick = () => askContact("entraineur_adjoint", m.played
+      ? `Ton analyse de notre match contre ${opp} (${m.score || "score non lu"}, ${m.competition || ""}) ?`
+      : `On joue ${opp} ${gameShort(m.date)} (${m.competition || ""}, ${m.home ? "à domicile" : "à l'extérieur"}). Comment tu vois ce match et quel onze tu alignerais ?`);
+    body.appendChild(g);
+  }
+  body.insertAdjacentHTML("beforeend", `<div style="height:30px"></div>`);
+  openSheet();
 }
 
 // ------------------------------------------------------------------ Classement
@@ -1060,11 +1430,12 @@ async function loadSquad() {
   if (!S.data.squad) { body.innerHTML = `<div class="empty">Chargement…</div>`; try { S.data.squad = await api("/api/phone/squad"); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; } }
   const sq = S.data.squad;
   $("sq-sub").textContent = `${sq.length} joueurs · équipe première`;
+  if (S.squadSort === "onze") return loadLineup();
   const row = (p) => {
     const s = p.saison || {};
     let stat = "";
     if (S.squadSort === "valeur") stat = `<b>${esc(p.valeur && p.valeur.texte || "—")}</b>valeur`;
-    else if (S.squadSort === "note") stat = `<b>${s.average_rating ? Number(s.average_rating).toFixed(2) : "—"}</b>note moy.`;
+    else if (S.squadSort === "note") stat = `<b>${s.average_rating ? Number(s.average_rating).toFixed(2).replace(".", ",") : "—"}</b>note moy.`;
     else stat = `<b>${s.goals ?? 0} b · ${s.assists ?? 0} pd</b>${s.minutes ?? 0} min`;
     return `<button class="pl" data-uid="${p.uid}"><span class="av" data-av="${p.uid}"></span><span class="pb"><span style="min-width:0"><div class="pn">${esc(p.nom)}</div>
       <div class="ps">${esc((p.postes || []).join(", "))}${p.age ? " · " + p.age + " ans" : ""}${p.pret ? " · prêté" : ""}</div></span><span class="stat">${stat}</span></span></button>`;
@@ -1090,6 +1461,65 @@ async function loadSquad() {
 for (const b of $("sq-seg").querySelectorAll("button")) b.onclick = () => {
   S.squadSort = b.dataset.sort; for (const x of $("sq-seg").querySelectorAll("button")) x.classList.toggle("on", x === b); loadSquad();
 };
+// Onze type : composition calculée par le service (notes de poste FM26), jamais par le modèle.
+const SYSTEMS = ["4-2-3-1", "4-3-3", "4-4-2", "4-1-4-1", "4-3-1-2", "3-5-2", "3-4-3", "3-4-2-1", "5-3-2"];
+const SLOT_Y = { GK: 90, DC: 76, DR: 72, DL: 72, WBR: 55, WBL: 55, DM: 59, MC: 45, MR: 44, ML: 44, AMC: 29, AMR: 27, AML: 27, STC: 11 };
+const SLOT_X = { GK: [50], DR: [86], DL: [14], WBR: [88], WBL: [12], MR: [87], ML: [13], AMR: [84], AML: [16],
+  DC: { 1: [50], 2: [35, 65], 3: [24, 50, 76] }, DM: { 1: [50], 2: [35, 65] }, MC: { 1: [50], 2: [33, 67], 3: [24, 50, 76] },
+  AMC: { 1: [50], 2: [35, 65] }, STC: { 1: [50], 2: [34, 66] } };
+const rtClass = (v) => (v == null || v < 10 ? "bad" : v >= 18 ? "" : v >= 15 ? "mid" : "low");
+function slotPositions(onze) {
+  const count = {}, seen = {};
+  for (const p of onze) count[p.poste] = (count[p.poste] || 0) + 1;
+  return onze.map((p) => {
+    const xs = SLOT_X[p.poste]; const i = seen[p.poste] = (seen[p.poste] ?? -1) + 1;
+    const list = Array.isArray(xs) ? xs : xs ? xs[count[p.poste]] || xs[1] : [50];
+    return [list[i] ?? 50, SLOT_Y[p.poste] ?? 50];
+  });
+}
+async function loadLineup() {
+  const body = $("sq-body"), sys = store("cd-system") || "4-2-3-1", rot = !!S.rotation, key = `${sys}|${rot}`;
+  S.data.lineups = S.data.lineups || {};
+  if (!S.data.lineups[key]) {
+    body.innerHTML = `<div class="loading">Calcul de la composition…</div>`;
+    try { S.data.lineups[key] = await api(`/api/phone/lineup?systeme=${encodeURIComponent(sys)}&rotation=${rot}`); }
+    catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+    if (S.squadSort !== "onze") return;
+  }
+  const L = S.data.lineups[key], pos = slotPositions(L.onze);
+  const toks = L.onze.map((p, i) => `<button class="tok" data-uid="${p.uid}" style="left:${pos[i][0]}%;top:${pos[i][1]}%" title="${esc(`${p.joueur} · ${p.libelle} · note ${p.note_poste ?? "?"}/20${p.condition ? " · " + p.condition : ""}`)}">
+      <span data-av="${p.uid}"></span><span class="rt ${rtClass(p.note_poste)}">${p.note_poste ?? "?"}</span><span class="nm">${esc(p.joueur.split(" ").slice(-1)[0])}</span></button>`).join("");
+  const bench = L.banc.map((p) => `<button class="pl" data-uid="${p.uid}"><span data-av="${p.uid}"></span><span class="pb"><span style="min-width:0"><div class="pn">${esc(p.joueur)}</div>
+      <div class="ps">${esc([p.meilleur_poste, p.condition ? `condition ${p.condition}` : ""].filter(Boolean).join(" · "))}</div></span><span class="stat"><span class="rt ${rtClass(p.note_poste)}">${p.note_poste ?? "?"}</span></span></span></button>`).join("");
+  const notes = [...(L.alertes || []), ...(L.exclus || []).map((x) => `${x.joueur} : ${x.raison}.`)];
+  body.innerHTML = `<div class="systems" id="sq-systems">${SYSTEMS.map((s) => `<button data-s="${s}" class="${s === sys ? "on" : ""}">${s}</button>`).join("")}</div>
+    <div class="pitch"><span class="ln frame"></span><span class="ln half"></span><span class="ln circle"></span><span class="ln box-t"></span><span class="ln box-b"></span>${toks}</div>
+    <div class="legend"><span><i style="background:var(--green)"></i>Naturel (18-20)</span><span><i style="background:#c99a06"></i>Compétent (15-17)</span><span><i style="background:var(--orange)"></i>Dépannage</span></div>
+    <div class="group" style="margin-top:6px"><div class="cell"><span class="body"><span class="k">Faire tourner</span><button class="switch ${rot ? "on" : ""}" id="sq-rot" aria-label="Faire tourner"></button></span></div></div>
+    ${notes.length ? `<div class="section-h">À noter</div><div class="group">${notes.map((t) => `<div class="info"><div class="info-v" style="font-size:15px">${esc(t)}</div></div>`).join("")}</div>` : ""}
+    ${bench ? `<div class="section-h">Banc</div><div class="group">${bench}</div>` : ""}
+    <div class="footnote">${esc([L.methode, ...(L.limitations || [])].filter(Boolean).join(" "))}</div>`;
+  const people = [...L.onze, ...L.banc];
+  for (const el of body.querySelectorAll("[data-av]")) {
+    const p = people.find((x) => String(x.uid) === el.dataset.av), big = !!el.closest(".tok");
+    el.replaceWith(avatar(p.joueur, p.unique_id, p.photo, big ? 38 : 40));
+  }
+  for (const b of body.querySelectorAll("[data-uid]")) b.onclick = () => { const p = (S.data.squad || []).find((x) => String(x.uid) === b.dataset.uid); if (p) openPlayer(p); };
+  for (const b of $("sq-systems").querySelectorAll("button")) b.onclick = () => { store("cd-system", b.dataset.s); loadLineup(); };
+  $("sq-rot").onclick = () => { S.rotation = !S.rotation; loadLineup(); };
+}
+// Notes de poste (1-20) de la sauvegarde, sur un terrain.
+const RATING_SPOTS = { stc: [50, 9], aml: [16, 24], amc: [50, 24], amr: [84, 24], ml: [13, 39], mc: [50, 39], mr: [87, 39],
+  wbl: [13, 54], dm: [50, 54], wbr: [87, 54], dl: [15, 69], dc: [50, 69], dr: [85, 69], sw: [50, 81], gk: [50, 93] };
+function ratingsPitch(ratings) {
+  if (!ratings || !Object.keys(ratings).length) return `<div class="footnote">Notes de poste absentes de la sauvegarde pour ce joueur.</div>`;
+  const dots = Object.entries(RATING_SPOTS).map(([code, [x, y]]) => {
+    const v = ratings[code];
+    return `<span class="rdot" style="left:${x}%;top:${y}%" title="${esc(code.toUpperCase())} : ${v ?? "?"}/20"><span class="rt ${v == null || v < 10 ? "no" : rtClass(v)}">${v ?? "–"}</span><span class="cd">${code.toUpperCase()}</span></span>`;
+  }).join("");
+  return `<div class="section-h">Notes par poste</div><div class="rpitch"><span class="ln frame" style="position:absolute;inset:3.5%;border:1.5px solid rgba(255,255,255,.35)"></span>${dots}</div>
+    <div class="legend"><span><i style="background:var(--green)"></i>Naturel</span><span><i style="background:#c99a06"></i>Compétent</span><span><i style="background:var(--orange)"></i>Dépannage</span><span><i style="background:rgba(127,127,127,.4)"></i>Inadapté (&lt; 10)</span></div>`;
+}
 function openPlayer(p) {
   $("sheet-title").textContent = "";
   const s = p.saison || {};
@@ -1099,16 +1529,110 @@ function openPlayer(p) {
   body.appendChild(head);
   const kv = [["Âge", p.age ? `${p.age} ans` : "—"], ["Valeur", p.valeur && p.valeur.texte || "—"], ["Salaire", p.salaire && p.salaire.texte ? `${p.salaire.texte} / sem.` : "—"],
     ["Contrat", p.fin_contrat ? `jusqu'au ${fr(p.fin_contrat)}` : "—"], ["Matchs", `${(s.starts ?? 0)} tit. · ${(s.substitute_appearances ?? 0)} remp.`], ["Minutes", s.minutes ?? "—"],
-    ["Buts · passes", `${s.goals ?? 0} · ${s.assists ?? 0}`], ["Note moyenne", s.average_rating ? Number(s.average_rating).toFixed(2) : "—"]];
+    ["Buts · passes", `${s.goals ?? 0} · ${s.assists ?? 0}`], ["Note moyenne", s.average_rating ? Number(s.average_rating).toFixed(2).replace(".", ",") : "—"]];
+  if (p.condition != null) kv.push(["Condition", `${p.condition} %`]);
   body.insertAdjacentHTML("beforeend", `<div class="kv">${kv.map(([k, v]) => `<div><div class="k2">${esc(k)}</div><div class="v2">${esc(v)}</div></div>`).join("")}</div>`);
+  body.insertAdjacentHTML("beforeend", ratingsPitch(p.notes_postes));
   const ds = contact("directeur_sportif"), adj = contact("entraineur_adjoint");
-  const g = document.createElement("div"); g.className = "group";
+  const g = document.createElement("div"); g.className = "group"; g.style.marginTop = "10px";
   if (adj && adj.can_chat) g.insertAdjacentHTML("beforeend", `<button class="link-cell" data-r="entraineur_adjoint" data-q="Que penses-tu de ${esc(p.nom)} en ce moment ?">Demander l'avis de ${esc(shortName(adj))}</button>`);
   if (ds && ds.can_chat) g.insertAdjacentHTML("beforeend", `<button class="link-cell" data-r="directeur_sportif" data-q="Quel est votre avis sur la situation de ${esc(p.nom)} (contrat, valeur, avenir) ?">Parler de son avenir avec ${esc(shortName(ds))}</button>`);
   body.appendChild(g);
-  for (const b of g.querySelectorAll("button")) b.onclick = () => { closeSheet(); openChat(b.dataset.r, "messages"); setTimeout(() => { $("input").value = b.dataset.q; autosize(); }, 420); };
+  for (const b of g.querySelectorAll("button")) b.onclick = () => askContact(b.dataset.r, b.dataset.q);
   body.insertAdjacentHTML("beforeend", `<div style="height:30px"></div>`);
   openSheet();
+}
+
+// ------------------------------------------------------------------ Mercato (offres réelles de la sauvegarde)
+const STATE_CLASS = { "conclue": "ok", "échouée": "ko", "en cours": "wip", "accord pour plus tard": "later", "sans suite": "none" };
+const stateLabel = (e) => ({ "accord pour plus tard": "accord, effet plus tard" }[e] || e || "état inconnu");
+const statePill = (e) => `<span class="state ${STATE_CLASS[e] || "none"}">${esc(cap(stateLabel(e)))}</span>`;
+async function loadMercato() {
+  const body = $("mk-body");
+  if (!S.data.mercato) {
+    body.innerHTML = `<div class="loading">Chargement des offres…</div>`;
+    try { S.data.mercato = await api("/api/phone/mercato"); } catch (e) { body.innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  }
+  const mk = S.data.mercato;
+  renderBadges();
+  $("mk-sub").textContent = S.lastGameDate ? `Dans le jeu : ${gameLong(S.lastGameDate)}` : "";
+  const tb = mk.budget_transferts, wb = mk.budget_salaires;
+  const tile = (k, v, small) => `<div><div class="k2">${esc(k)}</div><div class="v2">${esc(v || "—")}${small ? `<small>${esc(small)}</small>` : ""}</div></div>`;
+  $("mk-budget").innerHTML = tb || wb ? `<div class="kv">${tile("Transferts restants", tb && tb.restant && tb.restant.texte, tb && tb.alloue && tb.alloue.texte ? `sur ${tb.alloue.texte} alloués` : "")}
+    ${tile("Marge salariale", wb && wb.marge_hebdo && wb.marge_hebdo.texte, wb && wb.masse_hebdo && wb.masse_hebdo.texte ? `par semaine · masse ${wb.masse_hebdo.texte}` : "par semaine")}</div>` : "";
+  for (const b of $("mk-seg").querySelectorAll("button")) {
+    const n = (mk[b.dataset.side] || []).length;
+    b.textContent = `${b.dataset.side === "recues" ? "Reçues" : "Faites"}${n ? ` (${n})` : ""}`;
+    b.classList.toggle("on", b.dataset.side === S.mkSide);
+  }
+  const list = mk[S.mkSide] || [];
+  const recues = S.mkSide === "recues";
+  const row = (o, i) => `<button class="pl" data-i="${i}"><span class="av" data-av="${i}"></span><span class="pb"><span style="min-width:0">
+      <div class="pn">${esc(o.joueur || "Joueur inconnu")}</div>
+      <div class="ps">${esc([recues ? o.acheteur_court : o.vendeur_court, o.type, gameShort(o.date)].filter(Boolean).join(" · "))}</div></span>
+      <span class="stat"><b>${esc(o.montant || "—")}</b>${statePill(o.etat)}</span></span></button>`;
+  const groups = [["En cours", (o) => o.etat === "en cours"], ["Accords conclus, effet plus tard", (o) => o.etat === "accord pour plus tard"],
+    ["Terminées", () => true]];
+  const left = list.map((o, i) => [o, i]);
+  let html = "";
+  for (const [title, test] of groups) {
+    const grp = left.filter(([o]) => test(o)); grp.forEach((x) => left.splice(left.indexOf(x), 1));
+    if (grp.length) html += `<div class="section-h">${esc(title)}</div><div class="group">${grp.map(([o, i]) => row(o, i)).join("")}</div>`;
+  }
+  if (!list.length) html = `<div class="empty">${recues ? "Aucune offre reçue pour vos joueurs" : "Aucune offre faite par le club"} dans la sauvegarde.</div>`;
+  body.innerHTML = html + `<div class="footnote">${esc((mk.limitations || []).join(" "))} Offres lues dans la dernière sauvegarde.</div>`;
+  for (const el of body.querySelectorAll("[data-av]")) { const o = list[Number(el.dataset.av)]; el.replaceWith(avatar(o.joueur, o.unique_id, o.photo, 40)); }
+  for (const b of body.querySelectorAll(".pl")) b.onclick = () => openOffer(list[Number(b.dataset.i)], S.mkSide);
+}
+for (const b of $("mk-seg").querySelectorAll("button")) b.onclick = () => { S.mkSide = b.dataset.side; loadMercato(); };
+function askContact(role, text) {
+  // Ouvre la discussion avec un message prérempli (jamais envoyé sans l'entraîneur).
+  closeSheet(); openChat(role, "messages"); setTimeout(() => { $("input").value = text; autosize(); }, 420);
+}
+function openOffer(o, side) {
+  const recues = side === "recues";
+  $("sheet-title").textContent = "";
+  const body = $("sheet-body"); body.innerHTML = "";
+  const head = document.createElement("div"); head.className = "poster"; head.appendChild(avatar(o.joueur, o.unique_id, o.photo, 96));
+  head.insertAdjacentHTML("beforeend", `<div class="pname" style="font-size:25px">${esc(o.joueur || "Joueur inconnu")}</div>
+    <div class="prole">${esc(recues ? `Offre de ${o.acheteur_court || o.acheteur}` : `Offre à ${o.vendeur_court || o.vendeur}`)}</div>`);
+  body.appendChild(head);
+  const kv = [["Montant", o.montant || "—"], ["Type", cap(o.type || "—")], ["État", cap(stateLabel(o.etat))], ["Offre du", fr(o.date)]];
+  if (o.effet) kv.push(["Effet le", fr(o.effet)]);
+  if (o.derniere_evolution) kv.push(["Dernière évolution", fr(o.derniere_evolution)]);
+  kv.push([recues ? "Club acheteur" : "Club vendeur", recues ? o.acheteur : o.vendeur]);
+  body.insertAdjacentHTML("beforeend", `<div class="kv">${kv.map(([k, v]) => `<div><div class="k2">${esc(k)}</div><div class="v2" style="font-size:15px">${esc(v || "—")}</div></div>`).join("")}</div>`);
+  const ds = contact("directeur_sportif");
+  if (ds && ds.can_chat) {
+    const g = document.createElement("div"); g.className = "group";
+    g.innerHTML = `<button class="link-cell">En parler à ${esc(shortName(ds))}</button>`;
+    g.firstChild.onclick = () => askContact("directeur_sportif", recues
+      ? `On a reçu une offre de ${o.acheteur_court || o.acheteur} pour ${o.joueur} (${o.montant}, ${stateLabel(o.etat)}). Qu'en pensez-vous ?`
+      : `Où en est notre offre pour ${o.joueur} (${o.vendeur_court || o.vendeur}, ${o.montant}) ?`);
+    body.appendChild(g);
+  }
+  if (recues && o.notre_joueur && o.player_uid) {
+    const box = document.createElement("div"); box.innerHTML = `<div class="section-h">Plan de vente</div><div class="loading">Calcul du plan de vente…</div>`;
+    body.appendChild(box);
+    loadSale(o.player_uid).then((sale) => renderSale(box, sale)).catch((e) => { box.innerHTML = `<div class="section-h">Plan de vente</div><div class="footnote">${esc(e.message)}</div>`; });
+  }
+  body.insertAdjacentHTML("beforeend", `<div style="height:30px"></div>`);
+  openSheet();
+}
+async function loadSale(uid) {
+  S.data.sales = S.data.sales || {};
+  if (!S.data.sales[uid]) S.data.sales[uid] = api(`/api/phone/sale/${uid}`).catch((e) => { delete S.data.sales[uid]; throw e; });
+  return S.data.sales[uid];
+}
+function renderSale(box, sale) {
+  const p = sale.plan || {}, v = p.valeur || {}, st = p.strategie || {};
+  const tiles = [["Prix affiché", st.prix_affiche], ["Plancher", st.plancher], ["Valeur du jeu", v.valeur_du_jeu], ["Estimation", v.estimation]];
+  const buyers = (p.acheteurs || []).slice(0, 5);
+  box.innerHTML = `<div class="section-h">Plan de vente</div>
+    <div class="kv">${tiles.map(([k, x]) => `<div><div class="k2">${esc(k)}</div><div class="v2">${esc(x || "—")}</div></div>`).join("")}</div>
+    ${buyers.length ? `<div class="section-h">Acheteurs possibles</div><div class="group">${buyers.map((b) => `<div class="buyer"><div class="bn"><b>${esc(b.club)}</b><span style="color:var(--text2)">${esc(b.budget ? `budget ${b.budget}` : "")}</span></div>
+      <div class="br">${esc(frDates((b.raisons || []).slice(0, 3).join(" · ")))}</div></div>`).join("")}</div>` : ""}
+    <div class="footnote">${esc([st.contre_offre ? `Contre-offre : ${st.contre_offre}.` : "", ...(sale.limitations || [])].filter(Boolean).join(" "))}</div>`;
 }
 
 // ------------------------------------------------------------------ Réglages
@@ -1123,16 +1647,39 @@ function renderSettings() {
     bulb: "M12 2a7 7 0 0 0-4 12.7V18h8v-3.3A7 7 0 0 0 12 2zM9 20h6v2H9z", save: "M5 3h11l3 3v15H5V3zm3 0v5h7V3M8 21v-7h8v7",
     euro: "M15 5a7 7 0 0 0-6.3 4H6v2h2.1a7 7 0 0 0 0 2H6v2h2.7A7 7 0 0 0 15 19a7 7 0 0 0 3-.7l-.8-1.8A5 5 0 0 1 11 15h4v-2h-4.9a5 5 0 0 1 0-2H15V9h-4a5 5 0 0 1 6.2-1.5l.8-1.8A7 7 0 0 0 15 5z",
     cpu: "M7 7h10v10H7zM9 3h2v3H9zm4 0h2v3h-2zM9 18h2v3H9zm4 0h2v3h-2zM3 9h3v2H3zm0 4h3v2H3zm15-4h3v2h-3zm0 4h3v2h-3z", key: "M7 14a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-5.1A4 4 0 0 1 7 14z",
+    text: "M3 5h11v3h-2V7H9.5v11H11v2H6v-2h1.5V7H5v1H3V5zm11 6h7v2.5h-1.5V13h-1.2v5H20v2h-4v-2h.8v-5h-1.3v.5H14V11z",
+    phone: "M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm0 3v13h8V5H8zm3 14.5h2v1h-2z",
+    bell: "M12 22a2.5 2.5 0 0 0 2.4-2h-4.8a2.5 2.5 0 0 0 2.4 2zm7-5-1.5-2V10a5.5 5.5 0 0 0-4.5-5.4V3h-2v1.6A5.5 5.5 0 0 0 6.5 10v5L5 17v1h14v-1z",
+    eye: "M12 5c5 0 9 4.5 10 7-1 2.5-5 7-10 7S3 14.5 2 12c1-2.5 5-7 10-7zm0 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z",
+    badge: "M5 7a2 2 0 0 1 2-2h7v2H7v10h10v-7h2v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7zm14-5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z",
+    lock: "M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z",
+    reply: "M10 8V4L3 11l7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z",
   };
+  const sw = (icon, k, key) => cell(icon, k, "", `<button class="switch ${store(key) === "off" ? "" : "on"}" data-key="${key}" aria-label="${esc(k)}"></button>`);
+  const seg = (id, key, def, opts) => `<div class="seg" id="${id}" data-key="${key}" style="margin:0 16px 12px">${opts.map(([v, l]) => `<button data-v="${v}" class="${v === (store(key) || def) ? "on" : ""}">${l}</button>`).join("")}</div>`;
   const lastSync = sync.last_sync_at ? new Date(sync.last_sync_at).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
   const prov = (ai.providers || [])[0];
   $("set-body").innerHTML = `
     <div class="group" style="margin-top:6px"><div class="cell" style="padding:10px 0 10px 16px"><span id="set-av"></span><span class="body" style="border:0"><span><div style="font:600 20px var(--font-display)">${esc(me)}</div>
       <div style="font-size:14px;color:var(--text2)">Entraîneur · ${esc(h.club_short || h.club || "")}</div></span></span></div></div>
     <div class="section-h">Affichage</div>
-    <div class="group">${cell(ic("#5e5ce6", ICONS.moon), "Apparence", "")}<div class="seg" id="set-theme" style="margin:0 16px 12px">${[["auto", "Auto"], ["clair", "Clair"], ["sombre", "Sombre"]].map(([v, l]) => `<button data-t="${v}" class="${v === theme ? "on" : ""}">${l}</button>`).join("")}</div>
-      ${cell(ic("#ff3b30", ICONS.sound), "Sons des messages", "", `<button class="switch ${store("cd-sound") === "off" ? "" : "on"}" id="set-sound" aria-label="Sons"></button>`)}
-      ${cell(ic("#ff9500", ICONS.bulb), "Suggestions de messages", "", `<button class="switch ${store("cd-chips") === "off" ? "" : "on"}" id="set-chips" aria-label="Suggestions"></button>`)}</div>
+    <div class="group">${cell(ic("#5e5ce6", ICONS.moon), "Apparence", "")}${seg("set-theme", "cd-theme", "auto", [["auto", "Auto"], ["clair", "Clair"], ["sombre", "Sombre"]])}
+      ${cell(ic("#007aff", ICONS.text), "Taille du texte", "")}${seg("set-text", "cd-text", "std", [["std", "Standard"], ["big", "Grande"]])}
+      ${S.inHost ? `${cell(ic("#34c759", ICONS.phone), "Taille du téléphone", "")}<div class="seg" id="set-size" style="margin:0 16px 12px">${[[700, "Petit"], [860, "Normal"], [1000, "Grand"]].map(([v, l]) => `<button data-v="${v}" class="${v === S.phoneSize ? "on" : ""}">${l}</button>`).join("")}</div>` : ""}</div>
+    <div class="section-h">Sons et notifications</div>
+    <div class="group">${sw(ic("#ff3b30", ICONS.sound), "Sons des messages", "cd-sound")}
+      ${sw(ic("#ff3b30", ICONS.bell), "Bannières", "cd-notif-banner")}
+      ${sw(ic("#ff3b30", ICONS.eye), "Aperçu des messages", "cd-notif-preview")}
+      ${sw(ic("#ff3b30", ICONS.badge), "Pastilles sur les icônes", "cd-badges")}</div>
+    <div class="footnote">Les messages reçus pendant que vous êtes ailleurs sont regroupés par contact, en bannière ou sur l'écran verrouillé.</div>
+    <div class="section-h">Écran verrouillé</div>
+    <div class="group">${cell(ic("#5856d6", ICONS.lock), "Verrouillage automatique", "")}${seg("set-lock", "cd-autolock", "5", [["0", "Jamais"], ["2", "2 min"], ["5", "5 min"], ["15", "15 min"]])}
+      <button class="link-cell" id="set-lock-now">Verrouiller maintenant</button></div>
+    <div class="footnote">L'écran verrouillé affiche le prochain match et les messages non lus. Il apparaît à l'ouverture du téléphone et après la durée choisie sans activité.</div>
+    <div class="section-h">Messages</div>
+    <div class="group">${sw(ic("#ff9500", ICONS.bulb), "Suggestions de messages", "cd-chips")}
+      ${sw(ic("#ff9500", ICONS.reply), "Réponses rapides", "cd-quick")}</div>
+    <div class="footnote">Réponses rapides : « Oui, vas-y », « Non »… quand un contact vous pose une question. Double-clic ou clic droit sur une bulle pour réagir.</div>
     <div class="section-h">Carrière</div>
     <div class="group">${cell(ic("#34c759", ICONS.save), "Date dans le jeu", esc(gameShort(S.lastGameDate) || "—"))}
       ${cell(ic("#34c759", ICONS.save), "Lecture automatique", sync.enabled ? (sync.in_progress ? "en cours…" : "activée") : "désactivée")}
@@ -1140,12 +1687,20 @@ function renderSettings() {
       ${cell(ic("#007aff", ICONS.euro), "Devise", cur.factor ? `€ · ${String(cur.factor).replace(".", ",")} / £` : "non étalonnée")}</div>
     <div class="section-h">Intelligence artificielle</div>
     <div class="group">${cell(ic("#8e8e93", ICONS.cpu), "Moteur", esc(prov ? prov.name : "aucun"))}
-      ${cell(ic("#8e8e93", ICONS.key), "Raccourci", "Ctrl+Alt+D")}</div>
-    <div class="footnote">Le téléphone se déplace en saisissant l'heure en haut de l'écran. Taille : clic droit sur l'icône ClubDirector de la barre des tâches. Les données viennent uniquement de votre sauvegarde FM26 ; les photos, de votre pack de visages.</div>`;
+      ${cell(ic("#8e8e93", ICONS.key), "Raccourci", esc(S.hotkey))}</div>
+    <div class="footnote">Le téléphone se déplace en saisissant l'heure en haut de l'écran${S.inHost ? "" : " ; sa taille se règle par clic droit sur l'icône ClubDirector de la barre des tâches"}. Les données viennent uniquement de votre sauvegarde FM26 ; les photos, de votre pack de visages.</div>`;
   $("set-av").appendChild(avatar(me, null, false, 58, "linear-gradient(180deg,#6e6cf0,#3634a3)"));
-  for (const b of $("set-theme").querySelectorAll("button")) b.onclick = () => { store("cd-theme", b.dataset.t); applyTheme(); renderSettings(); };
-  $("set-sound").onclick = () => { store("cd-sound", store("cd-sound") === "off" ? "on" : "off"); renderSettings(); if (store("cd-sound") !== "off") sound("receive"); };
-  $("set-chips").onclick = () => { store("cd-chips", store("cd-chips") === "off" ? "on" : "off"); renderSettings(); };
+  for (const box of $("set-body").querySelectorAll(".seg[data-key]")) for (const b of box.querySelectorAll("button")) b.onclick = () => {
+    store(box.dataset.key, b.dataset.v); applyTheme(); renderSettings();
+  };
+  for (const b of $("set-body").querySelectorAll(".switch[data-key]")) b.onclick = () => {
+    const key = b.dataset.key; store(key, store(key) === "off" ? "on" : "off"); renderSettings(); renderBadges();
+    if (key === "cd-sound" && store(key) !== "off") sound("receive");
+  };
+  if ($("set-size")) for (const b of $("set-size").querySelectorAll("button")) b.onclick = () => {
+    S.phoneSize = Number(b.dataset.v); hostSend(`size:${b.dataset.v}`); renderSettings();
+  };
+  $("set-lock-now").onclick = () => lock();
 }
 // Thème : « auto » suit Windows (clair ou sombre).
 const LIGHT_MQ = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
@@ -1153,11 +1708,13 @@ function applyTheme() {
   const t = store("cd-theme") || "auto";
   const light = t === "clair" || (t === "auto" && LIGHT_MQ && LIGHT_MQ.matches);
   document.documentElement.dataset.theme = light ? "light" : "dark";
+  $("screen").classList.toggle("big-text", store("cd-text") === "big");
 }
 applyTheme();
 try { LIGHT_MQ && LIGHT_MQ.addEventListener("change", applyTheme); } catch (e) { /* ancien moteur */ }
 
 // ------------------------------------------------------------------ démarrage
+if (autolockMin() > 0) lock();  // le téléphone s'allume sur l'écran verrouillé
 refreshAll();
 setInterval(() => { if (!Object.keys(S.live).length) refreshAll(); }, 15000);
 api("/api/ai/warm", { method: "POST" }).catch(() => {});

@@ -303,6 +303,24 @@ messages = T(
     Column("tool_trace", JSON),
 )
 
+# Réaction de l'entraîneur à un message du téléphone (tapback iMessage) : une seule par message.
+message_reactions = T(
+    "message_reactions",
+    metadata,
+    Column("message_id", ForeignKey("messages.id", ondelete="CASCADE"), primary_key=True),
+    Column("reaction", String(16), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+)
+
+# Index de recherche par nom (FTS5 trigramme, table virtuelle créée par la migration 5) : son état
+# par carrière permet de le reconstruire après chaque synchronisation, sans trigger sur l'insertion.
+name_index_state = T(
+    "name_index_state",
+    metadata,
+    Column("career_id", Integer, primary_key=True),
+    Column("signature", String(60), nullable=False),
+)
+
 memories = T(
     "memories",
     metadata,

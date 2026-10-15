@@ -146,6 +146,16 @@ public sealed class OverlayForm : Form
         _settings.Save();
     }
 
+    /// <summary>Taille du téléphone choisie dans l'app Réglages de la page (mêmes bornes que overlay.json).</summary>
+    private void ResizePhone(int height)
+    {
+        if (!_settings.IsPhone) return;
+        _settings.PhoneHeight = Math.Clamp(height, 560, 1400);
+        _settings.Save();
+        PlaceOnScreen(Screen.FromControl(this));
+        Post("size:" + _settings.PhoneHeight);
+    }
+
     // ------------------------------------------------------------------ affichage
     private void PlaceOnScreen(Screen screen)
     {
@@ -207,6 +217,8 @@ public sealed class OverlayForm : Form
             var msg = e.TryGetWebMessageAsString();
             if (msg == "hide") BeginInvoke(HideOverlay);
             else if (msg == "drag") BeginInvoke(DragPhone);
+            else if (msg is not null && msg.StartsWith("size:", StringComparison.Ordinal) && int.TryParse(msg[5..], out var height))
+                BeginInvoke(() => ResizePhone(height));
         };
         // Seul le service local est affiché : toute autre navigation est refusée.
         core.NavigationStarting += (_, e) =>
@@ -226,6 +238,7 @@ public sealed class OverlayForm : Form
                 _offline = false;
                 _retry.Stop();
                 Post("hotkey:" + _settings.Hotkey);
+                if (_settings.IsPhone) Post("size:" + _settings.PhoneHeight);
                 if (Visible) Post("focus");
             }
             else

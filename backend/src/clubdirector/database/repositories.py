@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Engine, and_, desc, func, or_, select, text
+from sqlalchemy import Engine, and_, column, desc, func, or_, select, table, text
+from sqlalchemy.exc import DBAPIError
 
 from clubdirector.database import schema as s
 from clubdirector.domain.models import Provenance
@@ -44,6 +45,11 @@ ATTRIBUTE_FR = {
     "one_on_ones": "Face-à-face", "reflexes": "Réflexes", "rushing_out": "Sorties",
     "punching": "Tendance à boxer", "eccentricity": "Excentricité",
 }
+
+
+# Index FTS5 trigramme des noms (migration 5) : même résultat que LIKE '%…%' sur name_search, sans
+# parcourir les ~75 000 joueurs de la carrière à chaque recherche.
+NAME_FTS = table("player_names_fts", column("name_search"), column("career_id"), column("uid"))
 
 
 class CareerNotFound(LookupError):
@@ -229,20 +235,58 @@ class Repository:
             return _row(r) if r else None
 
     def find_players_by_name(self, ctx: CareerContext, name: str, limit: int = 10) -> list[dict]:
-        needle = fold(name)
-        if not needle:
+        if not fold(name):
             return []
+        cond, indexed = self.name_condition(ctx, name)
+        value = s.players_current.c.transfer_value
         with self.engine.connect() as c:
             rows = c.execute(
                 select(s.players_current)
-                .where(
-                    s.players_current.c.career_id == ctx.career_id,
-                    s.players_current.c.name_search.like(f"%{needle}%"),
-                )
-                .order_by(desc(s.players_current.c.transfer_value))
+                .where(s.players_current.c.career_id == ctx.career_id, cond)
+                .order_by(desc(value + 0 if indexed else value))
                 .limit(limit)
             )
             return [_row(r) for r in rows]
+
+    def name_condition(self, ctx: CareerContext, name: str) -> tuple[Any, bool]:
+        """Condition « le nom contient `name` » (casse et accents ignorés) et vrai si elle passe par l'index.
+
+        Avec l'index, l'appelant neutralise les index de tri (`colonne + 0`) : sinon SQLite parcourt la table
+        dans l'ordre du tri et teste chaque joueur. Sous 3 lettres, le trigramme ne sert pas : LIKE direct."""
+        needle = fold(name)
+        if len(needle) >= 3 and self.ensure_name_index(ctx):
+            return s.players_current.c.uid.in_(
+                select(NAME_FTS.c.uid).where(NAME_FTS.c.career_id == ctx.career_id,
+                                             NAME_FTS.c.name_search.like(f"%{needle}%"))), True
+        return s.players_current.c.name_search.like(f"%{needle}%"), False
+
+    def _name_signature(self, conn, career_id: int) -> str:
+        last = conn.execute(select(s.careers.c.last_sync_at).where(s.careers.c.id == career_id)).scalar()
+        n = conn.execute(select(func.count()).select_from(s.players_current)
+                         .where(s.players_current.c.career_id == career_id)).scalar_one()
+        return f"{last}|{n}"
+
+    def ensure_name_index(self, ctx: CareerContext) -> bool:
+        """Remplit l'index des noms après chaque synchronisation de la carrière (≈ 1 s pour 75 000 joueurs).
+
+        Faux si l'index est indisponible (base sans FTS5, verrou d'une synchronisation en cours) : la
+        recherche passe alors par LIKE, plus lente mais identique."""
+        k = ctx.career_id
+        st = s.name_index_state
+        try:
+            with self.engine.connect() as c:
+                if c.execute(select(st.c.signature).where(st.c.career_id == k)).scalar() == self._name_signature(c, k):
+                    return True
+            with self.engine.begin() as c:
+                c.execute(text("DELETE FROM player_names_fts WHERE career_id = :k"), {"k": k})
+                sig = self._name_signature(c, k)  # relu sous le verrou d'écriture
+                c.execute(text("INSERT INTO player_names_fts (name_search, career_id, uid) "
+                               "SELECT name_search, career_id, uid FROM players_current WHERE career_id = :k"), {"k": k})
+                c.execute(st.delete().where(st.c.career_id == k))
+                c.execute(st.insert().values(career_id=k, signature=sig))
+            return True
+        except DBAPIError:
+            return False
 
     def search_players(
         self,
@@ -288,18 +332,23 @@ class Repository:
             conds.append(p.nation_id == nation_id)
         if contract_expires_before is not None:
             conds.append(and_(p.contract_end.is_not(None), p.contract_end <= contract_expires_before))
+        indexed = False
         if name:
-            conds.append(p.name_search.like(f"%{fold(name)}%"))
+            cond, indexed = self.name_condition(ctx, name)
+            conds.append(cond)
         for attr, minimum in (attribute_min or {}).items():
             if attr not in ATTRIBUTE_FR:
                 raise ValueError(f"Attribut inconnu : {attr}")
             conds.append(func.json_extract(p.attributes, f"$.{attr}") >= minimum)
+        def col(c):  # par l'index des noms : ne pas laisser un index de tri piloter la requête
+            return c + 0 if indexed else c
+
         sort_col = {
-            "transfer_value": desc(p.transfer_value),
-            "age": p.age,
-            "wage": p.wage,
+            "transfer_value": desc(col(p.transfer_value)),
+            "age": col(p.age),
+            "wage": col(p.wage),
             "name": p.name,
-        }.get(order_by, desc(p.transfer_value))
+        }.get(order_by, desc(col(p.transfer_value)))
         with self.engine.connect() as c:
             total = c.execute(select(func.count()).select_from(s.players_current).where(*conds)).scalar_one()
             rows = c.execute(

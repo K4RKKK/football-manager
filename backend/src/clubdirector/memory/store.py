@@ -98,6 +98,25 @@ class ConversationStore:
                 conversation_id=conversation_id, role=role, content=content, created_at=datetime.now(UTC),
                 game_date=game_date, route=route, tool_trace=tool_trace)).inserted_primary_key[0]
 
+    def set_reaction(self, conversation_id: int, message_id: int, reaction: str | None) -> bool:
+        """Réaction de l'entraîneur à un message du fil (None : retirée). Faux si le message n'est pas du fil."""
+        r = s.message_reactions
+        with self.engine.begin() as c:
+            found = c.execute(select(s.messages.c.id).where(s.messages.c.id == message_id,
+                                                            s.messages.c.conversation_id == conversation_id)).first()
+            if found is None:
+                return False
+            c.execute(r.delete().where(r.c.message_id == message_id))
+            if reaction:
+                c.execute(insert(r).values(message_id=message_id, reaction=reaction, created_at=datetime.now(UTC)))
+            return True
+
+    def reactions(self, conversation_id: int) -> dict[int, str]:
+        r = s.message_reactions
+        with self.engine.connect() as c:
+            return dict(c.execute(select(r.c.message_id, r.c.reaction).join(s.messages, s.messages.c.id == r.c.message_id)
+                                  .where(s.messages.c.conversation_id == conversation_id)).all())
+
     def messages(self, conversation_id: int, limit: int = 50) -> list[dict]:
         with self.engine.connect() as c:
             rows = c.execute(select(s.messages).where(s.messages.c.conversation_id == conversation_id)

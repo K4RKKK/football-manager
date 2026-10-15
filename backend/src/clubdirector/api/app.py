@@ -18,7 +18,7 @@ import threading
 from dataclasses import asdict
 from datetime import UTC
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
@@ -68,6 +68,11 @@ class ToolCallRequest(BaseModel):
 
 class PhoneMessage(BaseModel):
     text: str = Field(..., min_length=1, max_length=4000)
+
+
+class ReactionRequest(BaseModel):
+    # Réactions iMessage : cœur, pouce levé, pouce baissé, rire, « !! », « ? » ; None : retirer.
+    reaction: Literal["love", "like", "dislike", "laugh", "emphasize", "question"] | None = None
 
 
 class StaffAssignment(BaseModel):
@@ -364,7 +369,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     return f
         return None
 
-    def _message_out(m: dict) -> dict:
+    def _message_out(m: dict, reaction: str | None = None) -> dict:
         trace = m.get("tool_trace") or []
         labels = list(dict.fromkeys(tool_label(t.get("tool", "")) for t in trace if t.get("ok")))
         at = m.get("created_at")
@@ -373,7 +378,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"id": m["id"], "from": "me" if m["role"] == "user" else "them", "text": m["content"],
                 "at": at.isoformat() if at else None,
                 "game_date": m["game_date"].isoformat() if m.get("game_date") else None,
-                "sources": labels, "route": m.get("route")}
+                "sources": labels, "route": m.get("route"), "reaction": reaction}
 
     def _contact(t: ToolContext, role: str) -> dict:
         o = state.orchestrator
@@ -441,7 +446,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         o = state.orchestrator
         member = o.staff(t, _role(role))
         conv = o.conversations.find_thread(t.ctx.career_id, role, member.uid if member else 0)
-        return [_message_out(m) for m in o.conversations.messages(conv, limit=min(limit, 500))] if conv else []
+        if not conv:
+            return []
+        reactions = o.conversations.reactions(conv)
+        return [_message_out(m, reactions.get(m["id"])) for m in o.conversations.messages(conv, limit=min(limit, 500))]
+
+    @app.put("/api/contacts/{role}/messages/{message_id}/reaction", dependencies=A)
+    def contact_react(role: str, message_id: int, req: ReactionRequest):
+        """Réaction (tapback) de l'entraîneur à un message, enregistrée avec le fil."""
+        t = state.tool_context()
+        o = state.orchestrator
+        member = o.staff(t, _role(role))
+        conv = o.conversations.find_thread(t.ctx.career_id, role, member.uid if member else 0)
+        if not conv or not o.conversations.set_reaction(conv, message_id, req.reaction):
+            raise HTTPException(404, "Message introuvable dans cette conversation.")
+        return {"id": message_id, "reaction": req.reaction}
 
     @app.post("/api/contacts/{role}/messages", dependencies=A)
     def contact_send(role: str, req: PhoneMessage):
@@ -535,8 +554,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         def data(name, args):
             r = state.registry.execute(name, args, t)
             return r.data if r.ok and isinstance(r.data, list) else []
-        upcoming = data("get_upcoming_matches", {"limit": 10})
-        recent = data("get_recent_matches", {"limit": 10})
+        upcoming = data("get_upcoming_matches", {"limit": 30})
+        recent = data("get_recent_matches", {"limit": 30})
         names = {m[k] for m in upcoming + recent for k in ("domicile", "exterieur") if m.get(k)}
         short = state.repo.club_short_names(t.ctx, names)
 
@@ -560,8 +579,63 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             p["unique_id"] = r.get("unique_id")
             p["photo"] = bool(_photo_path(r.get("unique_id")))
             p["saison"] = lines.get(r["uid"])
+            p["notes_postes"] = r.get("position_ratings")
+            p["condition"] = round(r["condition"] / 100) if r.get("condition") is not None else None
             out.append(p)
         return out
+
+    def _players_media(t: ToolContext, uids) -> dict[int, dict]:
+        """Photo (pack de visages) et appartenance au club de joueurs cités par un outil."""
+        out = {}
+        for uid in {u for u in uids if u}:
+            row = state.repo.player(t.ctx, uid)
+            if row:
+                out[uid] = {"unique_id": row.get("unique_id"), "photo": bool(_photo_path(row.get("unique_id"))),
+                            "notre_joueur": row.get("club_uid") == t.ctx.club_uid}
+        return out
+
+    @app.get("/api/phone/mercato", dependencies=A)
+    def phone_mercato():
+        """Offres reçues et faites par le club, budgets (app Mercato). Offres réelles de la sauvegarde."""
+        t = state.tool_context()
+
+        def run(name, args=None):
+            r = state.registry.execute(name, args or {}, t)
+            return (r.data if r.ok else None), r.limitations
+        recues, lim = run("get_transfer_offers", {"direction": "recues", "limit": 100})
+        faites, _ = run("get_transfer_offers", {"direction": "faites", "limit": 100})
+        recues, faites = (recues or {}).get("offres", []), (faites or {}).get("offres", [])
+        transfers, _ = run("get_transfer_budget")
+        wages, _ = run("get_wage_budget")
+        short = state.repo.club_short_names(t.ctx, {o[k] for o in recues + faites for k in ("acheteur", "vendeur") if o.get(k)})
+        media = _players_media(t, [o.get("player_uid") for o in recues + faites])
+
+        def out(o):
+            return {**o, **media.get(o.get("player_uid"), {}), "acheteur_court": short.get(o.get("acheteur"), o.get("acheteur")),
+                    "vendeur_court": short.get(o.get("vendeur"), o.get("vendeur"))}
+        return {"recues": [out(o) for o in recues], "faites": [out(o) for o in faites],
+                "budget_transferts": transfers, "budget_salaires": wages, "limitations": lim}
+
+    @app.get("/api/phone/sale/{uid}", dependencies=A)
+    def phone_sale(uid: int):
+        """Plan de vente d'un de nos joueurs (fiche d'une offre reçue). Préparation uniquement."""
+        t = state.tool_context()
+        r = state.registry.execute("prepare_sale", {"player_uid": uid}, t)
+        if not r.ok:
+            raise HTTPException(400, r.error or "Plan de vente impossible.")
+        return {"plan": r.data, "limitations": r.limitations}
+
+    @app.get("/api/phone/lineup", dependencies=A)
+    def phone_lineup(systeme: str = "4-2-3-1", rotation: bool = False):
+        """Onze type calculé sur les notes de poste de FM26 (app Effectif)."""
+        t = state.tool_context()
+        r = state.registry.execute("propose_lineup", {"systeme": systeme, "rotation": rotation}, t)
+        if not r.ok:
+            raise HTTPException(400, r.error or "Composition impossible.")
+        media = _players_media(t, [p.get("uid") for p in r.data["onze"] + r.data["banc"]])
+        for p in r.data["onze"] + r.data["banc"]:
+            p.update(media.get(p.get("uid"), {}))
+        return {**r.data, "limitations": r.limitations}
 
     @app.get("/api/conversations", dependencies=A)
     def conversations():

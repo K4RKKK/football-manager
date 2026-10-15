@@ -47,7 +47,21 @@ def _m4_contact_threads(engine: Engine) -> None:
                 conn.exec_driver_sql(f"ALTER TABLE conversations ADD COLUMN {name} {sql_type}")
 
 
-MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot, _m3_dedupe_snapshot_rows, _m4_contact_threads]
+def _m5_phone_reactions_and_name_index(engine: Engine) -> None:
+    """Réactions aux messages du téléphone et index FTS5 trigramme des noms de joueurs (session 4).
+
+    L'index est rempli à la première recherche après une synchronisation (voir Repository)."""
+    schema.message_reactions.create(engine, checkfirst=True)
+    schema.name_index_state.create(engine, checkfirst=True)
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS player_names_fts USING fts5("
+            "name_search, career_id UNINDEXED, uid UNINDEXED, tokenize='trigram')"
+        )
+
+
+MIGRATIONS: list[Migration] = [_m1_initial, _m2_player_team_slot, _m3_dedupe_snapshot_rows, _m4_contact_threads,
+                               _m5_phone_reactions_and_name_index]
 CURRENT_VERSION = len(MIGRATIONS)
 
 
