@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Plugin BepInEx 6 (Unity IL2CPP) pour FM26.
+    NE COMPILE QUE sur un PC où FM26 + BepInEx 6 BE (≥ build 738) ont été lancés au moins une fois :
+    BepInEx génère alors BepInEx\interop\*.dll (assemblages du jeu), non redistribuables.
+    dotnet build -c Release /p:FMPath="C:\Program Files (x86)\Steam\steamapps\common\Football Manager 26"
+  -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>ClubDirector.Plugin</AssemblyName>
+    <RootNamespace>ClubDirector.Plugin</RootNamespace>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <FMPath Condition="'$(FMPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Football Manager 26</FMPath>
+    <BepInExCore>$(FMPath)\BepInEx\core</BepInExCore>
+    <Interop>$(FMPath)\BepInEx\interop</Interop>
+  </PropertyGroup>
+
+  <Target Name="CheckGameReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(Interop)\UnityEngine.UIElementsModule.dll')"
+           Text="Assemblages interop FM26 introuvables dans '$(Interop)'. Installez BepInEx 6 IL2CPP dans FM26, lancez le jeu une fois, puis passez /p:FMPath=..." />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="../ClubDirector.Core/ClubDirector.Core.csproj" />
+    <Reference Include="BepInEx.Core"><HintPath>$(BepInExCore)\BepInEx.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx.Unity.IL2CPP"><HintPath>$(BepInExCore)\BepInEx.Unity.IL2CPP.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(BepInExCore)\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Common"><HintPath>$(BepInExCore)\Il2CppInterop.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(Interop)\Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Interop)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIElementsModule"><HintPath>$(Interop)\UnityEngine.UIElementsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Interop)\UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.InputSystem"><HintPath>$(Interop)\Unity.InputSystem.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
