@@ -233,14 +233,11 @@ button.cell:active { background: var(--fill); }
 .bubble .li { display: block; padding-left: 14px; text-indent: -12px; }
 .receipt { font-size: 11px; color: var(--text2); margin: 3px 4px 0; font-weight: 500; }
 .receipt.failed { color: var(--red); cursor: pointer; }
-.sources { font-size: 11px; color: var(--text3); margin: 4px 6px 0; max-width: 78%; }
 .typing { display: inline-flex !important; gap: 4px; align-items: center; padding: 12px 14px !important; }
 .typing i { width: 8px; height: 8px; border-radius: 50%; background: var(--text2); animation: blink 1.3s infinite ease-in-out; }
 .typing i:nth-child(2) { animation-delay: .18s; }
 .typing i:nth-child(3) { animation-delay: .36s; }
 @keyframes blink { 0%, 60%, 100% { opacity: .3; transform: translateY(0); } 30% { opacity: .95; transform: translateY(-2px); } }
-.caption { font-size: 11px; color: var(--text2); margin: 4px 8px 0; display: flex; align-items: center; gap: 5px; }
-.caption::before { content: ""; width: 9px; height: 9px; border: 1.6px solid var(--text3); border-top-color: var(--text2); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .chips { flex: none; display: flex; gap: 8px; overflow-x: auto; padding: 6px 12px 2px; scrollbar-width: none; background: var(--bg); }
 .chips::-webkit-scrollbar { display: none; }
@@ -899,9 +896,7 @@ function renderThread(role, jump = false) {
     if (m.live && m.typing) {
       const tb = document.createElement("div"); tb.className = "bubble typing tail"; tb.innerHTML = "<i></i><i></i><i></i>";
       wrap.appendChild(tb);
-      if (m.caption) wrap.insertAdjacentHTML("beforeend", `<div class="caption">${esc(m.caption)}</div>`);
     }
-    if (m.from === "them" && !m.live && m.sources && m.sources.length) wrap.insertAdjacentHTML("beforeend", `<div class="sources">Données consultées : ${esc(m.sources.join(" · "))}</div>`);
     if (m.from === "me" && m.failed) {
       const r = document.createElement("div"); r.className = "receipt failed"; r.textContent = "Non distribué · toucher pour réessayer";
       r.onclick = () => retry(role, m); wrap.appendChild(r);
@@ -932,12 +927,12 @@ document.addEventListener("click", (e) => { if (!$("menu").contains(e.target)) c
 
 // Réponse en cours d'écriture : chaque paragraphe devient une bulle dès qu'il est complet.
 function startLive(role) {
-  const live = { id: "live" + Date.now(), from: "them", live: true, parts: [], buf: "", typing: true, caption: "", at: new Date().toISOString(), read: false };
+  const live = { id: "live" + Date.now(), from: "them", live: true, parts: [], buf: "", typing: true, at: new Date().toISOString(), read: false };
   S.live[role] = live; refreshLists();
   return {
     on(ev) {
       if (ev.type === "delta") {
-        live.read = true; live.caption = ""; live.buf += ev.text;
+        live.read = true; live.buf += ev.text;
         let i;
         while ((i = live.buf.search(/\n\s*\n/)) >= 0) {
           const part = live.buf.slice(0, i).trim(); live.buf = live.buf.slice(i).replace(/^\s+/, "");
@@ -946,7 +941,7 @@ function startLive(role) {
       } else if (ev.type === "break") {
         const part = live.buf.trim(); live.buf = ""; if (part) { live.parts.push(part); renderThread(role); }
       } else if (ev.type === "tool") {
-        live.read = true; live.caption = `${shortName(contact(role))} consulte : ${ev.label}`; renderThread(role);
+        live.read = true; renderThread(role);  // le contact travaille : les trois points restent affichés
       } else if (ev.type === "done") { live.final = ev.message; }
       else if (ev.type === "error") { live.error = ev.message; }
     },
