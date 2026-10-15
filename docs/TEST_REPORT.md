@@ -181,3 +181,26 @@ le service et l'IA en cours d'utilisation n'ont pas été redémarrés.
 | Erreurs claires | ✅ | serveur arrêté : « injoignable sur 127.0.0.1:8080 : serveur arrêté ou pas encore démarré » ; relance échouée : message et journaux à consulter |
 | `pytest` backend | ✅ | 192 / 192 (nouveaux : `test_llm_watchdog.py` 14, `test_sync_speed.py` 5) ; au premier passage, `test_lineup.py` échouait pendant une modification en cours d'une autre session, réussi relancé |
 | fmsave (fork) `uv run pytest` | ✅ | 2 981 réussis (+1 : noms des joueurs d'une offre), 1 échec d'environnement connu (`test_guard`, liens symboliques sous Windows) |
+
+### Session 4 — téléphone : apps, interactions iMessage, recherche, installateur
+Vérifié sur une copie de la vraie carrière (AS Roma, base copiée par l'API de sauvegarde SQLite, service de
+test sur 127.0.0.1:8768, lecture automatique et surveillance de l'IA désactivées) dans le navigateur intégré
+à la taille de la fenêtre (365×860) ; le service réel (8765) n'a pas été redémarré.
+
+| Test | Résultat | Détail |
+|---|---|---|
+| App Mercato (copie) | ✅ | 12 offres reçues, 9 faites, états réels (sans suite, échouée, conclue, accord pour plus tard) ; budgets : 0 € restant sur 21,9 M€, marge salariale 50 k€/sem. |
+| Fiche d'offre + plan de vente (copie) | ✅ | Cristian Cioffi (Lecce, 55 k€) : prix affiché 686 k€, plancher 537 k€, valeur du jeu 648 k€, 5 acheteurs avec raisons ; 1,8 s |
+| Calendrier (copie) | ✅ | octobre 2025, jour du jeu (21) en rouge, points par match (victoire, nul, à venir) ; fiche du match à Samsunspor |
+| Onze type (copie) | ✅ | 4-2-3-1 identique à `propose_lineup` (Svilar ; Wesley, Mancini, Gadou, Angeliño ; Koné, Cristante ; Soulé, Dybala, Malen ; Dovbyk), 9 systèmes, banc, rotation |
+| Notes par poste (copie) | ✅ | Dybala : AMC 20, STC 16, AMR 16, AML 12, autres ≤ 6 |
+| Écran verrouillé (copie) | ✅ | « Mardi 21 octobre », prochain match « Samsunspor – Roma, dans 2 jours, Europa League, extérieur », 4 notifications regroupées (2 contacts, cartes empilées) ; toucher une carte ouvre la discussion |
+| Réponses rapides (copie) | ✅ | sous « Vous voulez que je commence à lister des profils… ? » : Oui, vas-y · Non · Dis-m'en plus |
+| Réaction (copie) | ✅ | double-clic → barre de réactions → ❤️ ; enregistrée côté serveur (message 77) et relue |
+| Notifications groupées | ✅ | 2 messages d'un contact → « 2 messages » ; 2 contacts → bannière « Messages, 3 nouveaux messages » ; message du staff arrivé hors réponse (inséré dans la copie) → bannière et pastille au rafraîchissement |
+| Réglages | ✅ | thème clair/sombre/auto, texte grand, sons, bannières, aperçu, pastilles, verrouillage, réponses rapides |
+| Recherche par nom (copie, 73 658 joueurs) | ✅ | LIKE : 200-2 300 ms → FTS5 trigramme : 2-7 ms, mêmes joueurs (dybala, pellegrini, kon, ndicka, koné, ma) ; index construit en 2,2 s à la première recherche ; vérification à chaque appel 1-2 ms |
+| Installateur (dossiers temporaires) | ✅ | prérequis détectés (uv 0.12.7, .NET 8.0.417, WebView2 155) ; raccourcis menu + démarrage (powershell réduit → `start_clubdirector.ps1`), `config.toml`, `install.json` ; désinstallation : 3 raccourcis et dossier retirés, données gardées ; simulation sur la vraie machine sans modification |
+| Fenêtre C# (taille demandée par la page) | ✅ Debug | `dotnet test ClubDirector.Overlay.Tests` : 10 / 10 |
+| `pytest` backend | ✅ | 192 / 192 sur l'arbre de travail partagé, 180 / 180 sur le seul contenu committé (HEAD + téléphone), dont `tests/test_phone.py` (7) : Mercato, plan de vente, onze, calendrier, réactions, index des noms (+ repli LIKE) et **parcours de bout en bout dans Edge sans fenêtre** (vrai service HTTP, vraie page : écran verrouillé, déverrouillage, Mercato, plan de vente, calendrier, onze 11 joueurs, notes 15 postes, réponses rapides, réaction 👍 enregistrée, réponse diffusée, aucun texte d'outil, réglages, verrouillage) |
+| `ruff check src tests` | ✅ | — |

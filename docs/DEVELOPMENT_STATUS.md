@@ -36,6 +36,11 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 4 | Script de rôle complet (`ai/role_directeur_sportif.md`) | ✅ | rôle exact FM26, limites, méthode, style ; présentation + bienvenue testées |
 | Phase 3 | Téléphone v2 : widgets (date du jeu, classement, dernier match), apps Messages, Contacts, Calendrier, Classement, Effectif (photos des joueurs), Réglages ; suggestions, sons, emojis, copie | ✅ | `web/phone.html` ; vérifié sur une copie de la vraie carrière |
 | Phase 3 | Téléphone (iPhone) : accueil, Contacts, fiche, Messages | ✅ | `web/phone.html` sur `/overlay` ; fenêtre en forme de téléphone (coins arrondis, déplaçable, 3 tailles) ; testé sur la vraie carrière |
+| Phase 3 | App Mercato : offres reçues / faites (joueur, club, montant, état, dates), budgets, plan de vente d'une offre reçue | ✅ | `/api/phone/mercato`, `/api/phone/sale/{uid}` (outils `get_transfer_offers`, `prepare_sale`) ; copie de la vraie carrière : 12 reçues, 9 faites, plan de Cioffi 686 k€ / 537 k€ |
+| Phase 3 | Calendrier (vue du mois, fiche de match), Effectif : onze type sur terrain (9 systèmes, rotation) et notes par poste | ✅ | `/api/phone/lineup` (`propose_lineup`) ; copie : onze 4-2-3-1 identique à l'outil, notes de Dybala AMC 20 / STC 16 |
+| Phase 3 | iMessage : réponses rapides, réactions (tapbacks) enregistrées, notifications groupées, écran verrouillé (prochain match + non lus) | ✅ | table `message_reactions` (migration 5) ; messages arrivés hors réponse (staff proactif) → bannière ; test de bout en bout `tests/test_phone.py` |
+| Phase 3 | Réglages du téléphone : apparence, taille du texte et du téléphone, sons, bannières, aperçu, pastilles, verrouillage auto | ✅ / 🟡 taille | taille du téléphone : message `size:` à la fenêtre (OverlayForm.cs) compilé et testé en Debug ; à recompiler en Release pour l'avoir dans la fenêtre en cours |
+| Données | Recherche par nom : index FTS5 trigramme (`player_names_fts`) reconstruit après chaque synchro | ✅ | copie (73 658 joueurs) : 200-2 300 ms → 2-7 ms, résultats identiques à LIKE ; reconstruction 2,2 s à la première recherche ; repli LIKE |
 | Phase 4 | Trois contacts : directeur sportif, directeur technique, entraîneur adjoint | ✅ / 🟡 adjoint | DT = code 88 (Freund, Lange, Moncada, Maldini) ; adjoint = code 20 liste entraînement, équipe première, mieux payé (heuristique 5/6, corrigeable) |
 | Phase 4 | Scripts de rôle DT et adjoint + format messages commun | ✅ | `role_directeur_technique.md`, `role_entraineur_adjoint.md`, `style_messagerie.md` |
 | Phase 4 | Types de messages (politesse, discussion, question, demande, réponse) | ✅ | 19/19 exemples classés ; consigne adaptée à chaque type |
@@ -55,4 +60,6 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 6 | Actions dans FM26 | 🧪 | toutes marquées indisponibles |
 | Phase 7 | Alertes proactives déterministes | ✅ | contrats, profondeur, forme, finances |
 | Phase 7 | Personnalités | ✅ | 5 profils |
-| Phase 8 | Installateur, profiling en jeu | ⬜ | |
+| Phase 8 | Installateur Windows (menu Démarrer, lancement à l'ouverture de session) + désinstallateur | ✅ testé / 🟡 machine | `scripts/install_windows.ps1`, `uninstall_windows.ps1` : création puis retrait vérifiés dans des dossiers temporaires ; pas encore installé sur le PC (accord de l'utilisateur requis) |
+| Phase 8 | Intégration continue GitHub (tests, lint, .NET) | 🟡 | `.github/workflows/tests.yml` écrit, s'exécutera au premier envoi |
+| Phase 8 | Profiling en jeu | ⬜ | |

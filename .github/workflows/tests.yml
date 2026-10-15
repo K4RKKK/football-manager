@@ -1,0 +1,45 @@
+# Tests et lint à chaque envoi : backend (Windows et Linux), fork fmsave, fenêtre du téléphone et cœur du plugin.
+# Aucune donnée de carrière réelle : sauvegardes synthétiques des fixtures uniquement.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: uv run ruff check src tests
+      - run: uv run pytest -q
+
+  fmsave:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: third_party/fmsave
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: uv run pytest -q
+
+  dotnet:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet test overlay/ClubDirector.Overlay.Tests
+      - run: dotnet test plugin/tests/ClubDirector.Core.Tests

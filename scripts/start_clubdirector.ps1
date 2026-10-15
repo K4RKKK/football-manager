@@ -37,7 +37,9 @@ if (-not $SansIA) {
   }
 }
 
-if (-not $SansFenetre) {
+if (-not $SansFenetre -and (Get-Process ClubDirector.Overlay -ErrorAction SilentlyContinue)) {
+  Write-Host "Fenêtre ClubDirector déjà ouverte."
+} elseif (-not $SansFenetre) {
   $exe = Join-Path $root "overlay\ClubDirector.Overlay\bin\Release\net8.0-windows\ClubDirector.Overlay.exe"
   if (-not (Test-Path $exe)) {
     Write-Host "Première utilisation : compilation de la fenêtre ClubDirector..."
@@ -51,6 +53,9 @@ if (-not $SansFenetre) {
   }
 }
 
+# Lancement au démarrage de Windows ou double clic : un seul service à la fois.
+try { if ((Invoke-RestMethod "http://127.0.0.1:8765/api/health" -TimeoutSec 2).status -eq "ok") {
+  Write-Host "Service ClubDirector déjà démarré : http://127.0.0.1:8765"; exit 0 } } catch { }
 Write-Host "Démarrage du service ClubDirector : http://127.0.0.1:8765"
 Set-Location (Join-Path $root "backend")
 uv run clubdirector serve

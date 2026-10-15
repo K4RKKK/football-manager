@@ -49,10 +49,54 @@ Le directeur sportif fait sa **prise de poste** à la première conversation IA 
 
 ### Le téléphone
 La fenêtre ClubDirector est un téléphone (mode par défaut). Saisir la barre d'état (l'heure en haut)
-pour le déplacer ; la position est retenue. Taille : clic droit sur l'icône de la zone de notification
-→ « Taille du téléphone » (Petit, Normal, Grand). Réglages dans `overlay.json` : `Mode`
-(`telephone` ou `panneau` pour l'ancien panneau latéral), `PhoneHeight`, `PhoneX`, `PhoneY`.
-Les photos du staff viennent du pack de visages FM26 s'il est installé.
+pour le déplacer ; la position est retenue. Taille : app **Réglages → Taille du téléphone**, ou clic droit
+sur l'icône de la zone de notification → « Taille du téléphone » (Petit, Normal, Grand). Réglages dans
+`overlay.json` : `Mode` (`telephone` ou `panneau` pour l'ancien panneau latéral), `PhoneHeight`, `PhoneX`, `PhoneY`.
+Les photos du staff et des joueurs viennent du pack de visages FM26 s'il est installé.
+
+Apps (données de la dernière sauvegarde uniquement, montants en euros) :
+- **Messages / Contacts** : les trois membres du staff ; toucher un contact ouvre la discussion. Réponses
+  rapides (« Oui, vas-y », « Non », « Dis-m'en plus ») quand un contact pose une question ; réaction à une
+  bulle par double-clic ou clic droit (❤️ 👍 👎 😂 ‼️ ❓), enregistrée avec la conversation.
+- **Mercato** : offres reçues et faites (joueur, club, montant, état, dates), budgets ; la fiche d'une offre
+  reçue pour un joueur du club affiche le plan de vente (prix affiché, plancher, acheteurs possibles).
+- **Calendrier** : vue du mois et liste des matchs à venir / résultats ; la fiche d'un match propose de le
+  préparer ou de le débriefer avec l'entraîneur adjoint (message prérempli, jamais envoyé seul).
+- **Effectif** : joueurs par poste, buts, note, valeur ; **onze type** calculé sur les notes de poste FM26
+  (9 systèmes, rotation) ; la fiche d'un joueur montre ses notes par poste sur un terrain.
+- **Classement**, **Réglages** (apparence, taille du texte et du téléphone, sons, bannières, aperçu, pastilles,
+  verrouillage automatique, suggestions et réponses rapides).
+- **Écran verrouillé** : à l'ouverture et après 5 min sans activité (réglable, « Jamais » possible) ; il montre
+  le prochain match et les messages non lus regroupés par contact ; toucher un message ouvre la discussion.
+
+## 3 quater. Installation Windows (raccourcis et démarrage automatique)
+Pour l'utilisateur courant, sans droits administrateur :
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_windows.ps1            # menu Démarrer seulement
+powershell -ExecutionPolicy Bypass -File scripts\install_windows.ps1 -Demarrage # + lancement à l'ouverture de session
+powershell -ExecutionPolicy Bypass -File scripts\install_windows.ps1 -Simulation # montre ce qui serait fait
+```
+L'installateur vérifie uv, le SDK .NET 8 et le runtime WebView2 (sans rien télécharger : il indique quoi
+installer), lance `uv sync`, compile le téléphone (fermer d'abord la fenêtre ClubDirector), crée
+`%LOCALAPPDATA%\ClubDirectorAI\config.toml` s'il manque, puis le dossier « ClubDirector AI » du menu Démarrer
+(lancer, désinstaller). Avec `-Demarrage`, un raccourci dans le dossier Démarrage de Windows lance
+`scripts\start_clubdirector.ps1` (IA, téléphone, service ; fenêtre réduite) ; un second lancement ne crée
+pas de doublon. Tout ce qui est créé est listé dans `%LOCALAPPDATA%\ClubDirectorAI\install.json`.
+
+Désinstaller : menu Démarrer → ClubDirector AI → Désinstaller, ou
+`powershell -ExecutionPolicy Bypass -File scripts\uninstall_windows.ps1 [-SupprimerDonnees] [-SansArret] [-Simulation]`.
+Le téléphone et le service sont arrêtés, les raccourcis retirés ; les données restent sauf avec
+`-SupprimerDonnees` (confirmation « SUPPRIMER »). Les sauvegardes FM26 et le dossier du projet ne sont jamais touchés.
+
+## 3 quinquies. Publier le dépôt sur GitHub
+Dépôt distant configuré : `origin` → `https://github.com/K4RKKK/football-manager.git` (branche
+`claude/clubdirector-phase0-1`). Avant chaque envoi :
+1. `cd backend && uv run pytest -q && uv run ruff check src tests` ; `cd overlay && dotnet test ClubDirector.Overlay.Tests`.
+2. `git status --ignored` : base SQLite, `plugin.token`, `preferences.json`, `config.toml`, `snapshots/`,
+   fichiers `.fm` (hors fixtures synthétiques), `bin/`, `obj/` et `.venv/` doivent rester ignorés.
+3. Aucun secret ni donnée personnelle suivis : `git grep -I -E "sk-|ghp_|api[_-]?key\s*="` ne doit rien trouver.
+4. `git push origin claude/clubdirector-phase0-1` (l'intégration continue `.github/workflows/tests.yml`
+   relance tests et lint sous Windows et Linux).
 
 ## 4. Plugin FM26 (expérimental — bloqué par la protection du jeu, voir KNOWN_LIMITATIONS 14)
 1. Fermer FM26. Installer BepInEx 6 Bleeding Edge IL2CPP ≥ build 738 (pack Thunderstore FM26 conseillé).

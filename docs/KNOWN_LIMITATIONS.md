@@ -105,3 +105,13 @@
     Suspensions : la sauvegarde garde aussi des sanctions que le jeu n'affiche plus, et le nombre de
     matchs restants n'est pas lu. Les sections féminines portant le nom d'un club masculin sont
     écartées par les classements du marché (joueurs classés chez les hommes).
+28. **Téléphone : réactions, réponses rapides, notifications** : une réaction (tapback) est enregistrée
+    avec le message et relue par le téléphone, mais n'est pas transmise au modèle (le contact ne « voit »
+    pas un ❤️). Les réponses rapides apparaissent quand le dernier message du contact finit par « ? » ;
+    une question sans point d'interrogation n'en propose pas. Les messages arrivés hors d'une réponse sont
+    vus au rafraîchissement du téléphone (toutes les 15 s, ou à l'affichage de la fenêtre). L'heure de
+    l'écran verrouillé est celle de Windows (la sauvegarde ne contient que la date du jeu). Mercato : les
+    offres affichées sont celles de la dernière sauvegarde, avec les états de la section transfer_man (voir 21) ;
+    une offre refusée par le club vendeur peut rester « en cours ». La taille du téléphone choisie dans
+    Réglages demande la fenêtre recompilée (`dotnet build overlay\ClubDirector.Overlay -c Release`, fenêtre
+    fermée) ; sinon, clic droit sur l'icône de la zone de notification.
