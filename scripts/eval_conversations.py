@@ -334,8 +334,7 @@ def rescore(copy: Path, path: Path) -> Path:
         r["fails"] = check(r["role"], r["question"], r["reply"], r["tools"], expects.get(r["id"], {}), v, team_names, xi, r["kind"])
     out = path.with_name(path.stem + "-rescore.json")
     out.write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(summary(results) + f"
-Recalculé : {out}")
+    print(summary(results) + f"\nRecalculé : {out}")
     return out
 
 
