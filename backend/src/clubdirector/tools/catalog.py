@@ -36,6 +36,7 @@ from clubdirector.tools.registry import (
     ToolResult,
     ToolSpec,
 )
+from clubdirector.tools.transfer_tools import register_transfer_tools
 
 
 def _season_stat_columns() -> tuple[str, ...]:
@@ -183,6 +184,10 @@ def _resolve_player(t: ToolContext, ref: PlayerRef) -> dict:
             exact = [r for r in rows if r["name"].casefold() == ref.name.casefold()]
             if len(exact) == 1:
                 return exact[0]
+            # Homonymes : le joueur de notre club d'abord (c'est presque toujours de lui qu'on parle).
+            ours = [r for r in (exact or rows) if r.get("club_uid") == t.ctx.club_uid]
+            if len(ours) == 1:
+                return ours[0]
             names = "; ".join(f"{r['name']} ({r.get('club_name') or 'sans club'}, uid {r['uid']})" for r in rows)
             raise LookupError(f"Plusieurs joueurs correspondent à « {ref.name} » : {names}. Précisez l'uid.")
         return rows[0]
@@ -647,8 +652,7 @@ def build_registry() -> ToolRegistry:
         lim = [] if advanced_allowed(t.prefs) else ["Potentiel (PA) masqué en mode réaliste/analyste."]
         return ToolResult("", True, data=out, limitations=lim)
 
-    for name, desc in [("evaluate_transfer_value", "Évaluation d'un prix de transfert."),
-                       ("generate_scout_report", "Rapport de recrutement rédigé."),
+    for name, desc in [("generate_scout_report", "Rapport de recrutement rédigé."),
                        ("plan_transfer_window", "Plan de mercato complet."),
                        ("analyze_player_performance", "Analyse fine des performances (par 90 min)."),
                        ("build_transfer_shortlist", "Shortlist interne persistante.")]:
@@ -687,11 +691,7 @@ def build_registry() -> ToolRegistry:
         ("withdraw_offer", "Retirer une offre."),
     ]:
         reg.register(ToolSpec(name, desc, "action", ActionArgs, None, False, NOT_PROVEN, requires_approval=True))
-    for name, desc in [("prepare_transfer_offer", "Préparer une offre (sans l'envoyer)."),
-                       ("prepare_counter_offer", "Préparer une contre-proposition."),
-                       ("prepare_contract_proposal", "Préparer une proposition de contrat.")]:
-        reg.register(ToolSpec(name, desc, "action", ActionArgs, None, False,
-                              "Moteur de négociation à règles prévu en phase 6 ; non encore implémenté."))
+    register_transfer_tools(reg)  # offres réelles, valeur, acheteurs, ventes, achats, contre-offres, contrats
     register_game_table_tools(reg)
     register_lineup_tools(reg)
     return reg

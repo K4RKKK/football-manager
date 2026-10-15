@@ -67,10 +67,11 @@ def is_small_talk(text: str) -> bool:
 
 # Types de messages de l'entraîneur : chacun appelle une façon de répondre différente.
 REQUEST_RE = re.compile(
-    r"^\W*(?:(?:est-ce que )?(?:tu peux|tu pourrais|peux-tu|pourrais-tu|vous pouvez|vous pourriez|pouvez-vous|"
-    r"pourriez-vous|j'aimerais(?: que)?|je voudrais(?: que)?|je veux(?: que)?|il (?:me )?faut|il faudrait|merci de|"
+    r"(?:^|[:;,.!?]\s*|\bet\s+)\W*(?:(?:est-ce que )?(?:tu peux|tu pourrais|peux-tu|pourrais-tu|vous pouvez|vous pourriez|"
+    r"pouvez-vous|pourriez-vous|j'aimerais(?: que)?|je voudrais(?: que)?|je veux(?: que)?|on veut|on voudrait|on aimerait|"
+    r"on doit|il nous faut|il (?:me )?faut|il faudrait|merci de|"
     r"n'oublie pas de|essaie de|essaye de)\s+)?(?:tu |vous )?(?:me |nous |m'|lui |leur |le |la |les |l')?"
-    r"(?:pr[ée]pare|trouve|cherche|fais|faites|fait|analyse|compare|liste|propose|donne|montre|envoie|"
+    r"(?:pr[ée]pare|trouve|cherche|faire|fais|faites|fait|analyse|compare|liste|propose|donne|montre|envoie|"
     r"vends|vend|ach[èe]te|recrute|prolonge|n[ée]gocie|regarde|v[ée]rifie|calcule|chiffre|estime|[ée]tudie|"
     r"identifie|rep[èe]re|sors|r[ée]dige|organise|planifie|garde|retiens|note|m[ée]morise|oublie|pr[ée]vois|"
     r"construis|classe|r[ée]sume|explique|d[ée]taille|[ée]value|[ée]tablis|dresse|sugg[èe]re|conseille|"
