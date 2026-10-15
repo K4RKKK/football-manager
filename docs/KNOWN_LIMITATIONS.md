@@ -49,11 +49,13 @@
     dernière sauvegarde. La synchronisation automatique la relit 20 s après chaque enregistrement
     (≈ 2 à 3 min de lecture sur une grosse base). Régler la sauvegarde automatique de FM26 sur une
     fréquence élevée pour suivre la partie au plus près.
-16. **Fonction du staff** : établies : directeur sportif (10, hors départements), directeur technique
-    (88), entraîneur principal (16) ; entraîneur adjoint = code 20 de la liste « entraînement », celui de
-    l'équipe première le mieux payé (heuristique : 5 clubs sur 6 vérifiés, un ex aequo au Bayern).
-    Les autres fonctions (chef recruteur, kinés…) restent non décodées. Correction depuis la fiche du
-    contact dans le téléphone (« Ce n'est pas la bonne personne ? »).
+16. **Fonction du staff** : établies et vérifiées sur des personnes réelles : directeur sportif (10, hors
+    départements), directeur technique (88), entraîneur principal (16), entraîneur adjoint (20), entraîneur
+    (2), préparateur physique (26), entraîneur des gardiens (34), scientifique du sport (40), kinésithérapeute
+    (50) ; départements : 0 médical et performance, 1 entraînement, 2 recrutement. Les autres fonctions
+    restent « non précisée » (le département est connu). L'adjoint principal reste une heuristique
+    (correction depuis la fiche du contact). Chaque contact n'a que les outils de son métier (le directeur
+    technique : le staff ; l'adjoint : le terrain ; le directeur sportif : tout).
 17. **Fenêtre externe** : visible au-dessus de FM26 en mode « fenêtré sans bordure » ; un plein écran
     exclusif passe devant toute fenêtre.
 18. **Photos** : elles viennent du pack de visages installé par l'utilisateur
