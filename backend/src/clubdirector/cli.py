@@ -22,6 +22,7 @@ def main(argv: list[str] | None = None) -> int:
     p_tool = sub.add_parser("tool", help="Exécuter un outil (diagnostic)")
     p_tool.add_argument("name")
     p_tool.add_argument("args", nargs="?", default="{}")
+    sub.add_parser("prise-de-poste", help="Le directeur sportif prend ses fonctions (présentation + état des lieux)")
     p_inv = sub.add_parser("inventory", help="Inventaire des sections d'une sauvegarde (décodées, utilisées)")
     p_inv.add_argument("path", type=Path)
     p_inv.add_argument("--out", type=Path, help="Dossier du rapport (défaut : <données>/reports)")
@@ -67,6 +68,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "ask":
         ans = state.orchestrator.ask(state.tool_context(), args.question, force_tier=args.tier)
+        print(ans.text)
+        for lim in ans.limitations:
+            print("  ⚠", lim)
+        print(f"  [route={ans.route} outils={[t['tool'] for t in ans.tools]}]")
+        return 0
+    if args.cmd == "prise-de-poste":
+        ans = state.orchestrator.take_office(state.tool_context())
         print(ans.text)
         for lim in ans.limitations:
             print("  ⚠", lim)

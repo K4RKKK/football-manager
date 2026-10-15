@@ -18,7 +18,7 @@ from sqlalchemy import text
 
 from clubdirector.database.mirror import ALL_TABLES, EXTRA_TABLES, table_name
 from clubdirector.database.repositories import HIDDEN_ATTRIBUTES
-from clubdirector.tools.presenters import advanced_allowed
+from clubdirector.tools.presenters import advanced_allowed, money
 from clubdirector.tools.registry import NoArgs, ToolArgs, ToolContext, ToolRegistry, ToolResult
 
 GameTable = Literal[ALL_TABLES]  # type: ignore[valid-type]
@@ -77,6 +77,11 @@ class TableQueryArgs(ToolArgs):
 class ClubHistoryArgs(ToolArgs):
     club_uid: int | None = Field(None, description="Club ; par défaut le club géré.")
     since_year: int | None = Field(None, description="Première année de fin de saison à inclure (ex. 2015 pour 2014/15).")
+
+
+class StaffArgs(ToolArgs):
+    club_uid: int | None = Field(None, description="Club ; par défaut le club géré.")
+    toutes_equipes: bool = Field(False, description="True : staff de toutes les équipes du club, pas seulement l'équipe première.")
 
 
 class DescribeArgs(ToolArgs):
@@ -165,6 +170,26 @@ def register_game_table_tools(reg: ToolRegistry) -> None:
         if any(s["points"] is None or s["won"] is None for s in seasons):
             lim.append("Certaines saisons anciennes ont des valeurs inconnues dans la sauvegarde (laissées vides).")
         return ToolResult("", True, data={"club_uid": club, "rattachement": link.method, "saisons": seasons}, limitations=lim)
+
+    @T("get_club_staff", "Staff du club (entraîneurs, encadrement) : nom, âge, nationalité, salaire, contrat, équipe.", "lecture", StaffArgs)
+    def get_club_staff(t: ToolContext, a: StaffArgs):
+        club = a.club_uid if a.club_uid is not None else t.ctx.club_uid
+        if club is None:
+            raise LookupError("Aucun club géré dans cette carrière.")
+        if not _columns(t, "staff"):
+            raise LookupError("Staff non synchronisé : resynchronisez la sauvegarde.")
+        with t.engine.connect() as c:
+            rows = c.execute(text(
+                "SELECT name, age, nation_id, team_slot, is_human_manager, has_contract, wage, contract_start, contract_end "
+                "FROM fm_staff WHERE career_id = :k AND club_uid = :u AND (:all OR team_slot = 0 OR team_slot IS NULL) "
+                "ORDER BY is_human_manager DESC, wage DESC"), {"k": t.ctx.career_id, "u": club, "all": a.toutes_equipes}).mappings().all()
+        staff = [{"nom": r["name"], "age": r["age"], "nation_id": r["nation_id"], "equipe_slot": r["team_slot"],
+                  "entraineur_principal_humain": bool(r["is_human_manager"]),
+                  "salaire": money(t.prefs, r["wage"]), "debut_contrat": r["contract_start"], "fin_contrat": r["contract_end"]}
+                 for r in rows]
+        return ToolResult("", True, data={"club_uid": club, "nombre": len(staff), "staff": staff}, limitations=[
+            "Le rôle de chaque membre du staff (adjoint, préparateur, recruteur…) n'est pas encore décodé dans la "
+            "sauvegarde : ne le déduis pas du nom ou du salaire."])
 
     @T("query_game_table", "Lit n'importe quelle table complète de la sauvegarde (filtres, tri, colonnes). Lecture seule, carrière active.", "lecture", TableQueryArgs)
     def query_game_table(t: ToolContext, a: TableQueryArgs):

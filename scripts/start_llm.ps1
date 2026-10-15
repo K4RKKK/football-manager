@@ -1,4 +1,4 @@
-<#
+﻿<#
   Démarre l'IA locale de ClubDirector : llama-server (llama.cpp, Vulkan) sur 127.0.0.1:8080.
   Chemins configurables par variables d'environnement (aucun chemin n'est supposé standard) :
     CLUBDIRECTOR_LLM_SERVER  chemin de llama-server.exe

@@ -77,7 +77,8 @@ class AppState:
         providers, self.provider_errors = build_providers(settings)
         self.orchestrator = Orchestrator(self.engine, self.registry, providers, mode=settings.ai.mode,
                                          monthly_budget_usd=settings.ai.monthly_budget_usd,
-                                         max_tool_rounds=settings.ai.max_tool_rounds)
+                                         max_tool_rounds=settings.ai.max_tool_rounds,
+                                         prefs_store=self.prefs_store)
 
     @property
     def prefs(self) -> Preferences:
@@ -241,6 +242,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def chat(req: ChatRequest):
         return state.orchestrator.ask(state.tool_context(), req.question, conversation_id=req.conversation_id,
                                       force_tier=req.force_tier).as_dict()
+
+    @app.post("/api/director/take-office", dependencies=A)
+    def take_office():
+        return state.orchestrator.take_office(state.tool_context()).as_dict()
 
     @app.get("/api/conversations", dependencies=A)
     def conversations():

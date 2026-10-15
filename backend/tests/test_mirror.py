@@ -106,3 +106,10 @@ def test_unsigned_64_bit_values_are_kept_as_text(engine):
         write_mirror(c, 1, 1, [build_mirror_table("injury_types", [])])
         from clubdirector.database.mirror import _sql_value
         assert _sql_value(big) == str(big) and _sql_value(5) == 5 and _sql_value(True) == 1
+
+
+def test_club_staff_comes_from_the_save(registry, tctx):
+    r = run(registry, tctx, "get_club_staff", toutes_equipes=True)
+    assert r.ok, r.error
+    assert r.data["nombre"] == len(r.data["staff"])
+    assert any("rôle" in lim for lim in r.limitations)  # le rôle n'est pas inventé

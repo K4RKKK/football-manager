@@ -1,4 +1,4 @@
-<#
+﻿<#
   Audit de l'environnement ClubDirector AI (cahier des charges §3.1) — LECTURE SEULE.
   Ne modifie rien, n'installe rien. Produit audit-report.json dans le dossier courant.
   Usage : powershell -ExecutionPolicy Bypass -File scripts\audit_windows.ps1

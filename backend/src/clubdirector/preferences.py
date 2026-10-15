@@ -38,6 +38,8 @@ class Preferences(BaseModel):
     limits: MercatoLimits = Field(default_factory=MercatoLimits)
     silent_during_matches: bool = True
     active_career_id: int | None = None
+    # Carrières dans lesquelles le directeur sportif a déjà fait sa prise de poste.
+    office_taken: list[int] = Field(default_factory=list)
 
 
 class PreferenceStore:

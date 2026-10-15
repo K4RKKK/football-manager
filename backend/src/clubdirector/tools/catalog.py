@@ -502,8 +502,6 @@ def build_registry() -> ToolRegistry:
 
     reg.register(ToolSpec("get_tactical_instructions", "Instructions tactiques détaillées.", "lecture", NoArgs, None, False,
                           "Les réglages tactiques sont stockés dans un format codé non confirmé (fmsave : valeurs brutes)."))
-    reg.register(ToolSpec("get_club_staff", "Personnel du club.", "lecture", NoArgs, None, False,
-                          "Non encore implémenté : fmsave ne lit qu'une partie des attributs du staff."))
 
     # ---------------------------------------------------------------- analyse
     @T("analyze_squad", "Bilan d'effectif déterministe : profondeur par poste, âges, contrats, valeurs.", "analyse")
