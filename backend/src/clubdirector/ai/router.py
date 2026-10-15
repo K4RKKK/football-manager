@@ -119,6 +119,27 @@ def wants_premium(question: str) -> bool:
 
 
 # ------------------------------------------------------------------ réponses déterministes
+# Écrites comme un message d'un membre du staff (phrases courtes, « on », jamais « vous »/« tu ») :
+# elles doivent se fondre dans la conversation au même titre que les réponses du modèle.
+MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+STAT_TYPES = {"league": "en championnat", "cup": "en coupe", "continental": "en coupe d'Europe",
+              "international": "en sélection", "non_competitive": "en amical"}
+
+# Intentions sans IA autorisées par contact : le directeur technique s'occupe du staff (aucune), l'adjoint
+# du terrain (pas des budgets ni des contrats), le directeur sportif de tout.
+ROLE_INTENTS: dict[str, set[str] | None] = {
+    "directeur_sportif": None,
+    "directeur_technique": set(),
+    "entraineur_adjoint": {"count_position", "squad_size", "top_stat", "player_goals", "match_days_ago",
+                           "recent_matches", "upcoming", "table"},
+}
+
+
+def intent_allowed(role: str, intent: Intent | None) -> bool:
+    allowed = ROLE_INTENTS.get(role)
+    return intent is not None and (allowed is None or intent.name in allowed)
+
+
 def fr_date(iso: str | None) -> str:
     if not iso:
         return "date inconnue"
@@ -126,14 +147,21 @@ def fr_date(iso: str | None) -> str:
     return f"{d}/{m}/{y}"
 
 
-def _fmt_match(m: dict) -> str:
-    score = m["score"] if m["score_disponible"] else "score non disponible dans la sauvegarde"
-    res = f" ({m['resultat']})" if m.get("resultat") else ""
-    return f"{fr_date(m['date'])} — {m['domicile']} {score} {m['exterieur']}{res}"
+def day_month(iso: str | None) -> str:
+    """« 19 octobre »."""
+    if not iso:
+        return "à une date inconnue"
+    _y, m, d = iso[:10].split("-")
+    return f"{int(d)} {MONTHS[int(m) - 1]}"
 
 
-def answer_intent(intent: Intent, run) -> tuple[str, list[str]]:
-    """`run(tool, args)` exécute un outil du registre et renvoie un ToolResult."""
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}{'s' if n > 1 else ''}"
+
+
+def answer_intent(intent: Intent, run, short_names=None) -> tuple[str, list[str]]:
+    """`run(tool, args)` exécute un outil du registre et renvoie un ToolResult ; `short_names(set)` donne
+    les noms courts des clubs (« Roma » plutôt que « Associazione Sportiva Roma »)."""
     lim: list[str] = []
 
     def call(tool: str, args: dict | None = None):
@@ -143,83 +171,119 @@ def answer_intent(intent: Intent, run) -> tuple[str, list[str]]:
         lim.extend(r.limitations)
         return r.data
 
+    def names(matches: list[dict]) -> dict:
+        wanted = {m[k] for m in matches for k in ("domicile", "exterieur") if m.get(k)}
+        try:
+            return (short_names(wanted) if short_names else {}) or {}
+        except Exception:  # noqa: BLE001 — noms courts facultatifs
+            return {}
+
+    def match_line(m: dict, sn: dict) -> str:
+        home, away = sn.get(m["domicile"], m["domicile"]), sn.get(m["exterieur"], m["exterieur"])
+        comp = f" en {m['competition']}" if m.get("competition") else ""
+        if m.get("score_disponible"):
+            return f"{home} {m['score']} {away}{comp}, le {day_month(m['date'])}"
+        return f"{home} – {away}{comp}, le {day_month(m['date'])}"
+
     n = intent.name
     a = intent.args
     if n == "count_position":
         squad = call("get_club_squad")
         pos = a["position"]
         natural = [p for p in squad if pos in p["postes"]]
-        names = ", ".join(p["nom"] for p in natural) or "aucun"
-        return (f"Nous avons {len(natural)} joueur(s) au poste naturel de {LABEL_FR[pos].lower()} ({pos}) : {names}.", lim)
+        label = LABEL_FR[pos].lower()
+        if not natural:
+            return (f"Aucun joueur de métier au poste de {label} dans l'effectif.", lim)
+        who = ", ".join(p["nom"] for p in natural)
+        return (f"Nous avons {_plural(len(natural), 'joueur')} de métier au poste de {label} : {who}.", lim)
     if n == "squad_size":
         squad = call("get_club_squad")
-        return (f"L'effectif compte {len(squad)} joueurs sous contrat avec le club (sauvegarde synchronisée).", lim)
+        return (f"On est {len(squad)} dans l'effectif de l'équipe première.", lim)
     if n == "top_stat":
         d = call("get_top_players_stat", {"stat": a["stat"], "relative_season": a["relative_season"], "limit": 3})
         label = "buts" if a["stat"] == "goals" else "passes décisives"
-        if not d["classement"]:
-            return (f"Je n'ai aucune statistique archivée pour la saison {d['saison']}.", lim)
-        if not d["classement"][0]["valeur"]:
-            return (f"Saison {d['saison']} : aucun joueur du club n'a encore de {label} enregistré(e)s dans les statistiques archivées.", lim)
+        when = "la saison dernière" if a["relative_season"] else "cette saison"
+        if not d["classement"] or not d["classement"][0]["valeur"]:
+            return (f"Personne n'a encore de {label} {when} d'après nos relevés.", lim)
         top = d["classement"][0]
-        others = "; ".join(f"{x['joueur']} {x['valeur']}" for x in d["classement"][1:])
-        txt = f"Saison {d['saison']} (toutes compétitions) : {top['joueur']} est en tête avec {top['valeur']} {label}."
+        txt = f"C'est {top['joueur']} avec {top['valeur']} {label} {when}, toutes compétitions."
+        others = [x for x in d["classement"][1:] if x["valeur"]]
         if others:
-            txt += f" Suivent : {others}."
+            txt += " Derrière : " + ", ".join(f"{x['joueur']} ({x['valeur']})" for x in others) + "."
         return (txt, lim)
     if n == "player_goals":
         d = call("get_player_statistics", {"name": a["name"], "relative_season": a["relative_season"]})
+        when = "la saison dernière" if a["relative_season"] else "cette saison"
         overall = [x for x in d["lignes"] if x["type"] == "overall"]
         if not overall:
-            return (f"Aucune statistique archivée pour {d['joueur']} en {d['saison']}.", lim)
+            return (f"Je n'ai pas de statistiques de {d['joueur']} pour {when} : donnée non disponible dans nos relevés.", lim)
         goals = sum(x["buts"] or 0 for x in overall)
-        clubs = ", ".join(sorted({x["club"] or "?" for x in overall}))
-        detail = "; ".join(f"{x['type']} {x['club'] or '?'} : {x['buts']}" for x in d["lignes"] if x["type"] != "overall")
-        txt = f"{d['joueur']} a marqué {goals} but(s) en {d['saison']} toutes compétitions ({clubs})."
+        txt = f"{d['joueur']} en est à {_plural(goals, 'but')} {when}, toutes compétitions."
+        detail = [f"{x['buts']} {STAT_TYPES.get(x['type'], x['type'])}" for x in d["lignes"]
+                  if x["type"] in STAT_TYPES and x.get("buts")]
         if detail:
-            txt += f" Détail : {detail}."
-        last = overall[-1]["releve_le"]
-        if last:
-            txt += f" Relevé à la date de jeu du {fr_date(last)}."
+            txt += " Dont " + ", ".join(detail) + "."
         return (txt, lim)
     if n == "match_days_ago":
         d = call("get_match_details", {"days_ago": a["days_ago"]})
         if not d["matchs"]:
-            txt = f"Aucun match de l'équipe première autour du {fr_date(d['date_cible'])} (date du jeu)."
+            near = [m for m in (d.get("match_precedent"), d.get("match_suivant")) if m]
+            sn = names(near)
+            txt = f"On n'a pas joué autour du {day_month(d['date_cible'])}."
             if d.get("match_precedent"):
-                txt += f" Match précédent : {_fmt_match(d['match_precedent'])}."
+                txt += f" Le match d'avant : {match_line(d['match_precedent'], sn)}."
             if d.get("match_suivant"):
-                txt += f" Match suivant : {_fmt_match(d['match_suivant'])}."
+                txt += f" Le suivant : {match_line(d['match_suivant'], sn)}."
             return (txt, lim)
         m = d["matchs"][0]
-        return (f"Autour du {fr_date(d['date_cible'])} (date du jeu) : {_fmt_match(m)}.", lim)
+        return (f"C'était {match_line(m, names([m]))}.", lim)
     if n == "recent_matches":
         rows = call("get_recent_matches", {"limit": a["limit"]})
         if not rows:
-            return ("Aucun match joué trouvé dans la sauvegarde.", lim)
-        return ("\n".join(_fmt_match(m) for m in rows), lim)
+            return ("On n'a pas encore de match joué dans nos relevés.", lim)
+        sn = names(rows)
+        if len(rows) == 1:
+            return (f"Dernier match : {match_line(rows[0], sn)}.", lim)
+        return ("Nos derniers résultats :\n" + "\n".join(f"- {match_line(m, sn)}" for m in rows), lim)
     if n == "upcoming":
         rows = call("get_upcoming_matches", {"limit": a["limit"]})
         if not rows:
-            return ("Aucun match à venir trouvé dans la sauvegarde.", lim)
-        return ("Prochains matchs :\n" + "\n".join(f"{fr_date(m['date'])} — {m['domicile']} vs {m['exterieur']}" for m in rows), lim)
+            return ("Pas de match programmé dans nos relevés pour l'instant.", lim)
+        sn = names(rows)
+        txt = f"Prochain match : {match_line(rows[0], sn)}."
+        if len(rows) > 1:
+            txt += " Ensuite : " + " ; ".join(match_line(m, sn) for m in rows[1:]) + "."
+        return (txt, lim)
     if n == "table":
         rows = call("get_league_table")
         if not rows:
-            return ("Aucun classement disponible dans la sauvegarde.", lim)
+            return ("Pas de classement disponible dans nos relevés.", lim)
         me = next((r for r in rows if r["est_notre_club"]), None)
-        head = f"Nous sommes {me['position']}e avec {me['points']} points ({me['won']}V {me['drawn']}N {me['lost']}D, {me['goals_for']}-{me['goals_against']})." if me else ""
-        table = "\n".join(f"{r['position']}. {r['club_name']} — {r['points']} pts" for r in rows[:10])
-        return ((head + "\n" + table).strip(), lim)
+        leader = rows[0]
+        if not me:
+            return (f"En tête : {leader['club_name']} avec {leader['points']} points.", lim)
+        txt = (f"On est {me['position']}{'er' if me['position'] == 1 else 'e'} avec {me['points']} points "
+               f"({_plural(me['won'], 'victoire')}, {_plural(me['drawn'], 'nul')}, {_plural(me['lost'], 'défaite')} ; "
+               f"{me['goals_for']} buts marqués, {me['goals_against']} encaissés).")
+        if leader is not me:
+            gap = leader["points"] - me["points"]
+            sn = (short_names({leader["club_name"]}) if short_names else {}) or {}
+            txt += f" {sn.get(leader['club_name'], leader['club_name'])} est en tête avec {leader['points']} points, {_plural(gap, 'point')} devant nous."
+        return (txt, lim)
     if n == "transfer_budget":
         d = call("get_transfer_budget")
-        return (f"Budget transferts ({d['mois']}) : restant {d['restant']['texte']}, alloué {d['alloue']['texte']}.", lim)
+        rest, total = d["restant"]["texte"], d["alloue"]["texte"]
+        if d["restant"].get("brut") == 0:
+            return (f"Le budget transferts est à sec : plus rien sur les {total} alloués.", lim)
+        return (f"Il nous reste {rest} sur le budget transferts ({total} alloués au départ).", lim)
     if n == "wage_budget":
         d = call("get_wage_budget")
-        return (f"Budget salarial hebdomadaire ({d['mois']}) : {d['budget_hebdo']['texte']} ; masse actuelle {d['masse_hebdo']['texte']} ; marge {d['marge_hebdo']['texte']}.", lim)
+        return (f"Côté salaires, on a {d['marge_hebdo']['texte']} de marge par semaine : {d['masse_hebdo']['texte']} de masse "
+                f"salariale pour un budget de {d['budget_hebdo']['texte']}.", lim)
     if n == "expiring":
         d = call("search_expiring_contracts", {"months": 12})
         if not d["joueurs"]:
-            return (f"Aucun contrat du club n'expire avant le {fr_date(d['jusqu_au'])} (date du jeu).", lim)
-        return ("Contrats expirant dans les 12 mois :\n" + "\n".join(f"- {p['nom']} : fin le {fr_date(p['fin_contrat'])}" for p in d["joueurs"]), lim)
+            return (f"Aucun contrat ne se termine avant le {day_month(d['jusqu_au'])}.", lim)
+        who = ", ".join(f"{p['nom']} ({day_month(p['fin_contrat'])} {p['fin_contrat'][:4]})" for p in d["joueurs"])
+        return (f"{_plural(len(d['joueurs']), 'contrat')} se termine{'nt' if len(d['joueurs']) > 1 else ''} dans l'année : {who}.", lim)
     raise ValueError(f"Intention inconnue : {n}")

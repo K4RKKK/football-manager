@@ -29,7 +29,7 @@ from clubdirector.ai.persona import (
     first_contact_request,
 )
 from clubdirector.ai.providers.base import IAIProvider, ProviderError
-from clubdirector.ai.router import answer_intent, classify, wants_premium
+from clubdirector.ai.router import answer_intent, classify, intent_allowed, wants_premium
 from clubdirector.database import schema as s
 from clubdirector.memory.store import ConversationStore, MemoryStore
 from clubdirector.sync.season import season_label
@@ -412,9 +412,11 @@ class Orchestrator:
 
         answer: ChatAnswer
         intent = classify(question) if force_tier is None and not hidden_question else None
+        if not intent_allowed(role, intent):  # chaque contact ne répond sans IA que dans son métier
+            intent = None
         if intent is not None:
             try:
-                text, lim = answer_intent(intent, run)
+                text, lim = answer_intent(intent, run, lambda names: tctx.repo.club_short_names(tctx.ctx, names))
                 answer = ChatAnswer(text, "niveau0", conv, trace, sorted(set(lim)))
             except LookupError as exc:
                 answer = ChatAnswer(f"Donnée non disponible : {exc}", "niveau0", conv, trace)

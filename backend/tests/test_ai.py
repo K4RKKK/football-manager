@@ -40,9 +40,10 @@ def test_open_questions_go_to_llm(q):
 def test_level0_answers_without_any_llm(engine, registry, tctx):
     o = Orchestrator(engine, registry, [])
     a = o.ask(tctx, "Quel était notre score il y a une semaine ?")
-    assert a.route == "niveau0" and "3-1" in a.text and "20/02/2031" in a.text
+    assert a.route == "niveau0" and "3-1" in a.text and "20 février" in a.text
     a = o.ask(tctx, "Combien avons-nous de défenseurs centraux ?")
     assert a.route == "niveau0" and a.text.startswith("Nous avons 1 joueur")
+    assert "sauvegarde" not in a.text and "relevé à la date" not in a.text  # ton naturel, pas de jargon
     a = o.ask(tctx, "Combien Mbappé a-t-il marqué la saison dernière ?")
     assert a.route == "niveau0" and "non disponible" in a.text.lower()
 
