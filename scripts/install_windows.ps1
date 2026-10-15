@@ -81,7 +81,8 @@ if ($missing.Count) {
 # ---------------------------------------------------------------- 2. préparation
 if (-not $SansPreparation) {
   Step "Préparation du service et du téléphone"
-  Act "uv sync (dépendances Python du service)" { Push-Location (Join-Path $root "backend"); try { uv sync } finally { Pop-Location } }
+  # --inexact : ajoute ce qui manque sans retirer les options déjà installées (anthropic, keyring…).
+  Act "uv sync --inexact (dépendances Python du service)" { Push-Location (Join-Path $root "backend"); try { uv sync --inexact } finally { Pop-Location } }
   if (Get-Process ClubDirector.Overlay -ErrorAction SilentlyContinue) {
     Write-Warning "La fenêtre ClubDirector est ouverte : fermez-la (icône de la zone de notification > Quitter) puis relancez l'installation pour la recompiler."
   } else {

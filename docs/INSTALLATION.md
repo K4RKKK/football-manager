@@ -77,7 +77,8 @@ powershell -ExecutionPolicy Bypass -File scripts\install_windows.ps1 -Demarrage 
 powershell -ExecutionPolicy Bypass -File scripts\install_windows.ps1 -Simulation # montre ce qui serait fait
 ```
 L'installateur vérifie uv, le SDK .NET 8 et le runtime WebView2 (sans rien télécharger : il indique quoi
-installer), lance `uv sync`, compile le téléphone (fermer d'abord la fenêtre ClubDirector), crée
+installer), lance `uv sync --inexact` (ajoute ce qui manque sans retirer les options déjà installées,
+comme anthropic ou keyring), compile le téléphone (fermer d'abord la fenêtre ClubDirector), crée
 `%LOCALAPPDATA%\ClubDirectorAI\config.toml` s'il manque, puis le dossier « ClubDirector AI » du menu Démarrer
 (lancer, désinstaller). Avec `-Demarrage`, un raccourci dans le dossier Démarrage de Windows lance
 `scripts\start_clubdirector.ps1` (IA, téléphone, service ; fenêtre réduite) ; un second lancement ne crée
