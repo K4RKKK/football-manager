@@ -209,7 +209,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.60" },
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "fmsave", specifier = "==0.5.10" },
+    { name = "fmsave", editable = "../third_party/fmsave" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "keyring", marker = "extra == 'keyring'", specifier = ">=25" },
     { name = "pydantic", specifier = ">=2.7" },
@@ -317,13 +317,45 @@ wheels = [
 [[package]]
 name = "fmsave"
 version = "0.5.10"
-source = { registry = "https://pypi.org/simple" }
+source = { editable = "../third_party/fmsave" }
 dependencies = [
     { name = "backports-zstd", marker = "python_full_version < '3.14'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/51/22/516bed4df00189ca5a2cfd52a0a4048a512b1329dfc867aebd4092ac9a5d/fmsave-0.5.10.tar.gz", hash = "sha256:9f0538c854a5375b0c77e045f46078a74e0ba0e4fcc4c73a53456932592c14d1", size = 399650, upload-time = "2026-10-11T02:33:24.927Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/07/931f86b6532eb4f7cdf7c467ae4bad5dcec3f959f507317e880ef427b103/fmsave-0.5.10-py3-none-any.whl", hash = "sha256:006ab22cdad0eb102446185954227821edb19a60d441087df883fc71cbd884a0", size = 444158, upload-time = "2026-10-11T02:33:22.994Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "backports-zstd", marker = "python_full_version < '3.14'", specifier = ">=1.7" },
+    { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2" },
+    { name = "polars", marker = "extra == 'polars'", specifier = ">=1.0" },
+]
+provides-extras = ["pandas", "polars"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "hypothesis", specifier = ">=6.168" },
+    { name = "pandas", specifier = ">=2.2" },
+    { name = "polars", specifier = ">=1.0" },
+    { name = "pyright", specifier = ">=1.1.414" },
+    { name = "pytest", specifier = ">=9.1" },
+    { name = "pytest-cov", specifier = ">=7.1" },
+    { name = "pytest-timeout", specifier = ">=2.4" },
+    { name = "ruff", specifier = ">=0.16.7,<0.17" },
+    { name = "syrupy", specifier = ">=6.1" },
+]
+docs = [
+    { name = "furo", specifier = ">=2025.12.19" },
+    { name = "myst-parser", specifier = ">=5.1" },
+    { name = "sphinx", specifier = ">=9.1" },
+    { name = "sphinx-copybutton", specifier = ">=0.5.2" },
+]
+test = [
+    { name = "hypothesis", specifier = ">=6.168" },
+    { name = "pandas", specifier = ">=2.2" },
+    { name = "polars", specifier = ">=1.0" },
+    { name = "pytest", specifier = ">=9.1" },
+    { name = "pytest-cov", specifier = ">=7.1" },
+    { name = "pytest-timeout", specifier = ">=2.4" },
+    { name = "syrupy", specifier = ">=6.1" },
 ]
 
 [[package]]

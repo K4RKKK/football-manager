@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "ClubDirector AI — directeur sportif IA connecté aux carrières Football Manager 26 (backend local)."
 requires-python = ">=3.12"
 dependencies = [
-    "fmsave==0.5.10",
+    "fmsave",
     "pydantic>=2.7",
     "sqlalchemy>=2.0",
     "fastapi>=0.115",
@@ -18,6 +18,10 @@ anthropic = ["anthropic>=0.60"]
 
 [project.scripts]
 clubdirector = "clubdirector.cli:main"
+
+[tool.uv.sources]
+# Fork intégré (MIT) : voir third_party/fmsave/UPSTREAM.md
+fmsave = { path = "../third_party/fmsave", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.6"]

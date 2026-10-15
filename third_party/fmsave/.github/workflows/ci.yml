@@ -1,0 +1,169 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Structural checks only. The copied-text and denylist checks compare against the
+      # private folder, which is never present here, so they run in the pre-commit hook
+      # and not in CI. A green run here is not evidence that those checks passed.
+      - name: Repository guard
+        run: python3 scripts/guard.py --tracked
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check -
+          tar -xzf gitleaks.tar.gz gitleaks
+      - name: Secret scan of full history
+        run: ./gitleaks git --redact --no-banner --verbose .
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: false
+      - run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format check
+        run: uv run ruff format --check .
+      - name: Type check
+        run: uv run pyright
+      - name: Workflow audit
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          advanced-security: false
+          version: "1.30.1"
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.12"
+            coverage-args: --cov=fmsave --cov-report=term-missing
+          - python-version: "3.14"
+            coverage-args: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
+      - run: uv sync --locked
+      - name: Run tests
+        env:
+          COVERAGE_ARGS: ${{ matrix.coverage-args }}
+        run: uv run pytest -m "not corpus" $COVERAGE_ARGS
+      - name: Build distributions
+        if: matrix.python-version == '3.12'
+        run: uv build
+      - name: Check distributions
+        if: matrix.python-version == '3.12'
+        run: uv run python scripts/check_dist.py dist
+      - name: Smoke test the wheel in an isolated environment
+        if: matrix.python-version == '3.12'
+        run: |
+          uv run --isolated --no-project --with dist/*.whl fmsave --version
+          uv run --isolated --no-project --with dist/*.whl python -c "import fmsave; assert fmsave.__version__"
+
+  docs:
+    name: Docs
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.12"
+          enable-cache: false
+      - run: uv sync --locked --group docs
+      - name: Build docs
+        run: uv run --group docs sphinx-build -W --keep-going -b html docs docs/_build/html
+
+  test-windows:
+    name: Tests (Windows, Python 3.14)
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: "3.14"
+          enable-cache: false
+      - run: uv sync --locked
+      - name: Run tests
+        run: uv run pytest -m "not corpus"
+
+  # The rest of the supported range, on every operating system fmsave claims. A private
+  # repository pays for its own minutes and macOS costs ten of them an hour, so this job
+  # runs only where they are free: it turns itself on the moment the repository is made
+  # public, with no line here to change. To force it on, make the condition `if: true`.
+  test-matrix:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    if: github.event.repository.private == false
+    needs: test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.12", "3.13", "3.14"]
+        exclude:
+          # Run by the two jobs above, whether or not the repository is public.
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: windows-latest
+            python-version: "3.14"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.13"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: false
+      - run: uv sync --locked
+      # The corpus tier needs private saves that are not here, as in every job above.
+      - name: Run tests
+        run: uv run pytest -m "not corpus"

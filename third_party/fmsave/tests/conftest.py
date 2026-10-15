@@ -1,0 +1,254 @@
+"""Shared test configuration, including the maintainer's local corpus (never present in CI).
+
+Rules for corpus tests (marked corpus, corpus_fast or corpus_full, or using a corpus fixture):
+
+- Never print or log save data. The report hook below redacts unexpected failures (and quiet
+  failures under --full-trace) and drops their captured output and logs, but other quiet
+  failures, passing tests shown with -rA, and warnings still show whatever was printed or
+  logged.
+- Never parametrize by corpus file names: test ids are printed.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from collections.abc import Generator, Iterator
+from pathlib import Path
+from typing import Any, NoReturn
+
+import pytest
+
+import fmsave
+from tests.fixtures.career import career_fragment
+from tests.fixtures.container import ContainerFragment, build_container_fragment
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+SHARED_CAREER_FOLDER_NAME = "Ünïcode folder"
+SHARED_CAREER_FILE_NAME = "career example.fm"
+SHARED_CONTAINER_FOLDER_NAME = "Private Folder"
+SHARED_CONTAINER_FILE_NAME = "career.bin"
+READ_ONLY_FILE_MODE = 0o444
+READ_ONLY_FOLDER_MODE = 0o555
+CORPUS_ENVIRONMENT_VARIABLE = "FMSAVE_CORPUS"
+CORPUS_MARKER_NAMES = ("corpus", "corpus_fast", "corpus_full")
+CORPUS_FIXTURE_NAMES = ("corpus_save_paths", "corpus_saves", "recorded_values")
+CORPUS_FIXTURES_USED = pytest.StashKey[bool]()
+HASH_CHUNK_BYTES = 8 * 1024 * 1024
+RECORDED_VALUES_FILE_NAME = "values.json"
+
+
+def corpus_root() -> Path:
+    configured_root = os.environ.get(CORPUS_ENVIRONMENT_VARIABLE)
+    return Path(configured_root) if configured_root else REPOSITORY_ROOT / ".local" / "corpus"
+
+
+def carries_corpus_marker(item: pytest.Item) -> bool:
+    return any(item.get_closest_marker(marker_name) for marker_name in CORPUS_MARKER_NAMES)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    if (corpus_root() / "manifest.json").is_file():
+        return
+    skip_marker = pytest.mark.skip(
+        reason=f"local corpus not found (set {CORPUS_ENVIRONMENT_VARIABLE})"
+    )
+    for item in items:
+        if carries_corpus_marker(item):
+            item.add_marker(skip_marker)
+
+
+def handles_corpus_data(item: pytest.Item) -> bool:
+    fixture_names = getattr(item, "fixturenames", ())
+    uses_corpus_fixture = any(
+        fixture_name in fixture_names for fixture_name in CORPUS_FIXTURE_NAMES
+    )
+    return carries_corpus_marker(item) or uses_corpus_fixture
+
+
+def is_quiet_failure(error: BaseException) -> bool:
+    """True for pytest.fail with pytrace=False whose report shows no chained exception."""
+    return (
+        isinstance(error, pytest.fail.Exception)
+        and not error.pytrace
+        and error.__cause__ is None
+        and (error.__context__ is None or error.__suppress_context__)
+    )
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo[None]
+) -> Generator[None, pytest.TestReport, pytest.TestReport]:
+    """Replace failure details from corpus tests with the phase and exception type only.
+
+    Tracebacks, chained exceptions, captured output and logs can all hold corpus paths and
+    save data, so a redacted report keeps none of them. Quiet failures (pytest.fail with
+    pytrace=False and no visible chained exception) carry safe messages and are kept, except
+    under --full-trace, which would print their traceback and local variables.
+    Teardown failures are also redacted for any test once a corpus fixture has been set up,
+    because session fixtures are torn down under whichever test ran last.
+    """
+    report = yield
+    exception_info = call.excinfo
+    if not report.failed or exception_info is None:
+        return report
+    if is_quiet_failure(exception_info.value) and not item.config.getoption("fulltrace"):
+        return report
+    corpus_teardown = call.when == "teardown" and item.session.stash.get(
+        CORPUS_FIXTURES_USED, False
+    )
+    if handles_corpus_data(item) or corpus_teardown:
+        report.longrepr = (
+            f"{item.name} ({call.when}) raised {exception_info.typename}; "
+            "details hidden to keep save content out of test output. "
+            "Reproduce locally in a debugger if needed."
+        )
+        report.sections = []
+    return report
+
+
+def record_corpus_fixture_use(request: pytest.FixtureRequest) -> None:
+    request.session.stash[CORPUS_FIXTURES_USED] = True
+
+
+def fail_quietly(message: str) -> NoReturn:
+    """Fail with only `message`: no traceback, no function arguments, no chained exception.
+
+    Corpus failures go through here so that paths and save contents never reach the output.
+    """
+    raise pytest.fail.Exception(message, pytrace=False) from None
+
+
+def file_sha256(file_path: Path) -> str:
+    digest = hashlib.sha256()
+    with file_path.open("rb") as file_handle:
+        while chunk := file_handle.read(HASH_CHUNK_BYTES):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_json_object(json_path: Path) -> dict[str, Any]:
+    try:
+        loaded: Any = json.loads(json_path.read_text(encoding="utf-8"))
+    except OSError:
+        fail_quietly(f"corpus file unreadable: {json_path.name}")
+    except ValueError:
+        fail_quietly(f"corpus file is not a valid JSON object: {json_path.name}")
+    if not isinstance(loaded, dict):
+        fail_quietly(f"corpus file is not a valid JSON object: {json_path.name}")
+    return loaded
+
+
+def verified_corpus_save_paths(root: Path) -> dict[str, Path]:
+    manifest = load_json_object(root / "manifest.json")
+    if not manifest:
+        fail_quietly("corpus manifest lists no saves")
+    save_paths: dict[str, Path] = {}
+    for relative_name, expected_digest in manifest.items():
+        save_path = root / relative_name
+        try:
+            observed_digest = file_sha256(save_path)
+        except OSError:
+            fail_quietly(f"corpus file unreadable: {save_path.name}")
+        if observed_digest != expected_digest:
+            fail_quietly(f"corpus file changed since the manifest was written: {save_path.name}")
+        save_paths[relative_name] = save_path
+    return save_paths
+
+
+def close_corpus_saves(opened_saves: dict[str, fmsave.Save]) -> None:
+    close_failures: list[str] = []
+    for relative_name, career_save in opened_saves.items():
+        try:
+            career_save.close()
+        except (fmsave.FmsaveError, OSError) as close_error:
+            close_failures.append(f"{Path(relative_name).name} ({type(close_error).__name__})")
+    if close_failures:
+        fail_quietly(f"corpus files could not be closed: {', '.join(close_failures)}")
+
+
+def open_corpus_saves(save_paths: dict[str, Path]) -> dict[str, fmsave.Save]:
+    opened_saves: dict[str, fmsave.Save] = {}
+    for relative_name, save_path in save_paths.items():
+        try:
+            opened_saves[relative_name] = fmsave.open(save_path)
+        except (fmsave.FmsaveError, OSError) as open_error:
+            close_corpus_saves(opened_saves)
+            error_kind = type(open_error).__name__
+            fail_quietly(f"corpus file could not be opened: {save_path.name} ({error_kind})")
+    return opened_saves
+
+
+def recorded_values_path(root: Path) -> Path | None:
+    """The corpus file of recorded values, at the corpus root or one folder below it.
+
+    The corpus lays out its own folders, so the file is found by name rather than by a path
+    this repository pins.
+    """
+    direct_path = root / RECORDED_VALUES_FILE_NAME
+    if direct_path.is_file():
+        return direct_path
+    return next(iter(sorted(root.glob(f"*/{RECORDED_VALUES_FILE_NAME}"))), None)
+
+
+def load_recorded_values(root: Path) -> dict[str, Any]:
+    values_path = recorded_values_path(root)
+    if values_path is None:
+        fail_quietly("recorded values file is missing")
+    return load_json_object(values_path)
+
+
+def write_shared_fragment(fragment: ContainerFragment, file_path: Path) -> Path:
+    """Write a fragment that several tests read, then make the file and its folder read-only.
+
+    A test that tried to change the file or write beside it would fail at once instead of
+    changing what later tests read. The guard is only advisory when tests run as root, which
+    ignores these modes, or on Windows, which does not stop writes into a read-only folder.
+    """
+    written_path = fragment.write(file_path)
+    written_path.chmod(READ_ONLY_FILE_MODE)
+    written_path.parent.chmod(READ_ONLY_FOLDER_MODE)
+    return written_path
+
+
+@pytest.fixture(scope="session")
+def career_save_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The whole career fragment, written once per session for tests that only read it.
+
+    Tests that write files, or need a variant or their own copy of the save, use tmp_path.
+    """
+    shared_folder = tmp_path_factory.mktemp("shared career") / SHARED_CAREER_FOLDER_NAME
+    return write_shared_fragment(career_fragment(), shared_folder / SHARED_CAREER_FILE_NAME)
+
+
+@pytest.fixture(scope="session")
+def container_fragment_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The default container fragment, written once per session for tests that only read it."""
+    shared_folder = tmp_path_factory.mktemp("shared container") / SHARED_CONTAINER_FOLDER_NAME
+    return write_shared_fragment(
+        build_container_fragment(), shared_folder / SHARED_CONTAINER_FILE_NAME
+    )
+
+
+@pytest.fixture(scope="session")
+def corpus_save_paths(request: pytest.FixtureRequest) -> dict[str, Path]:
+    record_corpus_fixture_use(request)
+    return verified_corpus_save_paths(corpus_root())
+
+
+@pytest.fixture(scope="session")
+def corpus_saves(
+    request: pytest.FixtureRequest, corpus_save_paths: dict[str, Path]
+) -> Iterator[dict[str, fmsave.Save]]:
+    record_corpus_fixture_use(request)
+    opened_saves = open_corpus_saves(corpus_save_paths)
+    yield opened_saves
+    close_corpus_saves(opened_saves)
+
+
+@pytest.fixture(scope="session")
+def recorded_values(request: pytest.FixtureRequest) -> dict[str, Any]:
+    record_corpus_fixture_use(request)
+    return load_recorded_values(corpus_root())

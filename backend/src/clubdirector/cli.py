@@ -22,6 +22,9 @@ def main(argv: list[str] | None = None) -> int:
     p_tool = sub.add_parser("tool", help="Exécuter un outil (diagnostic)")
     p_tool.add_argument("name")
     p_tool.add_argument("args", nargs="?", default="{}")
+    p_inv = sub.add_parser("inventory", help="Inventaire des sections d'une sauvegarde (décodées, utilisées)")
+    p_inv.add_argument("path", type=Path)
+    p_inv.add_argument("--out", type=Path, help="Dossier du rapport (défaut : <données>/reports)")
     p_serve = sub.add_parser("serve", help="Lancer le service local (127.0.0.1)")
     p_serve.add_argument("--port", type=int)
     args = parser.parse_args(argv)
@@ -68,6 +71,21 @@ def main(argv: list[str] | None = None) -> int:
         for lim in ans.limitations:
             print("  ⚠", lim)
         print(f"  [route={ans.route} outils={[t['tool'] for t in ans.tools]}]")
+        return 0
+    if args.cmd == "inventory":
+        from clubdirector.game.inventory import build_inventory, render_markdown
+        from clubdirector.game.snapshot import take_snapshot
+
+        snap = take_snapshot(args.path, settings.snapshot_dir)
+        inv = build_inventory(snap.copy_path)
+        out = args.out or settings.home / "reports"
+        out.mkdir(parents=True, exist_ok=True)
+        md = out / f"inventaire-{args.path.stem}.md"
+        md.write_text(render_markdown(inv), encoding="utf-8")
+        (out / f"inventaire-{args.path.stem}.json").write_text(
+            json.dumps(inv.as_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"Rapport : {md}")
         return 0
     if args.cmd == "tool":
         r = state.registry.execute(args.name, json.loads(args.args), state.tool_context())
