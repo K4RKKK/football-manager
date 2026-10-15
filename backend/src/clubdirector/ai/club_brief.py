@@ -73,7 +73,11 @@ def _roster(tctx: ToolContext) -> str | None:
         first = positions[0] if positions else ""
         title = next(t for t, test in LINES if test(first))
         s = season.get(r["uid"]) or {}
-        bits = [f"{r['age']} ans" if r.get("age") else None, "/".join(positions) or None, f"{s.get('minutes') or 0} min"]
+        # Postes où le joueur sait jouer (note FM26 ≥ 15 sur 20), du plus naturel au moins naturel.
+        rated = sorted(((code.upper(), v) for code, v in (r.get("position_ratings") or {}).items() if v and v >= 15),
+                       key=lambda kv: -kv[1])
+        where = "/".join(f"{code} {v}" for code, v in rated) or "/".join(positions) or None
+        bits = [f"{r['age']} ans" if r.get("age") else None, where, f"{s.get('minutes') or 0} min"]
         if s.get("goals"):
             bits.append(f"{s['goals']} b")
         if s.get("assists"):
@@ -82,8 +86,8 @@ def _roster(tctx: ToolContext) -> str | None:
             bits.append("en prêt")
         groups[title].append(f"{r['name']} ({', '.join(b for b in bits if b)})")
     body = " ; ".join(f"{title} : {', '.join(names)}" for title, names in groups.items() if names)
-    return ("Effectif COMPLET de l'équipe première (aucun autre joueur n'est à nous ; minutes = saison en cours) : "
-            + body)
+    return ("Effectif COMPLET de l'équipe première (aucun autre joueur n'est à nous ; postes avec la note FM26 sur 20, "
+            "un joueur ne joue qu'à un poste noté ≥ 15 ; minutes = saison en cours) : " + body)
 
 
 def build_club_dossier(registry: ToolRegistry, tctx: ToolContext) -> str:

@@ -128,6 +128,56 @@ def message_kind(text: str, previous: str | None = None) -> str:
     return "discussion"
 
 
+# Demande de composition : le onze est calculé par l'outil (notes de poste FM26) AVANT d'appeler le
+# modèle, qui le présente et le commente. Il ne le devine jamais.
+LINEUP_RE = re.compile(
+    r"\b(onze|11 de d[ée]part|compo(sition)?s?|[ée]quipe[- ]type|aligne(r|rais|rait|s|z)?|titulaires?|line-?up|"
+    r"qui (je )?(fais|mets|met) jouer|qui (doit|va|devrait) jouer|qui tu (mets|ferais jouer))\b",
+    re.IGNORECASE,
+)
+SYSTEM_RE = re.compile(r"\b([345])[- ]?([1-5])[- ]?([1-5])(?:[- ]?([1-3]))?\b")
+ROTATION_RE = re.compile(r"\b(rotation|tourner|tourne|m[ée]nager|m[ée]nage|reposer|repos|fra[iî]cheur|frais)\b", re.IGNORECASE)
+ABSENT_RE = re.compile(r"\bsans\s+([^.?!;:\n]+)", re.IGNORECASE)
+
+
+def lineup_request(text: str) -> dict | None:
+    """Arguments de `propose_lineup` si le message demande une composition, sinon None."""
+    if not LINEUP_RE.search(text) and not SYSTEM_RE.search(text):  # « et en 4-3-3 ? » : un système suffit
+        return None
+    from clubdirector.tools.lineup import SYSTEMS
+
+    args: dict = {}
+    m = SYSTEM_RE.search(text)
+    if m:
+        system = "-".join(g for g in m.groups() if g)
+        if system in SYSTEMS:
+            args["systeme"] = system
+    if ROTATION_RE.search(text):
+        args["rotation"] = True
+    absents = []
+    for chunk in ABSENT_RE.findall(text):
+        for name in re.split(r",|\bet\b|\bni\b", chunk):
+            name = name.strip(" '\"")
+            if name and len(name) <= 40 and name[:1].isupper():
+                absents.append(name)
+    if absents:
+        args["absents"] = absents
+    return args
+
+
+def lineup_brief(data: dict) -> str:
+    onze = " ; ".join(f"{x['poste']} {x['joueur']} ({x['note_poste']}/20)" for x in data["onze"])
+    bench = ", ".join(x["joueur"] for x in data.get("banc", []))
+    out = (f"[Composition calculée par l'outil propose_lineup sur les notes de poste FM26, système {data['systeme']} — "
+           f"base OBLIGATOIRE de ta réponse : {onze}. Remplaçants : {bench}.")
+    if data.get("exclus"):
+        out += " Écartés : " + ", ".join(f"{x['joueur']} ({x['raison']})" for x in data["exclus"]) + "."
+    if data.get("alertes"):
+        out += " Alertes : " + " ".join(data["alertes"])
+    return out + (" Présente ce onze ligne par ligne avec ton avis de terrain ; si tu proposes un changement, uniquement "
+                  "un joueur noté ≥ 15 au même poste. L'infirmerie du jour n'est pas lue : demande les absents si besoin.]")
+
+
 TOOL_LABELS = {
     "get_club_squad": "effectif", "get_player_profile": "fiche joueur", "get_player_contract": "contrat",
     "get_player_attributes": "attributs", "get_player_statistics": "statistiques", "get_player_season_history": "historique",
@@ -142,7 +192,7 @@ TOOL_LABELS = {
     "evaluate_youth_prospects": "jeunes", "remember": "mémoire", "list_memories": "mémoire", "forget": "mémoire",
     "describe_game_tables": "données du jeu", "query_game_table": "données du jeu",
     "get_club_league_history": "palmarès", "get_club_staff": "staff", "get_current_save": "sauvegarde",
-    "get_managed_club": "club",
+    "get_managed_club": "club", "propose_lineup": "composition",
 }
 Event = Callable[[dict], None]
 
@@ -397,6 +447,14 @@ class Orchestrator:
                 on_event({"type": "delta", "text": text})
             return ChatAnswer(text, "indisponible", conv, trace)
         system, messages = self._prompt(tctx, role, member, history, question, taking_office)
+        lineup_args = lineup_request(question) if not question.startswith("[Message automatique") else None
+        if lineup_args is not None and self.registry.get("propose_lineup") is not None:
+            if on_event:
+                on_event({"type": "tool", "name": "propose_lineup", "label": tool_label("propose_lineup")})
+            r = self.registry.execute("propose_lineup", lineup_args, tctx)
+            trace.append({"tool": "propose_lineup", "args": lineup_args, "ok": r.ok, "error": r.error})
+            if r.ok:
+                messages[-1] = {"role": "user", "content": messages[-1]["content"] + "\n\n" + lineup_brief(r.data)}
         tools = [{"name": t.name, "description": t.description, "parameters": t.json_schema()}
                  for t in self.registry.for_llm()]
         cost = 0.0
