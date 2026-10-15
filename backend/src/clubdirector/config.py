@@ -55,6 +55,18 @@ class AIProviderConfig(BaseModel):
     timeout_s: float = 300.0
 
 
+class WatchdogConfig(BaseModel):
+    """Surveillance de l'IA locale (ai/llm_watchdog.py) : un llama-server figé ou arrêté est relancé."""
+
+    enabled: bool = True
+    interval_s: float = 10.0
+    # Sans aucun jeton lu ni généré pendant ce délai, une demande en cours est déclarée figée.
+    stall_s: float = 60.0
+    ready_timeout_s: float = 240.0
+    max_restarts_per_hour: int = 3
+    start_script: Path | None = None  # défaut : scripts/start_llm.ps1 du dépôt
+
+
 class AIConfig(BaseModel):
     mode: Literal["local", "hybride", "premium"] = "local"
     providers: list[AIProviderConfig] = Field(
@@ -65,6 +77,7 @@ class AIConfig(BaseModel):
     # Réflexion préalable du modèle : "auto" (seulement pour les analyses demandées), "on", "off".
     thinking: Literal["auto", "on", "off"] = "auto"
     max_context_tokens: int = 8000
+    watchdog: WatchdogConfig = Field(default_factory=WatchdogConfig)
 
 
 class Settings(BaseModel):

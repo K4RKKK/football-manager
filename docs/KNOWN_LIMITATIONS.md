@@ -7,7 +7,12 @@
 1b. **Couverture des données** : ≈ 35 % du volume décompressé de la sauvegarde n'est lu par aucun
    lecteur (`docs/DATA_INVENTORY.md`) et 16 lecteurs fmsave ne sont pas encore importés. Objectif :
    100 % (`docs/SECTION_MAP.md`).
-1c. **Synchronisation lente** : ≈ 110 s sur une vraie carrière (73 658 joueurs).
+1c. **Durée de synchronisation** : ≈ 1 min sur une vraie carrière (73 658 joueurs ; 168 s avant le
+   15/10/2026). Il reste ≈ 37 s de décodage fmsave (joueurs 8 s, conversions du miroir 13 s) ; une
+   lecture en parallèle dans un second processus a été mesurée puis écartée (les sections indépendantes
+   reconstruisent les index partagés : 21 s de travail pour 9 s gagnés, +1 Go de RAM et un 2e cœur pris
+   pendant que FM26 tourne). Pendant la lecture, le service répond sur l'état précédent ; pendant
+   l'écriture (17-23 s), ses propres écritures (messages) attendent la validation au lieu d'échouer.
 2. **Statistiques des saisons passées** : FM26 ne conserve dans la sauvegarde que la saison en cours
    (fmsave). ClubDirector archive à chaque synchronisation ; une saison jamais synchronisée reste
    inconnue et l'assistant le dit.
@@ -47,7 +52,7 @@
 
 15. **Temps réel = à chaque sauvegarde** : sans plugin dans le jeu, le directeur voit l'état de la
     dernière sauvegarde. La synchronisation automatique la relit 20 s après chaque enregistrement
-    (≈ 2 à 3 min de lecture sur une grosse base). Régler la sauvegarde automatique de FM26 sur une
+    (≈ 1 min de lecture sur une grosse base). Régler la sauvegarde automatique de FM26 sur une
     fréquence élevée pour suivre la partie au plus près.
 16. **Fonction du staff** : établies et vérifiées sur des personnes réelles : directeur sportif (10, hors
     départements), directeur technique (88), entraîneur principal (16), entraîneur adjoint (20), entraîneur
@@ -63,8 +68,16 @@
     Sans pack, le téléphone affiche les initiales.
 19. **IA locale à un seul fil** : llama-server traite une demande à la fois ; un message attend la
     réponse précédente (ou le préchauffage d'un contact, 10-15 s après une nouvelle sauvegarde).
-    Le 15/10/2026, le serveur s'est bloqué une fois (aucune activité, requêtes sans réponse) ; il a été
-    relancé avec un journal (`%LOCALAPPDATA%\ClubDirectorAI\llm.log`) pour en trouver la cause.
+    Le 15/10/2026, le serveur s'est bloqué une fois (aucune activité, requêtes sans réponse, `/health`
+    pourtant « ok ») ; cause inconnue. Depuis, la surveillance du service (`ai/llm_watchdog.py`) détecte
+    un serveur figé (requête de test `/slots` sans réponse, ou demande sans aucun jeton lu ni généré
+    pendant 60 s) ou arrêté, le relance avec les mêmes paramètres (`scripts/start_llm.ps1`, mode jeu
+    compris) et refait la demande : l'entraîneur voit un message d'état, ou une erreur claire si la relance
+    échoue. Détection en ≈ 70 s ; au plus 3 relances par heure. Journal du serveur :
+    `%LOCALAPPDATA%\ClubDirectorAI\llm.log` (le précédent est archivé en `llm-<date>.log`, il garde la
+    trace d'un blocage) ; décisions de la surveillance : `llm-watchdog.log`. Un serveur jamais vu depuis
+    le démarrage du service n'est pas lancé d'office. La surveillance n'est active qu'après un
+    redémarrage du service ; elle n'a pas encore été éprouvée sur un vrai blocage.
 20. **Messages** : appels, vidéo et e-mail du téléphone sont décoratifs ; le directeur ne travaille pas
     entre deux messages (pas de tâche de fond) et n'agit pas dans le jeu (voir 12 et 14).
 21. **Marché des transferts** : les offres de la sauvegarde sont lues (club acheteur, vendeur,

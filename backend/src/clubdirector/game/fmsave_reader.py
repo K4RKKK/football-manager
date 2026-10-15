@@ -7,6 +7,7 @@ ne sait pas lire : on conserve ce `None` tel quel. Le statut de vérification de
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import warnings
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import fmsave
+from fmsave.readers._common import GAME_DB_SECTION
 from fmsave.readers.competition_names import NAME_SECTIONS, find_competition_names
 
 from clubdirector.database.mirror import MIRRORED_READERS, MirrorTable, build_mirror_table
@@ -75,10 +77,16 @@ def _label(value: Any) -> str | None:
     return str(label)
 
 
+_FIELD_NAMES: dict[type, tuple[str, ...]] = {}
+
+
 def _dc_to_dict(obj: Any) -> dict[str, Any]:
     if obj is None:
         return {}
-    return {f.name: getattr(obj, f.name) for f in dataclasses.fields(obj)}
+    names = _FIELD_NAMES.get(type(obj))
+    if names is None:  # dataclasses.fields est lent : 430 000 appels par synchronisation
+        names = _FIELD_NAMES[type(obj)] = tuple(f.name for f in dataclasses.fields(obj))
+    return {n: getattr(obj, n) for n in names}
 
 
 def _status(model: str, field: str) -> Confidence:
@@ -111,7 +119,11 @@ class FmsaveSaveReader:
             save_names = self._save_competition_names(snapshot_path)
             # Noms fournis par l'utilisateur prioritaires ; sinon ceux que la sauvegarde stocke.
             names = {db: long for db, (long, _short) in save_names.items()} | (self.competition_names or {})
-            with fmsave.open(snapshot_path, competition_names=names or None) as save:
+            with fmsave.open(snapshot_path, competition_names=names or None) as save, contextlib.ExitStack() as hold:
+                # game_db (≈ 200 Mo décompressés) reste prêté pendant toute la lecture : fmsave libère
+                # une section à la fin de chaque emprunt, et chaque lecteur la redécompressait.
+                if GAME_DB_SECTION in {s.name for s in save.info.sections}:
+                    hold.enter_context(save._context.section(GAME_DB_SECTION))
                 extract = self._read_open(save)
                 extract.mirror.append(MirrorTable(
                     "competition_names", ["database_id", "long_name", "short_name"],

@@ -63,7 +63,9 @@ def open_database(path: Path | str) -> Engine:
     url = "sqlite:///:memory:" if str(path) == ":memory:" else f"sqlite:///{Path(path)}"
     if str(path) != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(url, future=True)
+    # Une écriture du service (message, mémoire) qui tombe pendant l'écriture d'une synchronisation
+    # attend sa validation (≈ 10-15 s sur une vraie carrière) au lieu d'échouer après 5 s.
+    engine = create_engine(url, future=True, connect_args={"timeout": 60})
     event.listen(engine, "connect", _sqlite_pragmas)
     migrate(engine)
     return engine

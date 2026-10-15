@@ -7,12 +7,25 @@ chez les API compatibles OpenAI).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 
 class ProviderError(RuntimeError):
     pass
+
+
+# Message d'état pour l'entraîneur pendant une demande (ex. relance de l'IA locale figée). Le service
+# le diffuse dans le flux de la réponse (`{"type": "status"}`), hors du texte du contact.
+status_sink: ContextVar[Callable[[str], None] | None] = ContextVar("status_sink", default=None)
+
+
+def notify_status(text: str) -> None:
+    sink = status_sink.get()
+    if sink is not None:
+        sink(text)
 
 
 @dataclass

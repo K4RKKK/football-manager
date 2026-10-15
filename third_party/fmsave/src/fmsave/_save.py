@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from types import TracebackType
-from typing import NamedTuple, Self
+from typing import NamedTuple, Self, cast
 
 from fmsave import _checks
 from fmsave._checks import GateResult, ReaderCheck
@@ -99,7 +99,7 @@ from fmsave.readers.matches import (
     find_match_record_layout,
     locate_match_records,
 )
-from fmsave.readers.player_scan import window_end
+from fmsave.readers.player_scan import PlayerRecords, window_end
 from fmsave.readers.players import build_player_decoder, collect_player_stats
 from fmsave.readers.results import (
     apply_results,
@@ -162,6 +162,8 @@ from fmsave.table import Table
 
 CLUBS_TABLE_CACHE_KEY = "table:clubs"
 PLAYERS_TABLE_CACHE_KEY = "table:players"
+# A name lookup decodes only the players it is asked for when they are fewer than one in this many.
+_LIGHT_LOOKUP_SHARE = 4
 CONTRACTS_TABLE_CACHE_KEY = "table:contracts"
 SUSPENSIONS_TABLE_CACHE_KEY = "table:suspensions"
 MANAGED_CLUBS_TABLE_CACHE_KEY = "table:managed_clubs"
@@ -869,7 +871,9 @@ class Save:
             return Table((), TransferOffer)
         with self._context.section(TRANSFER_SECTION) as section:
             raw = read_transfer_offers(section, self._context.info.file_name)
-        uid_of, name_of = self._player_lookup()
+        uid_of, name_of = self._player_lookup(
+            r.person_index for r in raw if r.person_index is not None
+        )
         club_of = self._team_club_lookup()
         rows = []
         for r in raw:
@@ -935,12 +939,66 @@ class Save:
             ))
         return Table(rows, PlayerRanking)
 
-    def _player_lookup(self) -> tuple[dict[int, int], dict[int, str]]:
-        """Player uid by person index, and player name by uid."""
-        with self._context.section(GAME_DB_SECTION):
-            names = {player.uid: player.name for player in self.players()}
+    def _player_lookup(
+        self, pindexes: Iterable[int] | None = None
+    ) -> tuple[dict[int, int], dict[int, str]]:
+        """Player uid by person index, and player name by uid.
+
+        The names come from the players table when it is read already, or when `pindexes` is
+        None or covers a large share of the players. Otherwise only the players at `pindexes`
+        are decoded (ClubDirector): a cold `transfer_offers()` decoded every player of a real
+        career (73 658, about 8 s) for the names of a few thousand. The players table's checks
+        run when that table is read, not here.
+        """
+        with self._context.section(GAME_DB_SECTION) as game_db:
             records = self._context.player_records()
-        return dict(zip(records.pindexes, records.uids, strict=True)), names
+            uid_of = dict(zip(records.pindexes, records.uids, strict=True))
+            players = self._context.cached_value(PLAYERS_TABLE_CACHE_KEY)
+            if players is None and pindexes is not None:
+                positions = sorted(
+                    {records.position_by_pindex[p] for p in pindexes if p in records.position_by_pindex}
+                )
+                if len(positions) * _LIGHT_LOOKUP_SHARE < len(records.record_offsets):
+                    names = self._player_names(game_db, records, positions)
+                    if names is not None:
+                        return uid_of, names
+            table = players if players is not None else self.players()
+            return uid_of, {player.uid: player.name for player in cast("Table[Player]", table)}
+
+    def _player_names(
+        self, game_db: bytes, records: PlayerRecords, positions: list[int]
+    ) -> dict[int, str] | None:
+        """Names of the players at these record positions, decoding those records only.
+
+        None when the in-game date is unreadable: the players reader raises the proper error.
+        """
+        context = self._context
+        save_info = context.info
+        if save_info.game_date is None:
+            return None
+        game_db_schema = save_info.section_schemas.get(GAME_DB_SECTION)
+        decoder = build_player_decoder(
+            records.layout,
+            context.club_index(),
+            context.name_pools(),
+            save_info.game_date,
+            find_layout(PersonBlockLayout, GAME_DB_SECTION, game_db_schema, save_info.build).layout,
+            find_layout(ContractLayout, GAME_DB_SECTION, game_db_schema, save_info.build).layout,
+            save_info.file_name,
+        )
+        last_position = len(records.record_offsets) - 1
+        names: dict[int, str] = {}
+        for position in positions:
+            player, _contract = decoder.decode(
+                game_db,
+                records.record_offsets[position],
+                window_end(records, position, len(game_db)),
+                is_last_record=position == last_position,
+                suspension_entries=(),
+            )
+            if player.name is not None:
+                names[player.uid] = player.name
+        return names
 
     def _team_club_lookup(self):
         """(club uid, club name) for a team id; (None, None) when the team is unknown."""

@@ -93,3 +93,24 @@ def test_rankings_out_of_order_or_missing_raise() -> None:
 def test_records_export_every_field() -> None:
     assert {"player_uid", "bidding_club_uid", "selling_club_uid", "status", "offered_on"} <= set(column_names(TransferOffer))
     assert {"position", "women", "rank", "player_uid", "score"} <= set(column_names(PlayerRanking))
+
+
+def test_a_few_player_names_are_decoded_without_the_players_table(career_save_path, monkeypatch) -> None:
+    """The offers' names come from decoding their players only, and equal the players table's."""
+    import fmsave
+    from fmsave import _save
+    from fmsave._save import PLAYERS_TABLE_CACHE_KEY
+
+    monkeypatch.setattr(_save, "_LIGHT_LOOKUP_SHARE", 2)  # the synthetic career has only 4 players
+
+    with fmsave.open(career_save_path) as save:
+        uid_of, full = save._player_lookup()
+        pindexes = list(save._context.player_records().pindexes)
+    wanted = pindexes[:1]
+    assert len(wanted) * 2 < len(pindexes)
+    with fmsave.open(career_save_path) as save:
+        light_uids, light = save._player_lookup([*wanted, 10**9])  # an unknown index is ignored
+        assert save._context.cached_value(PLAYERS_TABLE_CACHE_KEY) is None
+    assert light_uids == uid_of
+    assert light == {uid_of[p]: full[uid_of[p]] for p in wanted if full.get(uid_of[p]) is not None}
+    assert light

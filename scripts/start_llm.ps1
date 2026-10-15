@@ -4,7 +4,11 @@
     CLUBDIRECTOR_LLM_SERVER  chemin de llama-server.exe
     CLUBDIRECTOR_LLM_MODEL   chemin du modèle .gguf
     CLUBDIRECTOR_LLM_DEVICE  périphérique Vulkan (défaut Vulkan0 = carte dédiée ; voir --list-devices)
-  Usage : powershell -ExecutionPolicy Bypass -File scripts\start_llm.ps1 [-Ctx 32768] [-Port 8080] [-ModeJeu]
+  Usage : powershell -ExecutionPolicy Bypass -File scripts\start_llm.ps1 [-Ctx 32768] [-Port 8080] [-ModeJeu] [-Journal <fichier>]
+  -Journal : journal du serveur (défaut %LOCALAPPDATA%\ClubDirectorAI\llm.log). Le précédent est archivé
+             (llm-AAAAMMJJ-HHMMSS.log, 5 gardés) : après un blocage, sa trace reste disponible.
+  La surveillance du service (backend ai/llm_watchdog.py) relance ce script, avec les mêmes paramètres,
+  si le serveur se fige ou s'arrête.
   -ModeJeu : à utiliser pendant que FM26 tourne. Les « experts » MoE de -CoucheCpu couches (défaut 12/30)
              restent en mémoire vive au lieu de la carte graphique : moins de VRAM prise au jeu,
              génération plus lente. Mesuré sur RX 9070 XT (Gemma 4 26B-A4B, contexte 32k) :
@@ -16,13 +20,25 @@ param(
   [int]$Port = 8080,
   [int]$Ctx = 32768,
   [switch]$ModeJeu,
-  [int]$CoucheCpu = 12
+  [int]$CoucheCpu = 12,
+  [string]$Journal = ""
 )
 $ErrorActionPreference = "Stop"
 $server = if ($env:CLUBDIRECTOR_LLM_SERVER) { $env:CLUBDIRECTOR_LLM_SERVER } else { "C:\AI\llama.cpp-b11658-vulkan\llama-server.exe" }
 $model  = if ($env:CLUBDIRECTOR_LLM_MODEL)  { $env:CLUBDIRECTOR_LLM_MODEL }  else { "C:\AI\models\gemma-4-26B-A4B-it\gemma-4-26B-A4B-it-UD-IQ4_XS.gguf" }
 $device = if ($env:CLUBDIRECTOR_LLM_DEVICE) { $env:CLUBDIRECTOR_LLM_DEVICE } else { "Vulkan0" }
 foreach ($p in @($server, $model)) { if (-not (Test-Path $p)) { throw "Introuvable : $p" } }
+
+if (-not $Journal) { $Journal = Join-Path $env:LOCALAPPDATA "ClubDirectorAI\llm.log" }
+$logDir = Split-Path $Journal -Parent
+New-Item -ItemType Directory -Force $logDir | Out-Null
+if (Test-Path $Journal) {
+  $archive = Join-Path $logDir ("llm-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".log")
+  try { Move-Item $Journal $archive -ErrorAction Stop } catch { $Journal = $archive }  # encore ouvert : nouveau nom
+  Get-ChildItem $logDir -Filter "llm-2*.log" | Sort-Object LastWriteTime -Descending |
+    Select-Object -Skip 5 | Remove-Item -ErrorAction SilentlyContinue
+}
+Write-Host "Journal du serveur : $Journal"
 
 # --host 127.0.0.1 : jamais exposé sur le réseau. --jinja : modèle de conversation du GGUF (appels d'outils).
 # -ngl 999 : toutes les couches sur la carte ; cache KV en q8_0 pour tenir 32k de contexte dans 16 Go.
@@ -37,4 +53,5 @@ if ($ModeJeu) { $extra += @("--n-cpu-moe", "$CoucheCpu") }
   -np 1 `
   --jinja `
   --alias clubdirector-local `
+  --log-file $Journal `
   @extra

@@ -68,3 +68,11 @@ prêteur = club du joueur à l'offre).
 note), du meilleur au moins bon : 14 postes dans l'ordre du jeu et les jeunes talents, hommes puis
 femmes. Vérifié par les postes des joueurs de chaque classement. La suite de la section (autre
 structure, probablement le staff) n'est pas lue. Tests : `tests/test_transfers.py`.
+
+### 7. Noms des joueurs d'une offre sans décoder tous les joueurs (`_save.py`, `Save._player_lookup`)
+`transfer_offers()` lu à froid décodait les 73 658 joueurs d'une vraie carrière (≈ 8 s, dont 0,1 s
+pour la section elle-même) pour les noms de quelques milliers. Quand la table des joueurs n'est pas
+encore lue et que les joueurs demandés sont moins d'un quart du total, seuls leurs enregistrements
+sont décodés, avec le décodeur du lecteur des joueurs : 4,4 s, table identique (vérifié sur la
+carrière de l'utilisateur, 12 253 offres). Les contrôles du lecteur des joueurs s'appliquent quand
+cette table est lue. Tests : `tests/test_transfers.py`.

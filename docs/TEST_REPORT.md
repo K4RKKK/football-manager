@@ -158,3 +158,26 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Règle des blessures vérifiée dans FM26 par l'utilisateur | ✅ | Gabriel Jesus : « entorse des ligaments croisés », retour prévu au 07/11 (jeu : « 6 jours - 2 semaines ») ; Barcola (date passée) non blessé ; Roma : aucun blessé, aucune ligne |
 | Outil get_injured_players (copie de la carrière) | ✅ | Roma : vide ; Arsenal : Gabriel Jesus (17 jours) ; Samsunspor : 3 retours récents ; club homonyme féminin écarté ; 0,6 s |
 | `pytest` backend | ✅ | 3 nouveaux tests (`tests/test_availability.py`) ; suite complète : 155 réussis, 2 échecs dans le travail en cours de la session Fiabilité (surveillance de l'IA), sans lien |
+
+### Session 3 (suite) — fiabilité de l'IA locale et synchronisation rapide
+Mesures sur une copie de la vraie carrière (AS Roma, 117 Mo, 73 658 joueurs) dans une base temporaire ;
+le service et l'IA en cours d'utilisation n'ont pas été redémarrés.
+
+| Test | Résultat | Détail |
+|---|---|---|
+| Synchronisation, premier import (base vide) | ✅ 168 s → 67 s | avant : stats de saison écrites ligne à ligne 84 s, lecture + conversion 57 s, matchs 15 s, miroir 5 s ; après : lecture 39 s, écriture 22 s |
+| Relecture d'une nouvelle sauvegarde de la même carrière | ✅ 175 s → 64 s (58 s) | tout le miroir réécrit : écriture 23 s ; tables inchangées sautées (empreinte) : écriture 17 s |
+| Temps par lecteur fmsave (lecture / conversion miroir) | mesuré | joueurs 8,0 / 4,3 s ; stats de saison 2,5 / 5,0 s ; matchs 3,4 / 0,4 s ; staff 3,3 / 0,4 s ; stats de match 2,1 s ; contrats 0 / 1,9 s ; historique 1,1 / 0,3 s ; finances 1,2 s ; classements du marché 0,4 / 0,3 s ; offres 0,1 s ; autres < 1 s |
+| Contenu identique avant / après | ✅ | 50 tables comparées ligne à ligne (hors identifiants et dates techniques) |
+| Liens d'historique (`_unique_assignment`) | ✅ 8 s → 0,07 s | placement glouton au plus tôt / au plus tard (unique ⇔ égaux) ; 4 000 cas tirés au hasard identiques à l'ancien décompte |
+| Ramasse-miettes suspendu pendant la synchro | ✅ | lecture 50 s → 42,5 s (mesure isolée) |
+| `transfer_offers()` à froid (fork) | ✅ 8,1 s → 4,4 s | seuls les joueurs cités sont décodés ; table identique (12 253 offres, 6 845 noms) ; l'analyse de la section seule prend 0,09 s |
+| Lecture parallèle dans un 2e processus | écartée | groupe indépendant : 21 s seul (index partagés reconstruits) pour 9 s gagnés, +1 Go de RAM pendant que FM26 tourne |
+| `to_columns` colonne par colonne (fork) | écarté | sortie identique sur les 31 tables mais ≈ 0,9 s gagné seulement : modification annulée |
+| Service pendant une relecture | ✅ | lecture de l'état précédent pendant la transaction ; une écriture (nouvelle conversation) attend la validation puis réussit (attente SQLite 60 s) |
+| IA figée (faux llama-server, vrai processus) | ✅ | `/health` « ok », demande sans progrès : détectée, processus arrêté, relancé, demande refaite et réponse reçue en < 30 s (délais du test : relevé 0,3 s, blocage 2 s) ; message d'état transmis |
+| Surveillance : cas simulés | ✅ | occupé qui avance jamais relancé ; `/slots` muet ; demande non traitée ; arrêt (relance seulement si déjà vu) ; 3 relances par heure au plus ; diagnostic sans relance ; paramètres relus sur la ligne de commande réelle (mode jeu 12, 32k, 8080) |
+| Diagnostic sur le vrai llama-server (`clubdirector llm`, lecture seule) | ✅ | état « prêt », paramètres relevés : `--n-cpu-moe 12 -c 32768 --port 8080` |
+| Erreurs claires | ✅ | serveur arrêté : « injoignable sur 127.0.0.1:8080 : serveur arrêté ou pas encore démarré » ; relance échouée : message et journaux à consulter |
+| `pytest` backend | ✅ | 192 / 192 (nouveaux : `test_llm_watchdog.py` 14, `test_sync_speed.py` 5) ; au premier passage, `test_lineup.py` échouait pendant une modification en cours d'une autre session, réussi relancé |
+| fmsave (fork) `uv run pytest` | ✅ | 2 981 réussis (+1 : noms des joueurs d'une offre), 1 échec d'environnement connu (`test_guard`, liens symboliques sous Windows) |

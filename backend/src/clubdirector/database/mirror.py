@@ -9,13 +9,18 @@ sait lire est conservé et interrogeable (outil `query_game_table`).
 Le schéma suit fmsave : une colonne apparue dans une nouvelle version est ajoutée (ALTER TABLE),
 jamais supprimée. Les listes et sous-structures sont stockées en JSON, les dates en ISO 8601.
 Seul le dernier relevé de chaque carrière est conservé (les tables typées gardent l'historique).
+Une table dont le contenu n'a pas changé depuis la synchronisation précédente n'est pas réécrite
+(empreinte dans `mirror_state`) : sa colonne `snapshot_id` est alors celui du relevé qui l'a
+écrite en dernier.
 """
 
 from __future__ import annotations
 
 import enum
+import hashlib
 import json
 import logging
+import pickle
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -107,6 +112,39 @@ def _sql_value(value: Any) -> Any:
     return json.dumps(_jsonable(value), ensure_ascii=False)
 
 
+def _json_default(value: Any) -> Any:
+    """Ce que `json` ne sait pas écrire seul, converti comme `_jsonable` le ferait."""
+    if isinstance(value, (set, frozenset)):
+        return list(value)
+    return _jsonable(value)
+
+
+def _sql_values(values: list) -> list:
+    """`_sql_value` sur une colonne entière, sans conversion quand elle n'en a pas besoin : la
+    plupart des colonnes ne contiennent que des entiers, textes, réels ou None (51 millions de
+    conversions par synchronisation sur une vraie carrière, sinon)."""
+    types = set(map(type, values))
+    if types <= _PLAIN:
+        if int not in types:
+            return values
+        ints = [v for v in values if type(v) is int]
+        if _INT64[0] <= min(ints) and max(ints) <= _INT64[1]:
+            return values
+    if types <= _SEQUENCES | {type(None)}:
+        # Listes et tuples : json les écrit directement (même texte que _jsonable), sauf clé de
+        # dictionnaire qu'il refuse (Enum simple…) : conversion valeur par valeur.
+        dumps = json.dumps
+        try:
+            return [None if v is None else dumps(v, ensure_ascii=False, default=_json_default) for v in values]
+        except (TypeError, ValueError):
+            pass
+    return [_sql_value(v) for v in values]
+
+
+_PLAIN = {type(None), int, float, str, bytes, bool}
+_SEQUENCES = {list, tuple}
+
+
 def _jsonable(value: Any) -> Any:
     if value is None or isinstance(value, (int, float, str, bool)):
         return value
@@ -131,7 +169,7 @@ def build_mirror_table(reader: str, records: Iterable[object]) -> MirrorTable:
     if not records:
         return MirrorTable(reader, columns, [])
     cols = export.to_columns(records, record_type)
-    converted = [[_sql_value(v) for v in cols[c]] for c in columns]
+    converted = [_sql_values(cols[c]) for c in columns]
     return MirrorTable(reader, columns, list(zip(*converted, strict=True)))
 
 
@@ -159,12 +197,39 @@ def _ensure_table(conn: Connection, table: MirrorTable) -> None:
             conn.exec_driver_sql(f"ALTER TABLE {_quote(name)} ADD COLUMN {_quote(col)}")
 
 
-def write_mirror(conn: Connection, career_id: int, snapshot_id: int, tables: Iterable[MirrorTable]) -> dict[str, int]:
-    """Remplace, pour cette carrière, le contenu de chaque table miroir fournie."""
+def table_digest(table: MirrorTable) -> str:
+    """Empreinte du contenu (colonnes + lignes). Deux contenus différents ont deux empreintes
+    différentes ; un contenu identique peut, rarement, en avoir deux (simple réécriture)."""
+    return hashlib.blake2b(pickle.dumps((table.columns, table.rows), protocol=5), digest_size=20).hexdigest()
+
+
+def _ensure_state(conn: Connection) -> None:
+    conn.exec_driver_sql(
+        "CREATE TABLE IF NOT EXISTS mirror_state (career_id INTEGER NOT NULL, reader TEXT NOT NULL, "
+        "digest TEXT NOT NULL, row_count INTEGER NOT NULL, snapshot_id INTEGER NOT NULL, "
+        "PRIMARY KEY (career_id, reader))"
+    )
+
+
+def write_mirror(conn: Connection, career_id: int, snapshot_id: int, tables: Iterable[MirrorTable],
+                 skipped: list[str] | None = None) -> dict[str, int]:
+    """Remplace, pour cette carrière, le contenu de chaque table miroir fournie ; une table
+    identique à celle déjà écrite n'est pas réécrite (son nom est ajouté à `skipped`)."""
     counts = {}
+    _ensure_state(conn)
+    known = {r[0]: (r[1], r[2]) for r in conn.exec_driver_sql(
+        "SELECT reader, digest, row_count FROM mirror_state WHERE career_id = ?", (career_id,))}
     for table in tables:
         _ensure_table(conn, table)
         name = _quote(table_name(table.reader))
+        counts[table.reader] = len(table.rows)
+        digest = table_digest(table)
+        if known.get(table.reader) == (digest, len(table.rows)):
+            stored = conn.exec_driver_sql(f"SELECT count(*) FROM {name} WHERE career_id = ?", (career_id,)).scalar()
+            if stored == len(table.rows):
+                if skipped is not None:
+                    skipped.append(table.reader)
+                continue
         conn.exec_driver_sql(f"DELETE FROM {name} WHERE career_id = ?", (career_id,))
         if table.rows:
             cols = ", ".join(["career_id", "snapshot_id", *(_quote(c) for c in table.columns)])
@@ -173,7 +238,9 @@ def write_mirror(conn: Connection, career_id: int, snapshot_id: int, tables: Ite
                 f"INSERT INTO {name} ({cols}) VALUES ({marks})",
                 [(career_id, snapshot_id, *row) for row in table.rows],
             )
-        counts[table.reader] = len(table.rows)
+        conn.exec_driver_sql(
+            "INSERT OR REPLACE INTO mirror_state (career_id, reader, digest, row_count, snapshot_id) "
+            "VALUES (?, ?, ?, ?, ?)", (career_id, table.reader, digest, len(table.rows), snapshot_id))
     return counts
 
 

@@ -28,12 +28,35 @@ def main(argv: list[str] | None = None) -> int:
     p_inv.add_argument("--out", type=Path, help="Dossier du rapport (défaut : <données>/reports)")
     p_serve = sub.add_parser("serve", help="Lancer le service local (127.0.0.1)")
     p_serve.add_argument("--port", type=int)
+    p_llm = sub.add_parser("llm", help="État de l'IA locale (llama-server) : prête, occupée, figée, arrêtée")
+    p_llm.add_argument("--surveiller", action="store_true",
+                       help="Surveiller en continu et relancer un serveur figé ou arrêté (sans le service)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     from clubdirector.config import load_settings
 
     settings = load_settings()
+    if args.cmd == "llm":
+        from clubdirector.ai.factory import build_providers
+        from clubdirector.ai.llm_watchdog import build_watchdog
+
+        wd = build_watchdog(settings, build_providers(settings)[0])
+        if wd is None:
+            print("Aucune IA locale (127.0.0.1) configurée, ou surveillance désactivée.")
+            return 1
+        if args.surveiller:
+            print(f"Surveillance de {wd.root} (journal : {wd.log_path}) — Ctrl+C pour arrêter.")
+            wd.start()
+            try:
+                while True:
+                    wd._stop.wait(60)
+                    print(json.dumps(wd.as_dict(), ensure_ascii=False))
+            except KeyboardInterrupt:
+                return 0
+        wd.check(act=False)  # diagnostic seul : jamais de relance depuis cette commande
+        print(json.dumps(wd.as_dict() | {"slots": wd.last_slots}, ensure_ascii=False, indent=2, default=str))
+        return 0 if wd.status.state in ("pret", "occupe") else 1
     if args.cmd == "serve":
         import uvicorn
 

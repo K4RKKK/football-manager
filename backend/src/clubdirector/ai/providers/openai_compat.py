@@ -8,17 +8,28 @@ Rapidité (mesurée en mode jeu, Gemma 4 26B-A4B, session 3) :
   par défaut (`chat_template_kwargs.enable_thinking`) et réservée aux analyses demandées ;
 - `step_stream` : la réponse s'affiche au fil de l'écriture ;
 - `warm` : pré-calcul du prompt (système + outils + dossier) que llama-server garde en cache.
+
+Fiabilité : avec la surveillance de l'IA locale (`ai/llm_watchdog.py`), une demande coupée parce
+que le serveur figé ou arrêté a été relancé est refaite une fois, dès que le serveur est prêt ;
+l'entraîneur en est averti (message d'état) et reçoit sinon une erreur claire, jamais un silence.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar
+from urllib.parse import urlsplit
 
 import httpx
 
-from clubdirector.ai.providers.base import ProviderError, StepResult, ToolCall
+from clubdirector.ai.providers.base import ProviderError, StepResult, ToolCall, notify_status
+
+log = logging.getLogger(__name__)
+T = TypeVar("T")
+RESTART_NOTICE = ("L'IA locale ne répondait plus : relance automatique en cours (environ une minute). "
+                  "La demande sera refaite dès qu'elle sera prête.")
 
 
 class OpenAICompatSession:
@@ -73,13 +84,15 @@ class OpenAICompatSession:
     def step_stream(self, on_text: Callable[[str], None]) -> StepResult:
         """Comme `step`, mais chaque morceau de texte est transmis dès qu'il arrive."""
         body = self._body() | {"stream": True, "stream_options": {"include_usage": True}}
-        text, calls, finish, usage, model = [], {}, None, {}, None
-        try:
+
+        def attempt(progress: Callable[[], None]):
+            text, calls, finish, usage, model = [], {}, None, {}, None
             with self.p.client.stream("POST", self.p.base_url + "/chat/completions", json=body) as r:
                 if r.status_code >= 400:
                     r.read()
-                    raise ProviderError(f"{self.p.name} a répondu {r.status_code} : {r.text[:300]}")
+                    raise ProviderError(self.p._status_text(r.status_code, r.text))
                 for line in r.iter_lines():
+                    progress()
                     if not line.startswith("data:"):
                         continue
                     payload = line[5:].strip()
@@ -103,8 +116,9 @@ class OpenAICompatSession:
                             slot["name"] += fn.get("name") or ""
                             slot["arguments"] += fn.get("arguments") or ""
                         finish = choice.get("finish_reason") or finish
-        except httpx.HTTPError as exc:
-            raise ProviderError(f"{self.p.name} injoignable ({self.p.base_url}) : {type(exc).__name__}") from exc
+            return text, calls, finish, usage, model
+
+        text, calls, finish, usage, model = self.p._guarded(attempt)
         tool_calls, raw_calls = [], []
         for i, slot in sorted(calls.items()):
             call_id = slot["id"] or f"call_{i}"
@@ -142,31 +156,87 @@ class OpenAICompatProvider:
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
-        self.client = httpx.Client(timeout=timeout_s, headers=headers, transport=transport)
+        self.timeout_s = timeout_s
+        self.client = httpx.Client(timeout=httpx.Timeout(timeout_s, connect=5.0), headers=headers, transport=transport)
+        self.local = urlsplit(self.base_url).hostname in ("127.0.0.1", "localhost")
+        # Surveillance du serveur local (ai/llm_watchdog.py), reliée par le service ; None ailleurs.
+        self.watchdog: Any = None
 
-    def _post(self, path: str, body: dict) -> dict:
-        try:
+    # ------------------------------------------------------------------ erreurs claires, réessai
+    def _status_text(self, status: int, body: str) -> str:
+        if self.local and status == 503:
+            return "l'IA locale est en cours de démarrage (chargement du modèle) : réessayez dans une minute"
+        return f"{self.name} a répondu {status} : {body[:300]}"
+
+    def _failure_text(self, exc: Exception) -> str:
+        where = urlsplit(self.base_url).netloc
+        if isinstance(exc, httpx.ConnectError):
+            if self.local:
+                return (f"l'IA locale est injoignable sur {where} : serveur arrêté ou pas encore démarré "
+                        "(relancer « Lancer ClubDirector.cmd »)")
+            return f"{self.name} injoignable ({self.base_url})"
+        if isinstance(exc, httpx.TimeoutException):
+            return f"aucune réponse de {self.name} en {self.timeout_s:.0f} s : serveur figé ou surchargé"
+        if isinstance(exc, (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError)):
+            return f"la connexion à {self.name} a été coupée pendant la réponse (serveur arrêté ou relancé)"
+        return f"{self.name} injoignable ({self.base_url}) : {type(exc).__name__}"
+
+    def _guarded(self, attempt: Callable[[Callable[[], None]], T], *, retry: bool = True) -> T:
+        """Exécute une demande HTTP. Sous surveillance, elle est suivie (progrès des octets reçus) et,
+        si le serveur a été relancé pendant qu'elle attendait (figé ou arrêté), refaite une fois."""
+        wd = self.watchdog
+        error: Exception | None = None
+        for round_ in range(2):
+            generation = wd.generation if wd is not None else 0
+            try:
+                if wd is None:
+                    return attempt(lambda: None)
+                with wd.track() as progress:
+                    return attempt(progress)
+            except httpx.HTTPError as exc:
+                error = exc
+            if wd is None or round_ == 1 or not retry:
+                break
+            if wd.restarting or wd.generation != generation:
+                notify_status(RESTART_NOTICE)  # figée : la surveillance la relance déjà
+            else:
+                notify_status("L'IA locale ne répond pas : vérification, et relance automatique si elle est arrêtée…")
+            if not wd.after_failure(generation):
+                if wd.generation != generation:  # relancé, mais pas revenu : échec de la relance
+                    raise ProviderError(
+                        "l'IA locale ne répondait plus et la relance automatique n'a pas abouti : relancer "
+                        "« Lancer ClubDirector.cmd » (détails dans llm-watchdog.log et llm.log, dossier "
+                        "%LOCALAPPDATA%\\ClubDirectorAI)") from error
+                break
+            log.warning("IA locale relancée par la surveillance : la demande est refaite")
+            notify_status("IA locale relancée : la demande est refaite.")
+        assert error is not None
+        raise ProviderError(self._failure_text(error)) from error
+
+    def _post(self, path: str, body: dict, *, retry: bool = True) -> dict:
+        def attempt(_progress: Callable[[], None]) -> dict:
             r = self.client.post(self.base_url + path, json=body)
-        except httpx.HTTPError as exc:
-            raise ProviderError(f"{self.name} injoignable ({self.base_url}) : {type(exc).__name__}") from exc
-        if r.status_code >= 400:
-            raise ProviderError(f"{self.name} a répondu {r.status_code} : {r.text[:300]}")
-        return r.json()
+            if r.status_code >= 400:
+                raise ProviderError(self._status_text(r.status_code, r.text))
+            return r.json()
+
+        return self._guarded(attempt, retry=retry)
 
     def start(self, system: str, history: list[dict], tools: list[dict]) -> OpenAICompatSession:
         return OpenAICompatSession(self, system, history, tools)
 
     def warm(self, system: str, history: list[dict], tools: list[dict], *, thinking: bool | None = False) -> None:
-        """Fait calculer le début du prompt par le serveur (1 token généré) : il le garde en cache."""
+        """Fait calculer le début du prompt par le serveur (1 token généré) : il le garde en cache.
+        Simple optimisation : jamais refaite après une relance."""
         session = OpenAICompatSession(self, system, history, tools)
         session.thinking = thinking
-        self._post("/chat/completions", session._body() | {"max_tokens": 1})
+        self._post("/chat/completions", session._body() | {"max_tokens": 1}, retry=False)
 
     def ping(self) -> str:
         try:
             r = self.client.get(self.base_url + "/models")
         except httpx.HTTPError as exc:
-            raise ProviderError(f"{self.name} injoignable ({self.base_url}) : {type(exc).__name__}") from exc
+            raise ProviderError(self._failure_text(exc)) from exc
         if r.status_code >= 400:
             raise ProviderError(f"{self.name} a répondu {r.status_code}")
         models = [m.get("id") for m in (r.json().get("data") or [])]

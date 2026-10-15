@@ -27,8 +27,10 @@ from pydantic import BaseModel, Field
 from clubdirector import __version__
 from clubdirector.ai.director_identity import staff_candidates
 from clubdirector.ai.factory import build_providers
+from clubdirector.ai.llm_watchdog import build_watchdog
 from clubdirector.ai.orchestrator import CONTACT_ROLES, Orchestrator, tool_label
 from clubdirector.ai.persona import ROLE_LABELS
+from clubdirector.ai.providers.base import status_sink
 from clubdirector.api.live import Heartbeat, PluginBridge
 from clubdirector.config import Settings, load_settings
 from clubdirector.database.db import open_database
@@ -95,6 +97,8 @@ class AppState:
                                    settle_s=settings.auto_sync_settle_s)
         self.watcher.status.enabled = settings.auto_sync
         providers, self.provider_errors = build_providers(settings)
+        # Surveillance de l'IA locale : un llama-server figé ou arrêté est relancé (ai/llm_watchdog.py).
+        self.llm_watchdog = build_watchdog(settings, providers)
         self.orchestrator = Orchestrator(self.engine, self.registry, providers, mode=settings.ai.mode,
                                          monthly_budget_usd=settings.ai.monthly_budget_usd,
                                          max_tool_rounds=settings.ai.max_tool_rounds,
@@ -158,6 +162,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.auto_sync:
         state.watcher.start()  # relit chaque nouvelle sauvegarde FM26 (copie sûre)
         state.warm_in_background()  # même interrupteur : pas de travail de fond pendant les tests
+        if state.llm_watchdog is not None:
+            state.llm_watchdog.start()
     allowed_hosts = {f"127.0.0.1:{settings.port}", f"localhost:{settings.port}", "127.0.0.1", "localhost", "testserver"}
 
     @app.middleware("http")
@@ -220,7 +226,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "ai": {"mode": settings.ai.mode, "providers": [
                 {"name": p.name, "model": p.model, "tier": p.tier} for p in state.orchestrator.providers],
                 "errors": state.provider_errors, "month_spend_usd": state.orchestrator.month_spend(),
-                "monthly_budget_usd": settings.ai.monthly_budget_usd},
+                "monthly_budget_usd": settings.ai.monthly_budget_usd,
+                "local": state.llm_watchdog.as_dict() if state.llm_watchdog else None},
             "auto_sync": state.watcher.as_dict(),
             "director": _director_status(),
             "currency": currency.model_dump(),
@@ -391,6 +398,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         q: queue.Queue = queue.Queue()
 
         def run() -> None:
+            # Messages d'état pendant la réponse (ex. relance de l'IA locale figée) : {"type": "status"}.
+            status_sink.set(lambda text: q.put({"type": "status", "text": text}))
             try:
                 q.put({"type": "done", **(job(q.put) or {})})
             except Exception as exc:  # noqa: BLE001

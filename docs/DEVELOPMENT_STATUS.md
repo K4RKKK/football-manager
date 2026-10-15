@@ -28,6 +28,8 @@ Légende : ✅ validé par test · 🟡 codé, non validé dans FM26 · 🧪 exp
 | Phase 2 | Adaptateur fmsave, normalisation, SQLite, migrations | ✅ | |
 | Phase 2 | Multi-carrières, saisons, archivage des résultats | ✅ | |
 | Phase 2 | Synchronisation automatique à chaque sauvegarde | ✅ | `sync/watcher.py` : fichier stable 20 s, copie sûre, verrou commun ; état dans `/api/status` |
+| Phase 2 | Synchronisation rapide | ✅ | vraie carrière : 168 s → 67 s (premier import), relecture 175 s → 58-64 s ; upserts groupés, tables du miroir inchangées non réécrites, conversion par colonne, liens d'historique en temps linéaire ; contenu identique (50 tables comparées) ; le service lit l'état précédent pendant une relecture (test) |
+| Fiabilité | Surveillance de l'IA locale (`ai/llm_watchdog.py`) | ✅ testé / 🟡 vrai blocage | serveur figé (requête de test `/slots` muette, ou demande sans progrès 60 s) ou arrêté : relancé avec les mêmes paramètres, demande refaite, message d'état ; test de bout en bout sur un faux serveur figé ; diagnostic lecture seule sur le vrai serveur (`clubdirector llm`) ; pas encore éprouvée sur un vrai blocage |
 | Phase 3 | Overlay dans FM26 (F10) | ❌ (bloqué) | dépend de BepInEx |
 | Phase 3 | Fenêtre ClubDirector externe au-dessus de FM26 | ✅ | `overlay/ClubDirector.Overlay` (WebView2, Ctrl+Alt+D, zone de notification) + page `/overlay` ; testée au-dessus de FM26 |
 | Phase 4 | Identité du directeur sportif en poste (sauvegarde) | ✅ | code de fonction 10 hors départements ; vérifié sur 11 directeurs réels + confirmé par l'utilisateur (Francis Cagigao) |

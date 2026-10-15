@@ -79,38 +79,42 @@ def _unique_assignment(
     groups: list[tuple[set[int], int | None]], clubs: list[int], nation: dict[int, int | None],
     last_position: dict[int, int | None],
 ) -> list[int] | None:
-    """Seule application croissante groupes -> clubs compatible (nation, dernière position), ou None."""
+    """Seule application croissante groupes -> clubs compatible (nation, dernière position), ou None.
+
+    Placement glouton au plus tôt (chaque groupe sur le premier club compatible après le précédent)
+    et au plus tard (en partant de la fin) : toute application compatible place chaque groupe entre
+    ces deux bornes, donc elle est unique si et seulement si les deux placements coïncident. Temps
+    linéaire (l'ancien décompte par programmation dynamique, k × n, coûtait 8 s par synchronisation)."""
     k, n = len(groups), len(clubs)
     if k == 0:
         return []
     if k > n:
         return None
+    club_nation = [nation.get(c) for c in clubs]
+    club_position = [last_position.get(c) for c in clubs]
 
     def ok(i: int, j: int) -> bool:
         nations, position = groups[i]
-        if nations and nation.get(clubs[j]) not in nations:
+        if nations and club_nation[j] not in nations:
             return False
-        return position is None or last_position.get(clubs[j]) == position
+        return position is None or club_position[j] == position
 
-    # ways[i][j] : nombre (plafonné à 2) de façons de placer les groupes i.. sur les clubs j..
-    ways = [[0] * (n + 1) for _ in range(k + 1)]
-    for j in range(n + 1):
-        ways[k][j] = 1
-    for i in range(k - 1, -1, -1):
-        for j in range(n - 1, -1, -1):
-            w = ways[i][j + 1]
-            if ok(i, j):
-                w += ways[i + 1][j + 1]
-            ways[i][j] = min(w, 2)
-    if ways[0][0] != 1:
-        return None
-    out, j = [], 0
+    earliest, j = [], 0
     for i in range(k):
-        while not (ok(i, j) and ways[i + 1][j + 1] == 1):
+        while j < n and not ok(i, j):
             j += 1
-        out.append(clubs[j])
+        if j == n:
+            return None
+        earliest.append(j)
         j += 1
-    return out
+    latest, j = [], n - 1
+    for i in range(k - 1, -1, -1):
+        while not ok(i, j):  # un placement existe (au plus tôt) : la borne est atteinte avant -1
+            j -= 1
+        latest.append(j)
+        j -= 1
+    latest.reverse()
+    return [clubs[j] for j in earliest] if earliest == latest else None
 
 
 def link_runs_to_clubs(
