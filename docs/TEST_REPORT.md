@@ -159,6 +159,16 @@ Restant : montants en unité brute tant que la devise n'est pas étalonnée (R-3
 | Outil get_injured_players (copie de la carrière) | ✅ | Roma : vide ; Arsenal : Gabriel Jesus (17 jours) ; Samsunspor : 3 retours récents ; club homonyme féminin écarté ; 0,6 s |
 | `pytest` backend | ✅ | 3 nouveaux tests (`tests/test_availability.py`) ; suite complète : 155 réussis, 2 échecs dans le travail en cours de la session Fiabilité (surveillance de l'IA), sans lien |
 
+### Session 3 (suite) — hiérarchie du vestiaire et moral
+| Test | Résultat | Détail |
+|---|---|---|
+| Hiérarchie lue vs écran Dynamique de groupe (captures de l'utilisateur, 28/10/2025) | ✅ | liste la plus récente de l'équipe première (26/10) : 23 joueurs sur 23 dans le bon groupe (leaders Mancini, Cristante, Pellegrini) ; les 5 joueurs absents sont prêtés ailleurs ; listes plus anciennes (01/10, 21/07) en désaccord, comme attendu |
+| `Save.squad_influence()` sur la vraie sauvegarde | ✅ | 11 listes (équipe première, U20, U18 ; actuelles et anciennes), 281 lignes, 0,44 s (joueurs déjà lus) |
+| Outil get_squad_hierarchy (copie de la carrière) | ✅ | 3 leaders, 6 très influents, 7 influents, 8 autres ; évolution depuis le 01/10 : Koné influent → très influent |
+| État d'esprit (moral) | ❌ non trouvé | fiches joueurs (décalages fixes, ancres variables, corrélation de rang), morale_manager (33 octets : compteurs), interaction_manager, zone de la dynamique : aucun champ qui sépare les 6 niveaux ; octet 97 (1-20, ρ = 0,71) gardé comme piste non confirmée, non exposé |
+| fmsave (fork) `uv run pytest` | ✅ | 2 988 réussis, 1 échec d'environnement (liens symboliques) ; 5 nouveaux tests (`tests/test_dynamics.py`) |
+| `pytest` backend | ✅ | 218 / 218 sur l'arbre de travail partagé, dont 3 nouveaux (`tests/test_dynamics.py`) |
+
 ### Session 3 (suite) — fiabilité de l'IA locale et synchronisation rapide
 Mesures sur une copie de la vraie carrière (AS Roma, 117 Mo, 73 658 joueurs) dans une base temporaire ;
 le service et l'IA en cours d'utilisation n'ont pas été redémarrés.
@@ -207,6 +217,7 @@ test sur 127.0.0.1:8768, lecture automatique et surveillance de l'IA désactivé
 | Poste après le nom du staff (demande de l'utilisateur, copie) | ✅ | « Paolo Maldini (Directeur technique) », « Francis Cagigao (Directeur sportif) », « Antonio Gagliardi (Entraîneur adjoint) » dans Messages, Contacts, nouveau message, fiche, bannière et écran verrouillé ; en-tête de conversation : nom puis poste en petit |
 | État de l'IA locale pendant une réponse | ✅ | évènement SSE `status` (relance de llama-server figé) affiché en petit sous les trois points |
 | Messages proactifs du staff | ✅ | détectés par l'identifiant du dernier message (`last.id`) au rafraîchissement : son + bannière, ou fil rechargé et lu s'il est ouvert ; `pytest` : 215 / 215 |
+| Installation réelle sur le PC (`install_windows.ps1 -Demarrage`, accord de l'utilisateur) | ✅ | 3 raccourcis (menu Démarrer : lancer, désinstaller ; dossier Démarrage : `start_clubdirector.ps1` en fenêtre réduite), `install.json` ; `uv sync --inexact` sans changement (un `uv sync` simple aurait retiré anthropic, keyring et 11 dépendances : corrigé avant le lancement) ; téléphone ouvert : recompilation Release reportée |
 
 ### Session 3 (suite) — staff vivant : messages proactifs, dossiers, mémoire longue, outils
 Démonstration sur une **copie** de la vraie carrière (base copiée par l'API de sauvegarde SQLite, dossier de
